@@ -1,0 +1,18 @@
+Source: harvid
+Section: sound
+Priority: optional
+Maintainer: Robin Gareus <robin@gareus.org>
+Build-Depends: debhelper (>= 8.0.0),
+ libavcodec-dev, libavformat-dev, libswscale-dev,
+ libpng12-dev, libjpeg8-dev
+Homepage: https://github.com/x42/ltc-tools
+Standards-Version: 3.9.3
+
+Package: harvid
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: HTTP Ardour Video Server
+ The image compositor socket is a HTTP server to efficiently
+ extract and cache still images from video files.
+ It provides for frame-accurate decoding and is used as back-
+ end for the Ardour3 video-timeline.

@@ -1,0 +1,408 @@
+/*
+   Copyright (C) 2002,2003,2008 Robin Gareus <robin@gareus.org>
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2, or (at your option)
+   any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+#ifdef HAVE_WINDOWS
+#include <windows.h>
+#include <winsock.h>
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/ioctl.h>
+#include <signal.h>
+#endif
+#include <pthread.h>
+
+#include "daemon_log.h"
+#include "daemon_util.h"
+
+#include "socket_server.h"
+
+#ifndef uint8_t
+#define uint8_t unsigned char
+#endif
+
+#ifndef HAVE_WINDOWS
+#include <sys/types.h>
+#include <sys/socket.h>
+#else
+#ifndef socklen_t
+#define socklen_t int
+#endif
+#endif
+
+//#define HAVE_PTHREAD_SIGMASK
+//#define CATCH_SIGNALS
+
+/** called to spawn thread for an incoming connection */
+static int create_client( void *(*cli)(void *), void *arg) {
+  pthread_t thread; // TODO: register/remember threads/connections !? why?
+#ifdef HAVE_PTHREAD_SIGMASK
+  sigset_t newmask, oldmask;
+
+  /* The idea is that only the main thread handles all the signals with
+   * posix threads.  Signals are blocked for any other thread. */
+  sigemptyset(&newmask);
+  sigaddset(&newmask, SIGCHLD);
+  sigaddset(&newmask, SIGPIPE); // ignore server loss - close on read.
+  sigaddset(&newmask, SIGTERM);
+  sigaddset(&newmask, SIGQUIT);
+  sigaddset(&newmask, SIGINT);
+  sigaddset(&newmask, SIGHUP);
+//sigaddset(&newmask, SIGALRM);
+  pthread_sigmask(SIG_BLOCK, &newmask, &oldmask); /* block signals */
+#endif /* HAVE_PTHREAD_SIGMASK */
+  pthread_attr_t pth_attr;
+  pthread_attr_init(&pth_attr);
+  pthread_attr_setdetachstate(&pth_attr,PTHREAD_CREATE_DETACHED);
+
+  if(pthread_create(&thread, &pth_attr, cli, arg)) {
+#ifdef HAVE_PTHREAD_SIGMASK
+    pthread_sigmask(SIG_SETMASK, &oldmask, NULL); /* restore the mask */
+#endif /* HAVE_PTHREAD_SIGMASK */
+    return -1;
+  }
+#ifdef HAVE_PTHREAD_SIGMASK
+  pthread_sigmask(SIG_SETMASK, &oldmask, NULL); /* restore the mask */
+#endif /* HAVE_PTHREAD_SIGMASK */
+  return 0;
+}
+
+
+/* -=-=-=-=-=-=-=-=-=-=- TCP socket daemon */
+
+static void setnonblock(int sock, unsigned long l) {
+#ifdef HAVE_WINDOWS
+  //WSAAsyncSelect(sock, 0, 0, FD_CONNECT|FD_CLOSE|FD_WRITE|FD_READ|FD_OOB|FD_ACCEPT);
+  //setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &val,  sizeof(int));
+  if(ioctlsocket(sock, FIONBIO, &l)<0)
+#else
+  if(ioctl(sock, FIONBIO, &l)<0)
+#endif
+    dlog(DLOG_WARNING, "SRV: unable to set (non)blocking mode: %s\n", strerror(errno));
+  else
+    dlog(DLOG_DEBUG, "SRV: set fd:%d in %sblocking mode\n", sock, l ? "non-" : "");
+}
+
+static void server_sockaddr(ICI *d, struct sockaddr_in *addr) {
+  memset(addr, 0, sizeof(addr));
+  addr->sin_family=AF_INET;
+  addr->sin_addr.s_addr=d->listenaddr;
+  addr->sin_port=d->listenport;
+
+  d->local_addr=strdup(inet_ntoa(addr->sin_addr));
+  d->local_port=ntohs(d->listenport);
+}
+
+
+/** called once to init server */
+static int create_server_socket(void) {
+  int s,val=1;
+  if((s=socket(AF_INET, SOCK_STREAM, 0))<0) {
+    dlog(DLOG_CRIT, "SRV: unable to create local socket: %s\n", strerror(errno));
+    exit(1);
+  }
+  setnonblock(s, 1);
+#ifndef HAVE_WINDOWS
+  setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &val,  sizeof(int));
+#else
+  setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &val,  sizeof(int));
+#endif
+  return(s);
+}
+
+/** called once after server socket has been created */
+static int server_bind(ICI *d, struct sockaddr_in addr) {
+  if(bind(d->fd, (struct sockaddr *)&addr, sizeof(addr))) {
+    dlog(DLOG_ERR, "SRV: Error binding to %s:%d\n", d->local_addr, d->local_port);
+    return(1);
+  }
+  dlog(DLOG_INFO, "SRV: bound to %s:%d\n", d->local_addr, d->local_port);
+  if(listen(d->fd, (MAXCONNECTIONS>>1))) {
+    dlog(DLOG_ERR, "SRV: Error listening on socket.\n");
+    return(1);
+  }
+  return(0);
+}
+
+/* -=-=-=-=-=-=-=-=-=-=- TCP socket connection */
+#define SLEEP_STEP (2)
+//#define CON_TIMEOUT (cfg->timeout) // -- TODO - configuration param
+//#define CON_TIMEOUT (30) // -- HTTP 30 sec
+#define CON_TIMEOUT (300) // ICSP 5 min
+
+#ifdef CATCH_SIGNALS
+void catchsig (int sig) {
+  signal(SIGHUP, catchsig); /* reset signal */
+  signal(SIGINT, catchsig);
+  signal(SIGPIPE, catchsig);
+  dlog(DLOG_CRIT,"SRV:   !!!  CAUGHT signal\n");
+}
+#endif
+
+/* this is the main client connection loop - one for each connection */
+static void *socket_handler(void *cn) {
+  CONN *c = (CONN*) cn;
+
+  c->buf_len=0;
+  c->timeout_cnt=0;
+  dlog(DLOG_DEBUG, "CON: socket-handler starting up for fd:%d\n", c->fd);
+
+#ifdef CATCH_SIGNALS
+  signal (SIGHUP, catchsig);
+  signal (SIGINT, catchsig);
+  signal (SIGPIPE, catchsig);
+#endif
+
+  while(c->run && c->d->run) { // keep-alive
+
+    fd_set rd_set, wr_set;
+    struct timeval tv;
+
+    tv.tv_sec=SLEEP_STEP;
+    tv.tv_usec=0;
+    FD_ZERO(&rd_set);
+    FD_ZERO(&wr_set);
+
+    FD_SET(c->fd, &rd_set);
+#ifdef SOCKET_WRITE
+    if (c->cq != NULL) FD_SET(c->fd, &wr_set);
+#endif
+
+    int ready=select(c->fd+1, &rd_set, &wr_set, NULL, &tv);
+    if(ready<0) {
+      dlog(DLOG_WARNING, "CON: connection select error: %s\n",strerror(errno));
+      break;
+    }
+    if(!ready) { /* Timeout */
+      c->timeout_cnt += SLEEP_STEP;
+      if (c->timeout_cnt > CON_TIMEOUT) {
+        dlog(DLOG_INFO, "CON: connection timeout: connection reset\n");
+        break;
+      }
+      continue;
+    }
+
+    // preform socket read/write on c->fd
+    // NOTE: set c->run=0; is preferred to return(!0) in protocol_handler;
+    if (FD_ISSET(c->fd, &rd_set)) {
+        dlog(DLOG_INFO, "CON: read..\n");
+      if (protocol_handler(c, c->d->userdata)) break;
+    }
+#ifdef SOCKET_WRITE
+    else  // check again if we can write now.
+     if (FD_ISSET(c->fd, &wr_set)) {
+      if (protocol_droid(c, c->d->userdata)) break;
+    }
+#endif
+  dlog(DLOG_DEBUG, "CON: loop:%d\n",c->fd);
+
+  }
+  dlog(DLOG_DEBUG, "CON: protocol ended. closing connection fd:%d\n",c->fd);
+#ifndef HAVE_WINDOWS
+  close(c->fd);
+#else
+  closesocket(c->fd);
+#endif
+
+  pthread_mutex_lock(&c->d->lock);
+  c->d->num_clients--;
+  pthread_mutex_unlock(&c->d->lock);
+
+  dlog(DLOG_INFO, "CON: closed client connection (%u) from %s:%d.\n",c->fd, c->client_address, c->client_port);
+  dlog(DLOG_DEBUG, "SRV: now %i connections active\n",c->d->num_clients); // XXX
+
+  if (c->client_address) free(c->client_address);
+  free(c);
+  pthread_exit(0);
+  return NULL; /* end close connection */
+}
+
+/**launch handler for each incoming connection. */
+static void start_child(ICI *d, int fd, char *rh, unsigned short rp) {
+  pthread_mutex_lock(&d->lock);
+  d->num_clients++;
+  if (d->num_clients > d->max_clients) d->max_clients = d->num_clients;
+  pthread_mutex_unlock(&d->lock);
+
+  CONN *c = calloc(1,sizeof(CONN));
+  c->run=1;
+  c->fd=fd;
+  c->d=d;
+  c->client_address=strdup(rh);
+  c->client_port=rp;
+#ifdef SOCKET_WRITE
+  c->cq = NULL;
+#endif
+  c->userdata = NULL;
+  // TODO: register this connection so that a parent server (or CONN siblings) can interact.
+
+  if(create_client(&socket_handler, c)) {
+    if(fd>=0)
+#ifndef HAVE_WINDOWS
+      close(fd);
+#else
+      closesocket(fd);
+#endif
+    dlog(DLOG_ERR, "SRV: Protocol handler child fork failed\n");
+    pthread_mutex_lock(&d->lock);
+    d->num_clients--;
+    pthread_mutex_unlock(&d->lock);
+    free(c);
+    dlog(DLOG_WARNING, "SRV: Connection terminated: now %i connections active\n",d->num_clients);
+    return;
+  }
+  dlog(DLOG_INFO, "SRV: Connection started: now %i connections active\n",d->num_clients);
+}
+
+/** handshake - accept incoming connection  */
+static int accept_connection(ICI *d, char **remotehost, unsigned short *rport) {
+  struct sockaddr_in addr;
+  int s;
+  socklen_t addrlen=sizeof(addr);
+
+  //dlog(DLOG_DEBUG, "SRV: waiting for accept on server-fd:%d\n", d->fd);
+
+  do {
+    s=accept(d->fd, (struct sockaddr *)&addr, &addrlen);
+  } while(s<0 && errno==EINTR);
+
+  *remotehost = inet_ntoa(addr.sin_addr);
+  *rport = ntohs(addr.sin_port);
+
+  if(s<0) {
+    dlog(DLOG_WARNING, "SRV: socket accept error: %s\n",strerror(errno));
+    return (-1);
+  }
+  dlog(DLOG_INFO, "SRV: Connection accepted %s:%d\n", *remotehost, *rport);
+
+  //  pthread_mutex_lock(&d->lock); ? not needed
+  if (d->num_clients >= MAXCONNECTIONS) {
+    protocol_error(s, 503, "Too many open connections. Please try again later.");
+#ifndef HAVE_WINDOWS
+    close(s);
+#else
+    closesocket(s);
+#endif
+    dlog(DLOG_WARNING,"SRV: refused client. max number of connections (%i) readed.\n", MAXCONNECTIONS);
+    return (-1);
+  }
+
+  // check if we should use SO_KEEPALIVE here
+  //int val =1; setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, &val,  sizeof(int));
+  // or set non-blocking i/o ...
+  //setnonblock(s, 1);
+  return(s);
+}
+
+static void *main_loop (void *arg) {
+  ICI *d = arg;
+  struct sockaddr_in addr;
+#ifndef HAVE_WINDOWS
+  signal(SIGPIPE, SIG_IGN);
+#endif
+
+  d->fd=create_server_socket();
+  server_sockaddr(d,&addr);
+  if(server_bind(d,addr)) { goto daemon_end; }
+
+  if (d->username && d->groupname)
+    drop_privileges(d->username, d->groupname);
+  else if (d->username || d->groupname)
+    dlog(DLOG_ERR, "SRV: incomplete username/groupname pair. not using suid.\n");
+
+  while(d->run) {
+    fd_set rfds;
+    struct timeval tv;
+
+    tv.tv_sec = 1; tv.tv_usec = 0;
+    FD_ZERO(&rfds);
+    FD_SET(d->fd, &rfds);
+
+    // select() returns 0 on timeout, -1 on error.
+    if((select(d->fd+1, &rfds, NULL, NULL, &tv))<0) {
+      dlog(DLOG_WARNING, "SRV: unable to select the socket: %s\n", strerror(errno));
+      if (errno!=EINTR) // TODO; timeout count ?!
+        goto daemon_end;
+      else
+        continue;
+    }
+
+    char *rh=NULL;
+    unsigned short rp=0;
+    int s=-1;
+    if(FD_ISSET(d->fd, &rfds))
+      s=accept_connection(d,&rh,&rp);
+    if (s>=0) start_child(d,s,rh,rp);
+  }
+
+  // wait until all connections are closed
+  int timeout =31;
+  dlog(DLOG_INFO, "SRV: server shut down procesdure: waiting %i sec for clients to disconnect..\n", timeout-1);
+
+  #if 0 // show shutdown countdown.
+  fflush(stdout);
+  while (d->num_clients> 0 && --timeout > 0) {
+    if (timeout%5 == 0) printf("(%i)",timeout); fflush(stdout);
+    sleep(1);
+  }
+  printf("\n");
+  #endif
+
+  if (d->num_clients> 0) {
+    dlog(DLOG_WARNING, "SRV: Terminating %i remaining connections.\n", d->num_clients);
+    // TODO: explicitly kill the threads?!
+    // after free(d)  `while(c->d->run)` may segfault..
+  } else {
+    dlog(DLOG_INFO, "SRV: Closed all connections.\n");
+  }
+
+daemon_end:
+  close(d->fd);
+  dlog(DLOG_CRIT, "SRV: server shut down.\n");
+
+  d->run=0;
+  if (d->local_addr) free(d->local_addr);
+  pthread_mutex_destroy(&d->lock);
+  free(d);
+  return(NULL);
+}
+
+// tcp server thread
+int start_tcp_server (unsigned int hostnl, unsigned short port, char *docroot, char *username, char *groupname, void *userdata) {
+  ICI *d = calloc(1, sizeof(ICI));
+  // TODO: register this server so that a parent or sibling can interact.
+  pthread_mutex_init(&d->lock,NULL);
+  d->run=1;
+  d->listenport=htons(port);
+  d->listenaddr=hostnl;
+  d->username=username;
+  d->groupname=groupname;
+  d->docroot=docroot;
+  d->userdata=userdata;
+  main_loop(d);
+  return(0);
+}
+
+// vim:sw=2 sts=2 ts=8 et:

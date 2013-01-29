@@ -1,0 +1,9 @@
+*.swp
+tags
+cscope.files
+cscope.out
+
+src/harvid
+tmp/
+pkg/osx/usr
+src/harvid.dSYM/

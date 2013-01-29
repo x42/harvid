@@ -1,0 +1,12 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	$(MAKE) LDFLAGS=-Wl,--as-needed
+
+override_dh_auto_install:
+	$(MAKE) install-bin DESTDIR=$(CURDIR)/debian/harvid PREFIX=/usr
+
+override_dh_auto_clean:
