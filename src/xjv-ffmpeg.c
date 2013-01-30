@@ -1,8 +1,7 @@
 /*
-   xj5 - ffmpeg backend
-   sodankyla - video composition daemon
+   This file is part of harvid
 
-   Copyright (C) 2007,2008,2011 Robin Gareus <robin@gareus.org>
+   Copyright (C) 2007-2013 Robin Gareus <robin@gareus.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,34 +14,19 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
-   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-*/
-
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #include <stdio.h>
 #include <stdint.h>     /* uint8_t */
 #include <stdlib.h>     /* calloc et al.*/
 #include <string.h>     /* memset */
 
 #include "ffcompat.h"
-
-#ifdef HAVE_SWSCALE
 #include <libswscale/swscale.h>
-#endif
 
 #include "jv.h"
 #include "xjv-ffmpeg.h"
 
-
-/*
-#define SPP ( \
-	      (ff->render_fmt==PIX_FMT_RGB24)?3: \
-	      ((ff->render_fmt==PIX_FMT_BGR24)?3: \
-	      ((ff->render_fmt==PIX_FMT_RGBA)?4: \
-	      ((ff->render_fmt==PIX_FMT_BGR32)?4: \
-	      ((ff->render_fmt==PIX_FMT_RGB32)?4:1.5)))) \
-	    )
-*/
 /* xj5 seek modes */
 enum {  SEEK_ANY, ///< directly seek to givenvideo frame
         SEEK_KEY, ///< seek to next keyframe after given frame.
@@ -82,10 +66,7 @@ typedef struct {
   AVCodecContext    *pCodecCtx;
   AVFrame           *pFrame;
   AVFrame           *pFrameFMT;
-#ifdef HAVE_SWSCALE
   struct SwsContext *pSWSCtx;
-#endif
-
 } ffst;
 
 #include <time.h>
@@ -104,10 +85,14 @@ const AVRational c1_Q = { 1, 1 };
 // Manage video file
 //--------------------------------------------
 
-void ff_getbuffersize(void *ptr, size_t *s) {
+static void ff_getbuffersize(void *ptr, size_t *s) {
   ffst *ff=(ffst*)ptr;
   *s=(avpicture_get_size(ff->render_fmt, ff->out_width, ff->out_height));
   //*s=(avpicture_get_size(ff->render_fmt, ff->movie_width, ff->movie_height));
+}
+
+static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, int ys) {
+  fprintf(stderr, "render_empty_frame NYI\n"); // TODO
 }
 
 //#define SCALE_UP  ///< positive pixel-aspect scales up X axis - else positive pixel-aspect scales down Y-Axis.
@@ -162,7 +147,6 @@ void ff_initialize (void) {
   if (want_verbose) fprintf(stdout, "FFMPEG: registering codecs.\n");
   av_register_all();
   avcodec_register_all();
-  avcodec_register_all();
   if(!want_verbose) av_log_set_level(AV_LOG_QUIET);
 }
 
@@ -176,11 +160,6 @@ int ff_close_movie(void *ptr) {
   ff->current_file=NULL;
 
   if (!ff->pFrameFMT) return(-1);
-
-#ifdef HAVE_SWSCALE
-  //if (ff->pSWSCtx) sws_freeContext(ff->pSWSCtx);
-#endif
-
   ff_set_bufferptr(ff, ff->internal_buffer); // restore allocated movie-buffer..
   if (ff->internal_buffer) free(ff->internal_buffer); // done in pFrameFMT?
   if (ff->pFrameFMT) av_free(ff->pFrameFMT);
@@ -188,6 +167,7 @@ int ff_close_movie(void *ptr) {
   ff->buffer=NULL;ff->pFrameFMT=ff->pFrame=NULL;
   avcodec_close(ff->pCodecCtx);
   avformat_close_input(&ff->pFormatCtx);
+  if (ff->pSWSCtx) sws_freeContext(ff->pSWSCtx);
   return (0);
 }
 
@@ -254,11 +234,7 @@ int ff_open_movie(void *ptr, JVARGS *a) {
   ff->render_fmt=a->render_fmt;
 
   /* Open video file */
-#ifdef OLDFFMPEG
-  if(av_open_input_file(&ff->pFormatCtx, a->file_name, NULL, 0, NULL)!=0)
-#else
   if(avformat_open_input(&ff->pFormatCtx, a->file_name, NULL, NULL) <0)
-#endif
   {
     fprintf( stderr, "Cannot open video file %s\n", a->file_name);
     return (-1);
@@ -280,11 +256,7 @@ int ff_open_movie(void *ptr, JVARGS *a) {
     return (-1);
   }
 
-#ifdef OLDFFMPEG
-  if (want_verbose) dump_format(ff->pFormatCtx, 0, a->file_name, 0);
-#else
   if (want_verbose) av_dump_format(ff->pFormatCtx, 0, a->file_name, 0);
-#endif
 
   /* Find the first video stream */
   for(i=0; i<ff->pFormatCtx->nb_streams; i++)
@@ -308,7 +280,6 @@ int ff_open_movie(void *ptr, JVARGS *a) {
 
   ff_set_framerate(ff);
 
-#if 1 // get duration from stream - not header -- TODO live-stream duration
   {
   AVStream *avs = ff->pFormatCtx->streams[ff->videoStream];
 
@@ -325,21 +296,6 @@ int ff_open_movie(void *ptr, JVARGS *a) {
   }
   ff->duration = (double) avs->duration * av_q2d(avs->time_base);
   }
-#else // get duration from container/format
-
-#if defined(__BIG_ENDIAN__) && (__ppc__)
-// this cast is weird, but it works.. the bytes seem to be in 'correct' order, but the two
-// 4byte-words are swapped. ?!
-// I wonder how this behaves on a 64bit arch
-// - maybe it's bug in ffmpeg or all video files I tried had a bad header :D
-  int64_t dur = (int64_t) (ff->pFormatCtx->duration);
-  ff->duration = ( ((double) (((dur&0xffffffff)<<32)|((dur>>32)&0xffffffff))) / (double) AV_TIME_BASE );
-#else
-//ff->duration = (double) (((double) (ff->pFormatCtx->duration - ff->pFormatCtx->start_time))/ (double) AV_TIME_BASE);
-  ff->duration = (double) (((double) (ff->pFormatCtx->duration))/ (double) AV_TIME_BASE);
-#endif
-  ff->frames = (long) (ff->framerate * ff->duration);
-#endif
   ff->tpf = 1.0/(av_q2d(ff->pFormatCtx->streams[ff->videoStream]->time_base)*ff->framerate);
   ff->file_frame_offset =  ff->framerate*((double) ff->pFormatCtx->start_time/ (double) AV_TIME_BASE);
 
@@ -459,13 +415,8 @@ int my_seek_frame (ffst *ff, AVPacket *packet, int64_t timestamp) {
   // TODO: assert  0 < timestamp + ts_offset - (..->start_time)   < length
 	
 #if LIBAVFORMAT_BUILD > 4629 // verify this version
-# if 0  // TODO -> -F <ratio>
-  timestamp*=ff->tpf;
-# else	// THIS is eqivalent - or even better at rounding but
-	// does not work with -F <double>
   timestamp=av_rescale_q(timestamp,c1_Q,v_stream->time_base);
   timestamp=av_rescale_q(timestamp,c1_Q,v_stream->r_frame_rate); //< timestamp/=framerate;
-# endif
 #endif
 
 #if LIBAVFORMAT_BUILD < 4617
@@ -478,9 +429,6 @@ int my_seek_frame (ffst *ff, AVPacket *packet, int64_t timestamp) {
     rv= av_seek_frame(ff->pFormatCtx, ff->videoStream, timestamp, AVSEEK_FLAG_BACKWARD) ;
     avcodec_flush_buffers(ff->pCodecCtx);
   } else if (ff->seekflags==SEEK_LIVESTREAM) {
-#if 0
-    ff->pCodecCtx->hurry_up = 1; // check if we're not there yet ;)
-#endif
   } else /* SEEK_CONTINUOUS */ if (ff->avprev >= timestamp || ((ff->avprev + 32*ff->tpf) < timestamp) ) {
     // NOTE: only seek if last-frame is less then 32 frames behind
     // else read continuously until we get there :D
@@ -493,9 +441,6 @@ int my_seek_frame (ffst *ff, AVPacket *packet, int64_t timestamp) {
     // seek to keyframe *BEFORE* this frame
     rv= av_seek_frame(ff->pFormatCtx, ff->videoStream, timestamp, AVSEEK_FLAG_BACKWARD) ;
     avcodec_flush_buffers(ff->pCodecCtx);
-#if 0
-    ff->pCodecCtx->hurry_up = 1; // check if we're not there yet ;)
-#endif
   }
 #endif
 
@@ -541,7 +486,6 @@ read_frame:
     return (0);
   }
 
-#ifndef OLDFFMPEG
 #if 1 // experimental
   /* remember live-stream PTS offset */
   if (   ff->seekflags==SEEK_LIVESTREAM
@@ -559,12 +503,8 @@ read_frame:
       mtsb = AV_NOPTS_VALUE;
   }
 #endif
-#endif
 
   if (mtsb >= timestamp) {
-#if 0
-    ff->pCodecCtx->hurry_up = 0;
-#endif
     return (1); // ok!
   }
 
@@ -581,58 +521,6 @@ read_frame:
   reset_video_head(ff, packet);
   return (0); // seek failed.
 }
-
-void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, int ys) {
-;
-#if 0
-  int x,y;
-  for (x=0; x<w; x++)
-    for (y=0; y<h; y++)
-      memset(&(buf[SPP*(x+ys*y)]), 200, SPP*sizeof(uint8_t)); // XXX
-#endif
-}
-
-#if 0
-void render_buffer_raw(ffst *ff,
-    uint8_t* buf, int w, int h, int xoff, int ys,
-    uint8_t *src, int src_w, int src_h) {
-  // printf("DEBUG: memcpy %d %d -%dx%d\n", src_w, src_h, ff->movie_width, ff->movie_height);
-  memcpy (buf, src, avpicture_get_size(ff->render_fmt, ff->movie_width, ff->movie_height));
-  //memcpy (buf, src, (SPP*src_w*src_h));
-}
-
-
-void render_buffer_rgb(ffst *ff,
-    uint8_t* buf, int w, int h, int xoff, int ys,
-    uint8_t *src, int src_w, int src_h) {
-  ; // TODO: scale full siye src image into  strided buffer with x-offset.
-
-  int x,y,i;
-  int xalign=0;
-  int yalign=0;
-  // TODO; use imlib2 or gdk_pixbuf_scale_simple !
-#if 1 // crude scaling
-  double sx = (double)src_w/(double)(w+xoff);
-  double sy = (double)src_h/(double)h;
-  sx=sy; // keep aspect when scaling - AND sx might be wrong as (w+xoff) is not always full thumb width! (use xw)
-  for (x=0; ((xoff+x)*sx < src_w ) && ((x+xalign) < w); x++) {
-    for (y=0; y*sy<src_h && (y+yalign) < h; y++) {
-      int d= SPP* ((x+xalign)+ys*(y+yalign));
-      int s= SPP* ((int)rint(sx*(x+xoff))+src_w*((int)rint(sy*y)));
-      for (i=0;i<SPP;i++) buf[d+i] = src[s+i];
-    }
-  }
-#else // no scaling
-  for (x=0; ((x+xoff) < src_w ) && ((x+xalign) < w); x++) {
-    for (y=0; y<src_h && (y+yalign) < h; y++) {
-      int d= SPP* ((x+xalign)+ys*(y+yalign));
-      int s= SPP* (xoff+x+src_w*y);
-      for (i=0;i<SPP;i++) buf[d+i] = src[s+i];
-    }
-  }
-#endif
-}
-#endif
 
 /**
  * seeks to frame and decodes and scales video frame
@@ -668,29 +556,10 @@ void ff_render(void *ptr, unsigned long frame,
   //
   // TODO allow offset - letterbox
   //
-#ifdef HAVE_SWSCALE
         //printf("%dx%d@%d - %dx%d@%d\n",  ff->pCodecCtx->width, ff->pCodecCtx->height, ff->pCodecCtx->pix_fmt, ff->pCodecCtx->width, ff->pCodecCtx->height, ff->render_fmt);
         //ff->pSWSCtx = sws_getCachedContext(ff->pSWSCtx, ff->pCodecCtx->width, ff->pCodecCtx->height, ff->pCodecCtx->pix_fmt, ff->pCodecCtx->width, ff->pCodecCtx->height, ff->render_fmt, SWS_BICUBIC, NULL, NULL, NULL);
         ff->pSWSCtx = sws_getCachedContext(ff->pSWSCtx, ff->pCodecCtx->width, ff->pCodecCtx->height, ff->pCodecCtx->pix_fmt, ff->out_width, ff->out_height, ff->render_fmt, SWS_BICUBIC, NULL, NULL, NULL);
         sws_scale(ff->pSWSCtx, (const uint8_t * const*) ff->pFrame->data, ff->pFrame->linesize, 0, ff->pCodecCtx->height, ff->pFrameFMT->data, ff->pFrameFMT->linesize);
-#else
-	img_convert((AVPicture *)ff->pFrameFMT, ff->render_fmt,
-	    (AVPicture*)ff->pFrame, ff->pCodecCtx->pix_fmt,
-	    ff->out_width, ff->out_height); // TODO: test this
-	    //ff->pCodecCtx->width, ff->pCodecCtx->height);
-#endif
-        #if 0 // TODO if buf!= NULL - memcopy data there (again)
-          #if 0
-	    if (ff->render_fmt == PIX_FMT_RGB24 ) // || ff->render_fmt== PIX_FMT_RGBA)
-	      render_buffer_rgb(ff,
-		  buf, w, h, xoff, ys,
-		  ff->buffer, ff->movie_width, ff->movie_height);
-	    else
-          #endif
-	      render_buffer_raw(ff,
-		  buf, w, h, xoff, ys,
-		  ff->buffer, ff->movie_width, ff->movie_height);
-        #endif
 	av_free_packet(&ff->packet); /* XXX */
 	break;
       } else  {
@@ -775,26 +644,5 @@ void ff_resize(void *ptr, int w, int h, uint8_t *buf, JVINFO *i) {
     ff_set_bufferptr(ptr,buf);
   if (i) ff_get_info(ptr,i);
 }
-
-#if 0 // dlopen - plugin interface
-
-static JVPLUGIN ffmpeg_UI = {NULL,
-  &ff_initialize, &ff_cleanup,
-  &ff_create, &ff_destroy,
-  &ff_open_movie, &ff_close_movie,
-  &ff_render,
-  &ff_get_info,
-  &ff_get_framerate,
-  &ff_set_bufferptr,
-  &ff_get_bufferptr,
-  "ffmpeg","0.2"
-};
-
-JVPLUGIN *get_plugin_info(void) {
-  printf("FFMPEG: initializing.\n");
-  return &ffmpeg_UI;
-}
-
-#endif
 
 /* vi:set ts=8 sts=2 sw=2: */

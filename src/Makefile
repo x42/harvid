@@ -26,9 +26,7 @@ LOADLIBES+=`pkg-config --libs libavcodec libavformat libavutil libpng libswscale
 LOADLIBES+=-ljpeg
 LOADLIBES+=-lz -lm
 
-
-CFLAGS+=-DHAVE_SWSCALE -DICSD_RGB24
-CFLAGS+=-DHAVE_SYSLOG_H
+CFLAGS+=-DICSD_RGB24
 CFLAGS+=-DICSVERSION=\"$(VERSION)\"
 
 all: harvid

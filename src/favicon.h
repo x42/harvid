@@ -1,3 +1,19 @@
+/*
+   Copyright (C) 2008 Robin Gareus <robin@gareus.org>
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2, or (at your option)
+   any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 const uint8_t favicon_data[766] = {
  0x00,0x00,0x01,0x00,0x01,0x00,0x20,0x20,0x10,0x00,0x01,0x00,0x04,0x00,0xe8,0x02
 ,0x00,0x00,0x16,0x00,0x00,0x00,0x28,0x00,0x00,0x00,0x20,0x00,0x00,0x00,0x40,0x00

@@ -37,17 +37,22 @@
 #define SAMPLE_FMT_S16 AV_SAMPLE_FMT_S16
 #endif
 
+#if LIBAVUTIL_VERSION_INT < AV_VERSION_INT(50, 0, 0)
+#define AVMEDIA_TYPE_AUDIO CODEC_TYPE_AUDIO
+#endif
+
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(53, 2, 0)
+static inline int avformat_open_input(AVFormatContext **ps, const char *filename, void *fmt, void **options)
+{
+	return av_open_input_file(ps, filename, NULL, 0, NULL);
+}
+#endif
+
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(53, 5, 0)
 static inline AVCodecContext *
 avcodec_alloc_context3(AVCodec *codec __attribute__((unused)))
 {
 	return avcodec_alloc_context();
-}
-
-static inline int
-avcodec_open2(AVCodecContext *avctx, AVCodec *codec, void **options __attribute__((unused)))
-{
-	return avcodec_open(avctx, codec);
 }
 
 static inline AVStream *
@@ -63,6 +68,14 @@ avcodec_get_context_defaults3(AVCodecContext *s, AVCodec *codec)
 }
 
 #endif /* < 53.5.0 */
+
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(53, 5, 6)
+static inline int
+avcodec_open2(AVCodecContext *avctx, AVCodec *codec, void **options __attribute__((unused)))
+{
+	return avcodec_open(avctx, codec);
+}
+#endif /* <= 53.5.6 */
 
 #if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(53, 5, 0)
 static inline int

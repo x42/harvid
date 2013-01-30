@@ -1,11 +1,11 @@
 /*
-   sodankyla - video composition daemon
+   This file is part of harvid
 
-   Copyright (C) 2002,2003,2008 Robin Gareus <robin@gareus.org>
+   Copyright (C) 2002,2003,2008-2013 Robin Gareus <robin@gareus.org>
 
    This file contains GPL code from mini-http, micro-http and libcurl.
    by Jef Poskanzer <jef@mail.acme.com> and
-   Daniel Stenberg, <daniel@haxx.se>,
+   Daniel Stenberg, <daniel@haxx.se>.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,8 +18,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
-   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdio.h>
