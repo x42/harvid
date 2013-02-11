@@ -275,7 +275,7 @@ void ics_http_handler(
 			off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"index/\">File Index</a></li>\n");
 		}
 		off+=snprintf(msg+off, HPSIZE-off, "</ul>");
-		off+=snprintf(msg+off, HPSIZE-off, "<hr/><p>sodankyla-ics/%s at %s:%i</p>", ICSVERSION, c->d->local_addr, c->d->local_port);
+		off+=snprintf(msg+off, HPSIZE-off, "<hr/><p>%s at %s:%i</p>", SERVERVERSION, c->d->local_addr, c->d->local_port);
 		off+=snprintf(msg+off, HPSIZE-off, "\n</body>\n</html>");
 		SEND200(msg);
 		c->run=0; // close connection

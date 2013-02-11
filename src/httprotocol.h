@@ -32,7 +32,7 @@
 #define DOCTYPE "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n"
 #define HTMLOPEN "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head><meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />\n"
 
-#define SERVERVERSION "ics video-httpd " ICSVERSION ///< SERVER VERSION STRING
+#define SERVERVERSION "harvid " ICSVERSION ///< SERVER VERSION STRING
 #define PROTOCOL "HTTP/1.0" ///< HTTP protocol version for replies
 #define RFC1123FMT "%a, %d %b %Y %H:%M:%S GMT" ///< time format used in HTTP header
 

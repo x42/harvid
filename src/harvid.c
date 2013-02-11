@@ -269,7 +269,7 @@ char *hdl_server_status_html (CONN *c) {
   off+=snprintf(sm+off, STASIZ-off, "<p>concurrent connections: current/max-seen/limit: %d/%d/%d</p>\n", c->d->num_clients,c->d->max_clients, MAXCONNECTIONS );
   off+=dctrl_info_html(dc, sm+off, STASIZ-off);
   off+=vcache_info_html(vc, sm+off, STASIZ-off);
-  off+=snprintf(sm+off, STASIZ-off, "<hr/><p>sodankyla-ics/%s at %s:%i</p>", ICSVERSION, c->d->local_addr, c->d->local_port);
+  off+=snprintf(sm+off, STASIZ-off, "<hr/><p>harvid %s at %s:%i</p>", ICSVERSION, c->d->local_addr, c->d->local_port);
   off+=snprintf(sm+off, STASIZ-off, "\n</body>\n</html>");
   return (sm);
 }

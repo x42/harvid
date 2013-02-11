@@ -216,7 +216,7 @@ char *index_dir (const char *root, char *base_url, char *path, int opt) {
 
   if ((opt&OPT_CSV) == 0) {
     off+=snprintf(sm+off, IDXSIZ-off, DOCTYPE HTMLOPEN);
-    off+=snprintf(sm+off, IDXSIZ-off, "<title>ICS Index</title></head>\n<body>\n<h2>ICS - Index</h2>\n<p>\n");
+    off+=snprintf(sm+off, IDXSIZ-off, "<title>harvid Index</title></head>\n<body>\n<h2>harvid - Index</h2>\n<p>\n");
   }
 
   if (bl>1) {
@@ -232,7 +232,7 @@ char *index_dir (const char *root, char *base_url, char *path, int opt) {
 
   if ((opt&OPT_CSV) == 0) {
     off+=parse_dir(root, base_url, path, opt, sm+off, IDXSIZ-off, print_html);
-    off+=snprintf(sm+off, IDXSIZ-off, "<hr/><p>sodankyla-ics/%s</p>", ICSVERSION);
+    off+=snprintf(sm+off, IDXSIZ-off, "<hr/><p>"SERVERVERSION"</p>");
     off+=snprintf(sm+off, IDXSIZ-off, "\n</p>\n</body>\n</html>");
   } else {
     off+=parse_dir(root, base_url, path, opt, sm+off, IDXSIZ-off, print_csv);
