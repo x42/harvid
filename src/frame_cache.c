@@ -279,7 +279,7 @@ int cache_invalidate_buffer(void *p, int id, unsigned long frame, int w, int h) 
 #endif
 
 static char *flags2txt(int f) {
-  char *rv = (char*) calloc(1,sizeof(char));
+  char *rv = NULL;
   size_t off =0;
 
   if (f==0) {
@@ -316,7 +316,7 @@ size_t vcache_info_html(void *p, char *m, size_t n) {
     off+=snprintf(m+off, n-off,
         "<tr><td>%d</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%"PRId64"</td><td>%lld</td><td>%s</td></tr>\n",
 	i, cptr->id, tmp, cptr->w, cptr->h, cptr->frame, (long long) cptr->lru,(cptr->b?"alloc":"null"));
-    if (tmp) free(tmp);
+    free(tmp);
     i++;
     cptr=cptr->next;
   }
