@@ -1,2 +1,5 @@
+2013-02-11 (v0.1.0) Robin Gareus <robin@gareus.org>
+* more refactoring, add CSV index
+
 2013-01-30 (v0.0.1) Robin Gareus <robin@gareus.org>
 * refactored sodankyla/icsd

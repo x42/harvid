@@ -1,7 +1,5 @@
 /*
-   This file is part of harvid
-
-   Copyright (C) 2008-2013 Robin Gareus <robin@gareus.org>
+   Copyright (C) 2008 Robin Gareus <robin@gareus.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -16,31 +14,16 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _ics_handler_H
-#define _ics_handler_H
+#ifndef _harvid_enums_H
+#define _harvid_enums_H
 
-#include "socket_server.h"
+/* image output format */
+enum {FMT_RAW=0, FMT_JPG, FMT_PNG, FMT_PPM};
 
-/**
- * @brief request parameters
- *
- * request arguments as parsed by the ICS protocol handler
- * mix of JVARGS and VInfo-request parameters
- */
-typedef struct {
-  char *file_name;
-  int64_t frame;
-  int decode_fmt;
-  int render_fmt;
-  int out_width;
-  int out_height;
-  int idx_option;
-} ics_request_args;
+/* info output format */
+enum {OUT_HTML=0, OUT_JSON, OUT_PLAIN, OUT_CSV};
 
-void ics_http_handler(
-		CONN *c,
-		char *host, char *protocol,
-		char *path, char *method_str,
-		char *query, char *cookie
-		);
+/* http index - binary flags */
+enum {OPT_FLAT=1, OPT_CSV=2};
+
 #endif

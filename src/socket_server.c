@@ -229,7 +229,7 @@ static void *socket_handler(void *cn) {
   pthread_mutex_unlock(&c->d->lock);
 
   dlog(DLOG_INFO, "CON: closed client connection (%u) from %s:%d.\n",c->fd, c->client_address, c->client_port);
-  dlog(DLOG_DEBUG, "SRV: now %i connections active\n",c->d->num_clients); // XXX
+  dlog(DLOG_DEBUG, "SRV: now %i connections active\n",c->d->num_clients);
 
   if (c->client_address) free(c->client_address);
   free(c);

@@ -1,7 +1,7 @@
 /*
    This file is part of harvid
 
-   Copyright (C) 2007-2013 Robin Gareus <robin@gareus.org>
+   Copyright (C) 2008-2013 Robin Gareus <robin@gareus.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -16,26 +16,20 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _XJFF_H
-#define _XJFF_H
+#ifndef _FRAME_CACHE_H
+#define _FRAME_CACHE_H
 
+#include <stdlib.h>
 #include <stdint.h>
-#include "jv.h"
 
-void ff_create(void **ff);
-void ff_destroy(void **ff);
-void ff_get_info(void *ptr, JVINFO *i);
+void vcache_create(void **p);
+void vcache_destroy(void **p);
+void vcache_resize(void **p, int size);
+void vcache_clear (void *p);
 
-void ff_render(void *ptr, unsigned long frame,
-    uint8_t* buf, int w, int h, int xoff, int xw, int ys);
+uint8_t *vcache_get_buffer(void *p, int id, int64_t frame, int w, int h);
 
-int ff_open_movie(void *ptr, JVARGS *a);
-int ff_close_movie(void *ptr);
+void vcache_info_dump(void *p); // dump debug info to stdout
+size_t vcache_info_html(void *p, char *m, size_t n); // write HTML to m - max length n
 
-void ff_initialize (void);
-void ff_cleanup (void);
-
-uint8_t *ff_get_bufferptr(void *ptr);
-uint8_t *ff_set_bufferptr(void *ptr, uint8_t *buf);
-void ff_resize(void *ptr, int w, int h, uint8_t *buf, JVINFO *i);
 #endif

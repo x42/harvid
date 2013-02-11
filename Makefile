@@ -9,8 +9,7 @@ ifeq ($(ARCH),mingw)
   LDFLAGS=-L$(WINEROOT)/lib/ -L${WINEROOT}/bin
 else
   ifeq ($(shell uname),Darwin)
-  ARCHFLAGS=-fnested-functions
-  ARCHFLAGS+=-arch i386 -arch ppc -arch x86_64
+  ARCHFLAGS=-arch i386 -arch ppc -arch x86_64
   ARCHFLAGS+=-isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
   ARCHFLAGS+=-headerpad_max_install_names
   else

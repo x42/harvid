@@ -16,27 +16,18 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _XJCD_H
-#define _XJCD_H
 
-#include <stdlib.h>
-#include <stdint.h>
+#include <string.h>
+#include "vinfo.h"
 
-void *get_decoder(int id); // client needs to provide this function
+void jvi_init (VInfo *ji) {
+  memset (ji,0,sizeof(VInfo));
+  memset(&ji->framerate,0, sizeof(TimecodeRate));
+  ji->framerate.num=25;
+  ji->framerate.den=1;
+  ji->out_width=ji->out_height=-1;
+}
 
-void cache_create(void **p);
-void cache_destroy(void **p);
-void cache_resize(void **p, int size);
-uint8_t *cache_get_buffer(void *p, int id, unsigned long frame, int w, int h);
-void dumpcacheinfo(void *p); // dump debug info to stdout
-size_t formatcacheinfo(void *p, char *m, size_t n); // write HTML to m - max length n
-
-void xjv_clear_cache (void *p);
-/*
-void cache_render(void *p, unsigned long frame,
-    uint8_t* buf, int w, int h, int xoff, int xw, int ys);
-
-// TODO cache invalidate. lock/unlock
-
-*/
-#endif
+void jvi_free (VInfo *i) {
+  ;
+}

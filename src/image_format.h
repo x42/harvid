@@ -16,12 +16,22 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _writer_H
-#define _writer_H
-#include "jv.h"
-enum {OUT_FMT_JPEG=1, OUT_FMT_PNG=2, OUT_FMT_PPM=3};
+#ifndef _image_format_H
+#define _image_format_H
+#include "vinfo.h"
 
-void write_image(JVARGS *ja, JVINFO *ji, uint8_t *buf);
-long int format_image(uint8_t **out, JVARGS *ja, JVINFO *ji, uint8_t *buf);
+/** write image to memory-buffer 
+ * @param out pointer to memory-area for the formatted image
+ * @param ji input data description (width, height, stride,..)
+ * @param buf raw image data to format
+ */
+size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf);
+
+/** write image to file
+ * @param ji input data description (width, height, stride,..)
+ * @param buf raw image data to format
+ */
+void write_image(char *file_name, int render_fmt, VInfo *ji, uint8_t *buf);
+
 
 #endif

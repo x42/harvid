@@ -4,7 +4,8 @@ Priority: optional
 Maintainer: Robin Gareus <robin@gareus.org>
 Build-Depends: debhelper (>= 8.0.0),
  libavcodec-dev, libavformat-dev, libswscale-dev,
- libpng12-dev, libjpeg8-dev
+ libpng12-dev,
+ libjpeg8-dev | libjpeg62-dev
 Homepage: https://github.com/x42/ltc-tools
 Standards-Version: 3.9.3
 

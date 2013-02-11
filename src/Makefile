@@ -15,7 +15,9 @@ ifeq ($(shell pkg-config --exists libpng || echo no), no)
   $(error "libpng is required - install libpng-dev")
 endif
 
-# TODO check for libjpeg
+ifeq ($(shell echo -e '\#include <stdio.h>\n\#include <jpeglib.h>\nint main() { struct jpeg_error_mgr jerr; jpeg_std_error(&jerr); return 0; }' | gcc -x c -o /dev/null - -ljpeg &>/dev/null || echo no), no)
+  $(error "libjpeg is required - install libjpeg-dev")
+endif
 
 
 CFLAGS+=$(ARCHFLAGS)
@@ -34,19 +36,22 @@ all: harvid
 HARVID_H = \
   daemon_log.h daemon_util.h \
   socket_server.h \
-  jv.h xjv-cache.h xjv-ffmpeg.h \
+  vinfo.h frame_cache.h ffdecoder.h \
+  decoder_ctrl.h \
   ffcompat.h \
+  enums.h \
+  favicon.h \
   ics_handler.h httprotocol.h \
-  v_writer.h \
+  image_format.h \
   timecode.h
 
 HARVID_SRC = \
-	harvid.c \
+  harvid.c \
   daemon_log.c daemon_util.c \
-  httpindex.c httprotocol.c ics_handler.c \
-  socket_server.c \
-  jv.c xjv-cache.c  xjv-ffmpeg.c \
-  v_writer.c \
+  fileindex.c httprotocol.c ics_handler.c \
+  socket_server.c vinfo.c \
+  decoder_ctrl.c frame_cache.c ffdecoder.c \
+  image_format.c \
   timecode.c
 
 harvid: $(HARVID_SRC) $(HARVID_H)

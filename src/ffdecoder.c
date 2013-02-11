@@ -24,8 +24,8 @@
 #include "ffcompat.h"
 #include <libswscale/swscale.h>
 
-#include "jv.h"
-#include "xjv-ffmpeg.h"
+#include "vinfo.h"
+#include "ffdecoder.h"
 
 /* xj5 seek modes */
 enum {  SEEK_ANY, ///< directly seek to givenvideo frame
@@ -192,7 +192,7 @@ void ff_get_framerate(void *ptr, TimecodeRate *fr) {
   }
 
   fr->drop=0;
-  if ((ff->framerate == 29.97) || (ff->framerate == 30000.0/1001.0)) // XXX also 23.9.. and 24.9..
+  if ((ff->framerate == 29.97) || (ff->framerate == 30000.0/1001.0))
     fr->drop=1;
 }
 
@@ -208,13 +208,13 @@ void ff_set_framerate(ffst *ff) {
   }
 }
 
-int ff_open_movie(void *ptr, JVARGS *a) {
+int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   int i;
   AVCodec *pCodec;
   ffst *ff = (ffst*) ptr;
 
   if (ff->pFrameFMT) {
-    if (ff->current_file && !strcmp(a->file_name, ff->current_file)) return(0);
+    if (ff->current_file && !strcmp(file_name, ff->current_file)) return(0);
     /* close currently open movie */
     if (!want_quiet)
     fprintf(stderr,"replacing current video file buffer\n");
@@ -231,17 +231,17 @@ int ff_open_movie(void *ptr, JVARGS *a) {
   ff->tpf=1.0;
   ff->avprev=0;
   ff->stream_pts_offset=AV_NOPTS_VALUE;
-  ff->render_fmt=a->render_fmt;
+  ff->render_fmt=render_fmt;
 
   /* Open video file */
-  if(avformat_open_input(&ff->pFormatCtx, a->file_name, NULL, NULL) <0)
+  if(avformat_open_input(&ff->pFormatCtx, file_name, NULL, NULL) <0)
   {
-    fprintf( stderr, "Cannot open video file %s\n", a->file_name);
+    fprintf( stderr, "Cannot open video file %s\n", file_name);
     return (-1);
   }
 #if 1 /// XXX http is not neccesarily a live-stream!
   // TODO: ff_seeflags(sf) API to set/get value
-  if (!strncmp(a->file_name, "http://", 7)) {
+  if (!strncmp(file_name, "http://", 7)) {
     ff->seekflags = SEEK_LIVESTREAM;
   } else {
     ff->seekflags = SEEK_CONTINUOUS;
@@ -251,12 +251,12 @@ int ff_open_movie(void *ptr, JVARGS *a) {
 
   /* Retrieve stream information */
   if(avformat_find_stream_info(ff->pFormatCtx, NULL)<0) {
-    fprintf( stderr, "Cannot find stream information in file %s\n", a->file_name);
+    fprintf( stderr, "Cannot find stream information in file %s\n", file_name);
     avformat_close_input(&ff->pFormatCtx);
     return (-1);
   }
 
-  if (want_verbose) av_dump_format(ff->pFormatCtx, 0, a->file_name, 0);
+  if (want_verbose) av_dump_format(ff->pFormatCtx, 0, file_name, 0);
 
   /* Find the first video stream */
   for(i=0; i<ff->pFormatCtx->nb_streams; i++)
@@ -273,7 +273,7 @@ int ff_open_movie(void *ptr, JVARGS *a) {
     }
 
   if(ff->videoStream==-1) {
-    fprintf( stderr, "Cannot find a video stream in file %s\n", a->file_name);
+    fprintf( stderr, "Cannot find a video stream in file %s\n", file_name);
     avformat_close_input(&ff->pFormatCtx);
     return (-1);
   }
@@ -283,9 +283,11 @@ int ff_open_movie(void *ptr, JVARGS *a) {
   {
   AVStream *avs = ff->pFormatCtx->streams[ff->videoStream];
 
+#if 0 // DEBUG duration
   printf("DURATION frames from AVstream: %"PRIi64"\n", avs->nb_frames);
   printf("DURATION duration from AVstream: %"PRIi64"\n", avs->duration /* * av_q2d(avs->r_frame_rate) * av_q2d(avs->time_base)*/);
   printf("DURATION duration from FormatContext: %lu\n", ff->frames = ff->pFormatCtx->duration * ff->framerate / AV_TIME_BASE);
+#endif
 
   if (avs->nb_frames != 0) {
     ff->frames = avs->nb_frames;
@@ -337,14 +339,14 @@ int ff_open_movie(void *ptr, JVARGS *a) {
   // Find the decoder for the video stream
   pCodec=avcodec_find_decoder(ff->pCodecCtx->codec_id);
   if(pCodec==NULL) {
-    fprintf( stderr, "Cannot find a codec for file: %s\n", a->file_name);
+    fprintf( stderr, "Cannot find a codec for file: %s\n", file_name);
     avformat_close_input(&ff->pFormatCtx);
     return(-1);
   }
 
   // Open codec
   if(avcodec_open2(ff->pCodecCtx, pCodec, NULL)<0) {
-    fprintf( stderr, "Cannot open the codec for file %s\n", a->file_name);
+    fprintf( stderr, "Cannot open the codec for file %s\n", file_name);
     avformat_close_input(&ff->pFormatCtx);
     return(-1);
   }
@@ -364,11 +366,10 @@ int ff_open_movie(void *ptr, JVARGS *a) {
     return(-1);
   }
 
-  ff->out_width=a->out_width>0?a->out_width:-1;
-  ff->out_height=a->out_height>0?a->out_height:-1;
+  ff->out_width=ff->out_height=-1;
   ff_init_moviebuffer(ff);
 
-  ff->current_file=strdup(a->file_name);
+  ff->current_file=strdup(file_name);
   return(0);
 }
 
@@ -585,7 +586,7 @@ void ff_render(void *ptr, unsigned long frame,
   }
 }
 
-void ff_get_info(void *ptr, JVINFO *i) {
+void ff_get_info(void *ptr, VInfo *i) {
   ffst *ff = (ffst*) ptr;
   if (!i) return;
   //printf("DEBUG xjv-ffmpeg get_info\n");
@@ -634,7 +635,7 @@ uint8_t *ff_get_bufferptr(void *ptr) {
   return ff->buffer;
 }
 
-void ff_resize(void *ptr, int w, int h, uint8_t *buf, JVINFO *i) {
+void ff_resize(void *ptr, int w, int h, uint8_t *buf, VInfo *i) {
   ffst *ff = (ffst*) ptr;
   ff->out_width=w;
   ff->out_height=h;

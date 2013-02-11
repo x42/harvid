@@ -23,48 +23,52 @@
 #include <getopt.h>
 #include <math.h>
 #include <sys/stat.h>
+#include <libgen.h> // basename
 
 #include "daemon_log.h"
 #include "daemon_util.h"
 #include "socket_server.h"
 
+#include "decoder_ctrl.h"
+#include "image_format.h"
+#include "ffdecoder.h"
+#include "frame_cache.h"
+#include "enums.h"
+
+#include "ffcompat.h"
+
 #ifndef HAVE_WINDOWS
 #include <arpa/inet.h> // inet_addr
 #endif
-
-extern int debug_level;
-
-#include "jv.h"
-#include "v_writer.h"
-#include "xjv-ffmpeg.h"
-#include "xjv-cache.h"
 
 #ifndef DEFAULT_PORT
 #define DEFAULT_PORT 1554
 #endif
 
+extern int debug_level;
+
 char *program_name;
-int  want_quiet =0;
-int  want_verbose =0;
+int   want_quiet =0;
+int   want_verbose =0;
 unsigned short  cfg_port = DEFAULT_PORT;
 unsigned int  cfg_host = 0; /* = htonl(INADDR_ANY) */
-int  cfg_daemonize = 0;
-int  cfg_syslog = 0;
+int   cfg_daemonize = 0;
+int   cfg_syslog = 0;
+int   cfg_noindex = 0;
+int   cfg_adminmask = 1;
 char *cfg_logfile = NULL;
 char *cfg_chroot = NULL;
 char *cfg_username = NULL;
 char *cfg_groupname = NULL;
-int initial_cache_size = 128;
+int   initial_cache_size = 128;
 
 static void printversion (void) {
-  printf ("harvid %s\n\n", ICSVERSION);
-  // TODO: show HTTP-server-version, decoder revision etc.. ?!
+  printf ("harvid %s\n", ICSVERSION);
+  printf ("Compiled with %s %s %s\n\n", LIBAVFORMAT_IDENT, LIBAVCODEC_IDENT, LIBAVUTIL_IDENT);
   printf ("Copyright (C) GPL 2002-2013 Robin Gareus <robin@gareus.org>\n");
 }
 
-#include <libgen.h> // basename
-
-void usage (int status) {
+static void usage (int status) {
   printf ("%s - http ardour video server\n\n", basename(program_name));
   printf ("Usage: %s [OPTION] [document-root]\n", program_name);
   printf ("\n"
@@ -182,7 +186,7 @@ static int decode_switches (int argc, char **argv) {
         break;
       case 'C':
         initial_cache_size = atoi(optarg);
-        if (initial_cache_size < 2 || initial_cache_size > 8192) // XXX what values are sane?
+        if (initial_cache_size < 2 || initial_cache_size > 8192)
           initial_cache_size = 128;
         break;
       case 'V':
@@ -200,15 +204,15 @@ static int decode_switches (int argc, char **argv) {
 // -=-=-=-=-=-=- main -=-=-=-=-=-=-
 #include "ffcompat.h"
 
-void *dc; // decoder control - TODO make part of daemon struct ?
-void *vc = NULL;  // video cache -> hook into dc ? or daemon ?
+void *dc = NULL; // decoder control - TODO make part of daemon struct ?
+void *vc = NULL; // video cache -> hook into dc ? or daemon ?
 
 int main (int argc, char **argv) {
   program_name = argv[0];
 
   char *docroot = "/" ;
 
-  // TODO: read and apply resource configuration
+  // TODO: read and apply resource configuration file
 
   debug_level=DLOG_WARNING;
 
@@ -224,58 +228,53 @@ int main (int argc, char **argv) {
   }
   // TODO: summarize config
 
-  // go go go
+  /* all systems go */
 
-  if (cfg_logfile || cfg_syslog)
-    dlog_open(cfg_logfile); // NULL == syslog ;; no dlog_open() -> stderr/out
+  if (cfg_logfile || cfg_syslog) dlog_open(cfg_logfile);
   if (cfg_chroot) do_chroot(cfg_chroot);
-  if (cfg_daemonize) daemonize(); // FIXME: daemonize only after opening socket ?! -> exit(1)
+  if (cfg_daemonize) daemonize(); // FIXME: daemonize only after sucessfully opening socket ?! -> exit(1)
 
   ff_initialize();
 
-  cache_create(&vc);
-  cache_resize(&vc, initial_cache_size);
-  decoder_control_create(&dc);
+  vcache_create(&vc);
+  vcache_resize(&vc, initial_cache_size);
+  dctrl_create(&dc);
 
-  //cfg_host=htonl(INADDR_ANY);
-  //cfg_host=htonl(INADDR_LOOPBACK);
-  //cfg_host=inet_addr("127.0.0.1");
-  // TODO: start servers as threads
   dlog(DLOG_INFO, "Initialization complete. starting server.\n");
   start_tcp_server(cfg_host, cfg_port, docroot, cfg_username, cfg_groupname, NULL);
-  // TODO daemonize() here if more than one has started.
-  // and wait until all of them have exited.
 
-  // cleanup
+  /* cleanup */
 
   ff_cleanup();
-  decoder_control_destroy(&dc);
-  cache_destroy(&vc);
+  dctrl_destroy(&dc);
+  vcache_destroy(&vc);
   dlog_close();
   return(0);
 }
 
 //  -=-=-=-=-=-=- video server callbacks -=-=-=-=-=-=-
+/*
+ * these are called from protocol_handler() in httprotocol.c
+ */
 #include "httprotocol.h"
 #include "ics_handler.h"
 
 #define STASIZ (262100)
-char *server_status_html (CONN *c) {
+char *hdl_server_status_html (CONN *c) {
   char *sm = malloc(STASIZ * sizeof(char));
   int off =0;
-  // TODO: built-in style-sheet || optional header from file or/and XSLT
   off+=snprintf(sm+off, STASIZ-off, DOCTYPE HTMLOPEN);
   off+=snprintf(sm+off, STASIZ-off, "<title>ICS Status</title></head>\n<body>\n<h2>ICS - Status</h2>\n\n");
   off+=snprintf(sm+off, STASIZ-off, "<p>status: ok, online.</p>\n");
   off+=snprintf(sm+off, STASIZ-off, "<p>concurrent connections: current/max-seen/limit: %d/%d/%d</p>\n", c->d->num_clients,c->d->max_clients, MAXCONNECTIONS );
-  off+=formatdecoderctlinfo(dc, sm+off, STASIZ-off);
-  off+=formatcacheinfo(vc, sm+off, STASIZ-off);
+  off+=dctrl_info_html(dc, sm+off, STASIZ-off);
+  off+=vcache_info_html(vc, sm+off, STASIZ-off);
   off+=snprintf(sm+off, STASIZ-off, "<hr/><p>sodankyla-ics/%s at %s:%i</p>", ICSVERSION, c->d->local_addr, c->d->local_port);
   off+=snprintf(sm+off, STASIZ-off, "\n</body>\n</html>");
   return (sm);
 }
 
-static char *session_info_json (CONN *c, ics_request_args *a, JVINFO *ji) {
+static char *file_info_json (CONN *c, ics_request_args *a, VInfo *ji) {
   char *im = malloc(256 * sizeof(char));
   int off =0;
   off+=snprintf(im+off,256-off, "{");
@@ -285,10 +284,11 @@ static char *session_info_json (CONN *c, ics_request_args *a, JVINFO *ji) {
   off+=snprintf(im+off,256-off, ",\"framerate\":%.2f",timecode_rate_to_double(&ji->framerate));
   off+=snprintf(im+off,256-off, ",\"duration\":%"PRId64 ,ji->frames);
   off+=snprintf(im+off,256-off, "}");
+  jvi_free(ji);
   return (im);
 }
 
-static char *session_info_html (CONN *c, ics_request_args *a, JVINFO *ji) {
+static char *file_info_html (CONN *c, ics_request_args *a, VInfo *ji) {
   char *im = malloc(STASIZ * sizeof(char));
   int off =0;
   char smpte[14];
@@ -303,10 +303,11 @@ static char *session_info_html (CONN *c, ics_request_args *a, JVINFO *ji) {
   off+=snprintf(im+off, STASIZ-off, "<li>Duration: %.2f sec</li>\n",(double)ji->frames/timecode_rate_to_double(&ji->framerate));
   off+=snprintf(im+off, STASIZ-off, "<li>Duration: %llu frames</li>\n",(long long unsigned) ji->frames);
   off+=snprintf(im+off, STASIZ-off, "\n</ul>\n</body>\n</html>");
+  jvi_free(ji);
   return (im);
 }
 
-static char *session_info_raw (CONN *c, ics_request_args *a, JVINFO *ji) {
+static char *file_info_raw (CONN *c, ics_request_args *a, VInfo *ji) {
   char *im = malloc(STASIZ * sizeof(char));
   int off =0;
   char smpte[14];
@@ -317,98 +318,95 @@ static char *session_info_raw (CONN *c, ics_request_args *a, JVINFO *ji) {
   off+=snprintf(im+off, STASIZ-off, "%llu\n",(long long unsigned) ji->frames); // duration
   off+=snprintf(im+off, STASIZ-off, "0.0\n"); // start-offset TODO
   off+=snprintf(im+off, STASIZ-off, "%f\n",ji->movie_aspect);
+  jvi_free(ji);
   return (im);
 }
 
-char *session_info (CONN *c, ics_request_args *a) {
-  JVINFO ji;
-  init_jvi(&ji);
+char *hdl_file_info (CONN *c, ics_request_args *a) {
+  VInfo ji;
   int vid;
-#ifdef USE_SESSIONXXX // mislabled fn - this is file_info() !!
-  jvsession_args sa;
-  if (vs_getobj(vs,0, (jv_framenumber) a->frame, &sa)) {
-    // TODO: error - session lookup
-  }
-  vid = jv_get_id(dc, sa.file_name);
-   a->frame = sa.frame;
-   free_jvs(&sa);
-#else
-  vid = jv_get_id(dc, a->file_name);
-#endif
-  jv_get_info(dc, vid, &ji);
-  switch (a->render_fmt) {  // XXX make dedicated parameter to select info-format - TODO add xjinfo XML!
-    case 2:
-      return session_info_raw(c,a,&ji);  // TODO free_jvi()
+  vid = dctrl_get_id(dc, a->file_name);
+  jvi_init(&ji);
+  dctrl_get_info(dc, vid, &ji);
+  switch (a->render_fmt) {
+    case OUT_PLAIN:
+      return file_info_raw(c,a,&ji);
       break;
-    case 1:
-      return session_info_json(c,a,&ji);  // TODO: free_jvi();
+    case OUT_JSON:
+      return file_info_json(c,a,&ji);
       break;
+    case OUT_CSV: // TODO
     default:
       break;
   }
-  return session_info_html(c,a,&ji);
-  free_jvi(&ji);
+  return file_info_html(c,a,&ji);
 }
+
 /////////////
 
-/*
- * this gets called from protocol_handler() in httprotocol.c
- */
-int hardcoded_video(int fd, httpheader *h, ics_request_args *a) {
-  JVINFO ji;
+int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
+  VInfo ji;
   int vid;
-  vid = jv_get_id(dc, a->file_name);
-
-  init_jvi(&ji);
-  //jv_get_info(dc, vid, &ji);
-  // TODO set a->decode_fmt; -- overridden by my_open_movie(..)
-  jv_get_info_scale(dc, vid, &ji, a->out_width, a->out_height);
-  uint8_t *bptr = cache_get_buffer(vc, vid, a->frame, ji.out_width, ji.out_height);
-
   uint8_t *optr = NULL;
   long int olen = 0;
-  JVARGS out;
-  init_jva(&out);
-  out.render_fmt = a->render_fmt;
+  uint8_t *bptr;
 
-  if (out.render_fmt) {
-    // TODO: cache formatted image..
-    olen = format_image(&optr, &out, &ji, bptr);
-  } else {
-    olen = ji.buffersize;
-    optr=bptr;
+  vid = dctrl_get_id(dc, a->file_name);
+  // TODO check valid vid early on -> bail out here already
+
+  jvi_init(&ji);
+
+  //dctrl_get_info(dc, vid, &ji);
+  // TODO set a->decode_fmt; -- overridden by my_open_movie(..)
+  dctrl_get_info_scale(dc, vid, &ji, a->out_width, a->out_height);
+  bptr = vcache_get_buffer(vc, vid, a->frame, ji.out_width, ji.out_height);
+
+  if (!bptr) {
+    dlog(DLOG_ERR, "VID: error decoding video file for fd:%d\n",fd);
+    httperror(fd, 500, NULL, NULL);
+    return (0);
   }
 
-  if(olen>0 && optr) {
+  switch (a->render_fmt) {
+    case FMT_RAW:
+      olen = ji.buffersize;
+      optr = bptr;
+      break;
+    default:
+      olen = format_image(&optr, a->render_fmt, &ji, bptr);
+      break;
+  }
+
+  if(olen > 0 && optr) {
     dlog(DLOG_DEBUG, "VID: sending %li bytes to fd:%d.\n", olen, fd);
-    switch (out.render_fmt) {
-      case 0:
-        h->ctype = "image/raw";  // FIXME RGB24
+    switch (a->render_fmt) {
+      case FMT_RAW:
+        h->ctype = "image/raw";
         break;
-      case OUT_FMT_JPEG:
+      case FMT_JPG:
         h->ctype = "image/jpeg";
         break;
-      case OUT_FMT_PNG:
+      case FMT_PNG:
         h->ctype = "image/png";
         break;
-      case OUT_FMT_PPM:
+      case FMT_PPM:
         h->ctype = "image/ppm";
         break;
       default:
         h->ctype = "image/unknown";
     }
     http_tx(fd, 200, h, olen, optr);
-    if (out.render_fmt) free(optr); // free formatted image
+    if (a->render_fmt != FMT_RAW) free(optr); // free formatted image
   } else {
-    dlog(DLOG_ERR, "VID: error decoding video file for fd:%d\n",fd);
+    dlog(DLOG_ERR, "VID: error formatting image for fd:%d\n",fd);
     httperror(fd, 500, NULL, NULL);
   }
-  free_jvi(&ji);
+  jvi_free(&ji);
   return (0);
 }
 
-void ics_clear_cache() {
-  xjv_clear_cache(vc);
+void hdl_clear_cache() {
+  vcache_clear(vc);
 }
 
 // vim:sw=2 sts=2 ts=8 et:

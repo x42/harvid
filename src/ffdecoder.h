@@ -1,7 +1,7 @@
 /*
    This file is part of harvid
 
-   Copyright (C) 2008-2013 Robin Gareus <robin@gareus.org>
+   Copyright (C) 2007-2013 Robin Gareus <robin@gareus.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -16,31 +16,25 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _ics_handler_H
-#define _ics_handler_H
+#ifndef _FFDECODER_H
+#define _FFDECODER_H
 
-#include "socket_server.h"
+#include <stdint.h>
 
-/**
- * @brief request parameters
- *
- * request arguments as parsed by the ICS protocol handler
- * mix of JVARGS and VInfo-request parameters
- */
-typedef struct {
-  char *file_name;
-  int64_t frame;
-  int decode_fmt;
-  int render_fmt;
-  int out_width;
-  int out_height;
-  int idx_option;
-} ics_request_args;
+void ff_create(void **ff);
+void ff_destroy(void **ff);
+void ff_get_info(void *ptr, VInfo *i);
 
-void ics_http_handler(
-		CONN *c,
-		char *host, char *protocol,
-		char *path, char *method_str,
-		char *query, char *cookie
-		);
+void ff_render(void *ptr, unsigned long frame,
+    uint8_t* buf, int w, int h, int xoff, int xw, int ys);
+
+int ff_open_movie(void *ptr, char *file_name, int render_fmt);
+int ff_close_movie(void *ptr);
+
+void ff_initialize (void);
+void ff_cleanup (void);
+
+uint8_t *ff_get_bufferptr(void *ptr);
+uint8_t *ff_set_bufferptr(void *ptr, uint8_t *buf);
+void ff_resize(void *ptr, int w, int h, uint8_t *buf, VInfo *i);
 #endif

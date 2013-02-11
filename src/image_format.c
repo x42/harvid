@@ -31,14 +31,15 @@
 #include <jpeglib.h>
 #include <png.h>
 
-#include "jv.h"
+#include "vinfo.h"
+#include "enums.h"
 
 extern int want_quiet;
 extern int want_verbose;
 
 int cfg_jpeg_quality = 75;
 
-static int write_jpeg(JVINFO *ji, uint8_t *buffer, FILE *x) {
+static int write_jpeg(VInfo *ji, uint8_t *buffer, FILE *x) {
   uint8_t *line;
   int n, y=0, i, line_width;
 
@@ -58,7 +59,7 @@ static int write_jpeg(JVINFO *ji, uint8_t *buffer, FILE *x) {
   cjpeg.in_color_space = JCS_RGB;
 
   jpeg_set_defaults (&cjpeg);
-  jpeg_set_quality (&cjpeg, cfg_jpeg_quality, TRUE); // TODO: use config var
+  jpeg_set_quality (&cjpeg, cfg_jpeg_quality, TRUE);
   cjpeg.dct_method = JDCT_FASTEST;
 
   jpeg_stdio_dest (&cjpeg, x);
@@ -84,7 +85,7 @@ static int write_jpeg(JVINFO *ji, uint8_t *buffer, FILE *x) {
   return(0);
 }
 
-static int write_png(JVINFO *ji, uint8_t *image, FILE *x) {
+static int write_png(VInfo *ji, uint8_t *image, FILE *x) {
   register int y;
   png_bytep rowpointers[ji->out_height];
   png_infop info_ptr;
@@ -119,7 +120,7 @@ static int write_png(JVINFO *ji, uint8_t *image, FILE *x) {
   return(0);
 }
 
-static int write_ppm(JVINFO *ji, uint8_t *image, FILE *x) {
+static int write_ppm(VInfo *ji, uint8_t *image, FILE *x) {
 
   fprintf(x,"P6\n%d %d\n255\n",ji->out_width,ji->out_height);
   fwrite(image,ji->out_height,3*ji->out_width,x);
@@ -145,17 +146,19 @@ static FILE *open_outfile(char *filename) {
   return x;
 }
 
-/* Function to get an image, called by main */
-long int format_image(uint8_t **out, JVARGS *ja, JVINFO *ji, uint8_t *buf) {
-#ifndef HAVE_WINDOWS
-  FILE *x = tmpfile();
-#else
+size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf) {
+#ifdef __USE_XOPEN2K8
+	size_t rs = 0;
+	FILE *x = open_memstream((char**) out, &rs);
+#elif defined HAVE_WINDOWS
   char tfn[L_tmpnam]; // = "C:\\icsd.tmp"
 	tmpnam(tfn);
   FILE *x = fopen(tfn, "w+b");
+#else
+  FILE *x = tmpfile();
 #endif
   if (x) {
-    switch (ja->render_fmt) {
+    switch (render_fmt) {
       case 1:
 	while (write_jpeg(ji, buf, x))
 	  fprintf(stderr, "Could not write tmpfile\n");
@@ -169,19 +172,23 @@ long int format_image(uint8_t **out, JVARGS *ja, JVINFO *ji, uint8_t *buf) {
 	  fprintf(stderr, "Could not write tmpfile\n");
 	break;
       default:
-	fprintf(stderr, "Unknown outformat %d\n", ja->render_fmt);
+	fprintf(stderr, "Unknown outformat %d\n", render_fmt);
 	break;
     }
-#ifdef HAVE_WINDOWS
+#ifdef __USE_XOPEN2K8
+		fclose(x);
+		return rs;
+#elif defined HAVE_WINDOWS
 		fclose(x);
 		x = fopen(tfn, "rb");
-#endif
+#else
 		fflush(x);
+#endif
     fseek (x , 0 , SEEK_END);
     long int rsize = ftell (x);
     rewind(x);
 		if (fseek(x, 0L, SEEK_SET) < 0) {
-			fprintf(stderr,"debug: seek failed!!!!!!!!!!!!!\n");
+			; // fprintf(stderr,"debug: seek failed!!!!!!!!!!!!!\n");
 		}
 		fflush(x);
     *out = (uint8_t*) malloc(rsize*sizeof(uint8_t));
@@ -199,32 +206,31 @@ long int format_image(uint8_t **out, JVARGS *ja, JVINFO *ji, uint8_t *buf) {
   return(0);
 }
 
-/* Function to write an image to file, called by main */
-void write_image(JVARGS *ja, JVINFO *ji, uint8_t *buf) {
+void write_image(char *file_name, int render_fmt, VInfo *ji, uint8_t *buf) {
   FILE *x;
-  if ( (x = open_outfile(ja->file_name)) ) {
-    switch (ja->render_fmt) {
-      case 1:
+  if ( (x = open_outfile(file_name)) ) {
+    switch (render_fmt) {
+      case FMT_JPG:
 	while (write_jpeg(ji, buf, x))
-	  fprintf(stderr, "Could not write outputfile %s\n", ja->file_name);
+	  fprintf(stderr, "Could not write outputfile %s\n", file_name);
 	break;
-      case 2:
+      case FMT_PNG:
 	while (write_png(ji, buf, x))
-	  fprintf(stderr, "Could not write outputfile %s\n", ja->file_name);
+	  fprintf(stderr, "Could not write outputfile %s\n", file_name);
 	break;
-      case 3:
+      case FMT_PPM:
 	while (write_ppm(ji, buf, x))
-	  fprintf(stderr, "Could not write outputfile %s\n", ja->file_name);
+	  fprintf(stderr, "Could not write outputfile %s\n", file_name);
 	break;
       default:
-	fprintf(stderr, "Unknown outformat %d\n", ja->render_fmt);
+	fprintf(stderr, "Unknown outformat %d\n", render_fmt);
 	break;
     }
-    if (strcmp(ja->file_name,"-")) fclose(x);
+    if (strcmp(file_name,"-")) fclose(x);
     if (want_verbose)
-    	fprintf(stderr, "Outputfile %s closed\n", ja->file_name);
+    	fprintf(stderr, "Outputfile %s closed\n", file_name);
   }
   else
-    fprintf(stderr, "Could not open outfile %s\n", ja->file_name);
+    fprintf(stderr, "Could not open outfile %s\n", file_name);
   return;
 }

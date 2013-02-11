@@ -21,90 +21,38 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "jv.h"
-#include "xjv-ffmpeg.h"
+#include "decoder_ctrl.h"
+#include "ffdecoder.h"
 #include "ffcompat.h"
 #include <assert.h>
 
 #include "daemon_log.h"
 
-void init_jva (JVARGS *a) {
-  //memset(a,0,sizeof(JVARGS));
-  a->render_fmt = 0; //PIX_FMT_RGB24; or AVL_RGB_24
-  a->file_name = NULL;
-  a->out_width =  -1;
-  a->out_height =  -1;
-}
-#if 0
-void free_jva (JVARGS *a) {
-  // if (a->file_name) free(a->file_name); // TODO make sure they're strdup() and not static or pointers
-}
-#endif
-
-void init_jvi (JVINFO *ji) {
-  memset (ji,0,sizeof(JVINFO));
-  memset(&ji->framerate,0, sizeof(TimecodeRate));
-  ji->framerate.num=25;
-  ji->framerate.den=1;
-  ji->out_width=ji->out_height=-1;
-}
-
-void free_jvi (JVINFO *i) {
-  ;
-}
-
-void free_jvs (jvsession_args *a) {
-  if (a->file_name) free(a->file_name);
-}
-
-////////////////////////////////////////////////
-// video object functions  - may be overridden
-
-/*
-typedef struct {
-  //void *d;
-  void (*render)(void *vd, unsigned long frame, uint8_t *b, int w, int h);
-  void (*get_info)(void *vd, JVINFO *i);
-  int (*open_movie)(void **vd, char *fn);
-  int (*close_movie)(void *vd);
-  int (*destroy)(void **vd);
-  // see also old PLUGIN API..
-} _DECODER;  // see jv.h::JVPLUGIN and xjv*.c files
-
- for now these fn are called my_XXX(..) :
-*/
-
-/// --- built-in functions to open,read&close
-
 static int my_decode(void *vd, unsigned long frame, uint8_t *b, int w, int h) {
   //printf("JV: decode into buffer.\n");
-  ff_resize(vd, w, h, 0, NULL);
+  ff_resize(vd, w, h, NULL, NULL);
   ff_set_bufferptr(vd, b);
-  // TODO: if checi rendering failed !!
+  // TODO: if check rendering failed !!
   ff_render(vd, frame, NULL, w, h, 0, w, w);
-
-  //reset the bufferptr after use. what if "the next in line" would mess with it?
   ff_set_bufferptr(vd, NULL);
   return 0;
 }
 
 static int my_open_movie(void **vd, char *fn) {
   ff_create(vd);
-  JVARGS a;
-  init_jva(&a);
+  int render_fmt;
 #ifdef VIBER
   #warning Hardcoded YUV420P / YV12
-  a.render_fmt = PIX_FMT_YUV420P; // TODO allow to set, override
+  render_fmt = PIX_FMT_YUV420P; // TODO allow to set, override
 #elif defined ICSD_RGB24
   #warning Hardcoded 24 bit RGB
-  a.render_fmt = PIX_FMT_RGB24; // TODO allow to set, override
+  render_fmt = PIX_FMT_RGB24; // TODO allow to set, override
 #else // mytest
   #warning Hardcoded 32 bit RGBA
-  a.render_fmt = PIX_FMT_RGB32;
+  render_fmt = PIX_FMT_RGB32;
 #endif
-  a.file_name = fn;
 
-  if (!ff_open_movie (*vd, &a)) {
+  if (!ff_open_movie (*vd, fn, render_fmt)) {
     dlog(DLOG_DEBUG, "JV : opened video file: '%s'\n",fn);
   } else {
     dlog(DLOG_ERR, "JV : error opening video file.\n");
@@ -119,11 +67,11 @@ static int my_destroy(void **vd) {
   return(0);
 }
 
-static void my_get_info(void *vd, JVINFO *i) {
+static void my_get_info(void *vd, VInfo *i) {
   ff_get_info(vd, i);
 }
 
-static void my_get_info_scale(void *vd, JVINFO *i, int w, int h) {
+static void my_get_info_scale(void *vd, VInfo *i, int w, int h) {
   ff_resize(vd, w, h, NULL, i);
 }
 
@@ -142,13 +90,13 @@ static void my_get_info_scale(void *vd, JVINFO *i, int w, int h) {
 typedef struct JVOBJECT {
   struct JVOBJECT *next;
   void *decoder;
-  int decoderid; //< select which decoder to use
   char *fn;
   int id;  // this ID is linked to the filename
-  int uuid;  // unique ID for this decoder -- TODO
+  int uuid;  // unique ID for this decoder
   time_t lru;
+  int64_t frame; // last decoded frame
   pthread_mutex_t lock; // lock to modify flags;
-  int flags; // TODO- lock ?!
+  int flags;
 } JVOBJECT;
 
 static JVOBJECT *newjvo (JVOBJECT *jvo) {
@@ -162,11 +110,12 @@ static JVOBJECT *newjvo (JVOBJECT *jvo) {
 }
 
 // TODO: allow to find more than one.. by file-id.. flags=NOT_USED, prefer open..
-static JVOBJECT *testjvd(JVOBJECT *jvo, int id) {
+static JVOBJECT *testjvd(JVOBJECT *jvo, int id, uint64_t frame) {
   JVOBJECT *cptr = jvo;
   JVOBJECT *lru_closed = NULL; // if cache is full - this one will be flushed and re-used
   JVOBJECT *lru_open = NULL; // and if only open decoders remain - close this.
   time_t lru = time(NULL) + 1; // TODO ; indep. LRU for closed and open files ?!
+  uint64_t framediff = -1; // TODO prefer decoders w/ frame before but close to frame
   int found =0, avail=0; // DEBUG
   while (cptr) {
     if (!(cptr->flags&VOF_VALID) || cptr->id != id) {
@@ -349,7 +298,7 @@ static int clearjvo(JVOBJECT *jvo, int f, int id) {
 // --- API
 
 typedef struct JVD {
-  JVOBJECT *jvo; // list of all objects
+  JVOBJECT *jvo; // list of all decoder objects
   int max_objects;
   int max_open_files;
   int max_concurrent;
@@ -359,54 +308,56 @@ typedef struct JVD {
 
 //NOTE: id and filename are equivalent (!)
 // a numeric id is just more handy to compare/pass around.
-
-JVOBJECT *get_obj(JVD *jvd, int uuid) {
+static JVOBJECT *get_obj(JVD *jvd, int uuid) {
   return(testjvo(jvd->jvo, 11, uuid, NULL));
 }
 
-int get_id(JVD *jvd, const char *fn) {
+static int get_id(JVD *jvd, const char *fn) {
   JVOBJECT *jvo = testjvo(jvd->jvo, 1, 0, fn);
   if (jvo) return (jvo->id);
   return (-1);
 }
 
-char *get_fn(JVD *jvd, int id) {
+static char *get_fn(JVD *jvd, int id) {
   JVOBJECT *jvo = testjvo(jvd->jvo, 2, id, NULL);
   if (jvo) return (jvo->fn); // strdup ?!
   return (NULL);
 }
 
-int new_video_object_fn(JVD *jvd, const char *fn) {
+static int new_video_object_fn(JVD *jvd, const char *fn) {
   JVOBJECT *jvo = getjvo(jvd->jvo, jvd->max_objects);
   if (!jvo) return (-1); // LATER - for now getjvo will assert(0)
   pthread_mutex_lock(&jvo->lock); // TODO trylock - and check flags again
   jvo->id=get_id(jvd, fn);  // zero is allowed here
   pthread_mutex_lock(&jvd->lock);  // lock monotonic
   if (jvo->id<0) jvo->id=jvd->monotonic;
-  jvo->uuid= jvd->monotonic++; // TODO proper UUID
+  jvo->uuid = jvd->monotonic++;
   pthread_mutex_unlock(&jvd->lock);  // unlock monotonic
   jvo->flags|=VOF_VALID;
   jvo->fn=strdup(fn);
+  jvo->frame = -1;
   pthread_mutex_unlock(&jvo->lock);
   return(jvo->id); // ID
 }
 
+#if 0 // unused
 /**
  * use-case: re-open a file. - flush decoders (and indirectly cache -> new ID)
  */
-int release_video_object(JVD *jvd, char *fn) {
+static int release_video_object(JVD *jvd, char *fn) {
   int id;
   if ((id=get_id(jvd,fn)) > 0)
     return (clearjvo(jvd->jvo, 1, id)); // '0': would close only close and re-use the same ID (cache)
   return(-1);
 }
+#endif
 
 //////////////////////////////////////////////////
 // part 2 - video object API - top part
 
 JVD *g_decoder; // global decoder pointer - TODO: get from session or daemon-instance.
 
-void decoder_control_create(void **p) {
+void dctrl_create(void **p) {
   (*((JVD**)p)) = (JVD*) calloc(1,sizeof(JVD));
   (*((JVD**)p))->monotonic=1;
   pthread_mutex_init(&((*((JVD**)p))->lock), NULL);
@@ -419,24 +370,25 @@ void decoder_control_create(void **p) {
   g_decoder=(*((JVD**)p)); // temp hack for testing.
 }
 
-void decoder_control_destroy(void **p) {
+void dctrl_destroy(void **p) {
   clearjvo((*((JVD**)p))->jvo, 4, -1);
   free((*((JVD**)p))->jvo);
   free(*((JVD**)p));
   *p=NULL;
 }
-size_t formatdecoderctlinfo (void *p, char *m, size_t n) {
+
+size_t dctrl_info_html (void *p, char *m, size_t n) {
   JVOBJECT *cptr = ((JVD*)p)->jvo;
   size_t off =0;
   off+=snprintf(m+off, n-off, "<h3>Decoder Objects:</h3>\n");
   off+=snprintf(m+off, n-off, "<table>\n");
-  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th><th>decoder-id</th><th>LRU</th><th>decoder</th></tr>\n");
+  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th><th>decoder-id</th><th>LRU</th><th>decoder</th><th>frame#</th></tr>\n");
   off+=snprintf(m+off, n-off, "\n");
   int i=0;
   while (cptr) {
     off+=snprintf(m+off, n-off,
-        "<tr><td>%i</td><td>%i</td><td>%i</td><td>%s</td><td>%i</td><td>%lld</td><td>%s</td></tr>\n",
-        i,cptr->id,cptr->flags,(cptr->fn?cptr->fn:"-"),cptr->uuid,(long long)cptr->lru,(cptr->decoder?"open":"null"));
+        "<tr><td>%i</td><td>%i</td><td>%i</td><td>%s</td><td>%i</td><td>%lld</td><td>%s</td><td>%"PRId64"</td></tr>\n",
+        i,cptr->id,cptr->flags,(cptr->fn?cptr->fn:"-"),cptr->uuid,(long long)cptr->lru,(cptr->decoder?"open":"null"), cptr->frame);
     i++;
     cptr=cptr->next;
   }
@@ -444,12 +396,12 @@ size_t formatdecoderctlinfo (void *p, char *m, size_t n) {
   return(off);
 }
 
-void dumpdecoderctl(void *p) {
+void dctrl_info_dump(void *p) {
   JVOBJECT *cptr = ((JVD*)p)->jvo;
   int i=0;
   printf("decoder info dump:\n");
   while (cptr) {
-    printf("%i,%i,%i,%s,%i,%lu:%s\n",i,cptr->id,cptr->flags,cptr->fn,cptr->uuid,cptr->lru,(cptr->decoder?"open":"null"));
+    printf("%i,%i,%i,%s,%i,%lu:%s:%"PRId64"\n",i,cptr->id,cptr->flags,cptr->fn,cptr->uuid,cptr->lru,(cptr->decoder?"open":"null"), cptr->frame);
     i++;
     cptr=cptr->next;
   }
@@ -457,7 +409,7 @@ void dumpdecoderctl(void *p) {
 }
 
 
-int jv_get_id(void *p, const char *fn) {
+int dctrl_get_id(void *p, const char *fn) {
   JVD *jvd = p?(JVD*)p:g_decoder;
   int id;
   // TODO ; prepare new decoder objects on the fly already here..
@@ -465,10 +417,9 @@ int jv_get_id(void *p, const char *fn) {
   return new_video_object_fn(jvd, fn);
 }
 
-
 // part 2b - video object API - decoder interaction
 
-int jv_get_info(void *p, int id, JVINFO *i) {
+int dctrl_get_info(void *p, int id, VInfo *i) {
   JVD *jvd = p?(JVD*)p:g_decoder;
   JVOBJECT *jvo  = NULL;
 #if 0 // FIXME
@@ -476,18 +427,18 @@ int jv_get_info(void *p, int id, JVINFO *i) {
   jvo = testjvd(jvd->jvo, id); // TODO open if not opened
   // TODO; allow uuid exclusive lookups
 #else
-  int uuid = jv_get_decoder(p, -1, id);
+  int uuid = dctrl_get_decoder(p, id, -1);
   jvo=get_obj(jvd, uuid);
 #endif
   if (jvo) {
     my_get_info(jvo->decoder,i);
-    jv_release_decoder(p,uuid);
+    dctrl_release_decoder(p,uuid);
     return(0);
   }
   return(-1);
 }
 
-int jv_get_info_scale(void *p, int id, JVINFO *i, int w, int h) {
+int dctrl_get_info_scale(void *p, int id, VInfo *i, int w, int h) {
   JVD *jvd = p?(JVD*)p:g_decoder;
   JVOBJECT *jvo  = NULL;
 #if 0 // FIXME
@@ -495,28 +446,28 @@ int jv_get_info_scale(void *p, int id, JVINFO *i, int w, int h) {
   jvo = testjvd(jvd->jvo, id); // TODO open if not opened
   // TODO; allow uuid exclusive lookups
 #else
-  int uuid = jv_get_decoder(p, -1, id);
+  int uuid = dctrl_get_decoder(p, id, -1);
   jvo=get_obj(jvd, uuid);
 #endif
   if (jvo) {
     my_get_info_scale(jvo->decoder,i,w,h);
-    jv_release_decoder(p,uuid);
+    dctrl_release_decoder(p,uuid);
     return(0);
   }
   return(-1);
 }
 
 // lookup or create new decoder for file ID
-int jv_get_decoder(void *p, int uuid, int id) {
+int dctrl_get_decoder(void *p, int id, int64_t frame) {
   JVD *jvd = p?(JVD*)p:g_decoder;
-  assert(uuid == -1); // TODO uuid for EXCLUSIVE decoders..
 
 tryagain:
-  dlog(DLOG_DEBUG, "JV : get_decoder uuid=%i or fileid=%i\n",uuid, id);
+  dlog(DLOG_DEBUG, "JV : get_decoder fileid=%i\n", id);
 
   JVOBJECT *jvo;
   int timeout = 10;
-  while (--timeout >0 && !(jvo = testjvd(jvd->jvo, id))) {
+  // TODO prefer decoder with framenumber larger but close to req. framenumber
+  while (--timeout > 0 && !(jvo = testjvd(jvd->jvo, id, frame))) {
    char *fn;
    if ((fn=get_fn(jvd, id))) {
      // TODO - check number of active decoders, .. sleep .. ? return (-1);
@@ -567,18 +518,22 @@ tryagain:
   return(-1);
 }
 
-int jv_decode(void *p, int uuid, unsigned long frame, uint8_t *b, int w, int h) {
+//called by fc_readcl()
+int dctrl_decode(void *p, int uuid, unsigned long frame, uint8_t *b, int w, int h) {
   JVD *jvd = p?(JVD*)p:g_decoder;
   JVOBJECT *jvo;
-  //printf("jv_decode: decoder: %i frame:%lu - %x \n",uuid, frame, b);
+  //printf("dctrl_decode: decoder: %i frame:%lu - %x \n",uuid, frame, b);
   if (!(jvo=get_obj(jvd, uuid))) return -1;
   jvo->lru=time(NULL);
   int rv= my_decode(jvo->decoder, frame, b, w, h);
-  //printf("jv_finish: decoder: %i frame:%lu\n",uuid, frame);
+  if (!rv) {
+    jvo->frame=frame;
+  }
+  //printf("dctrl_finish: decoder: %i frame:%lu\n",uuid, frame);
   return rv;
 }
 
-void jv_release_decoder(void *p, int uuid) {
+void dctrl_release_decoder(void *p, int uuid) {
   JVD *jvd = p?(JVD*)p:g_decoder;
   JVOBJECT *jvo;
   if (!(jvo=get_obj(jvd, uuid))) return;

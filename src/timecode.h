@@ -15,6 +15,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef _timecode_H
+#define _timecode_H
 /* libtimecode -- timecode.h compatible */
 
 #include <stddef.h>
@@ -61,3 +63,4 @@ void timecode_time_to_string (char *smptestring, TimecodeTime const * const t);
 void timecode_framenumber_to_time (TimecodeTime * const t, TimecodeRate const * const r, const int64_t frameno);
 
 void timecode_framenumber_to_string (char *smptestring, TimecodeRate const * const r, const int64_t frameno);
+#endif

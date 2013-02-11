@@ -16,7 +16,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define _GNU_SOURCE // asprintf
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +27,7 @@
 
 #include "daemon_log.h"
 #include "httprotocol.h"
+#include "enums.h"
 
 #ifndef MAX_PATH
 # ifdef PATH_MAX
@@ -41,6 +41,23 @@
 
 char *url_escape(const char *string, int inlength); // from httprotocol.c
 
+static char *csv_escape(const char *string, int inlength) {
+  char *ns;
+  size_t i,o,a;
+  const char *t = string;
+  if (!string) return strdup("");
+  if (inlength == 0) inlength = strlen(string)+1;
+  a = inlength;
+  while(*t && (t=strchr(t, '"'))) {
+    a++; t++;
+  }
+  ns = malloc(a);
+  for (i=0,o=0; i<a; ++i) {
+    ns[o++] = string[i];
+    if (string[i] == '"') ns[o++]='"';
+  }
+  return ns;
+}
 
 static int print_html (int what, const char *burl, const char *path, const char *name, char *m, size_t n) {
   size_t off =0;
@@ -51,11 +68,12 @@ static int print_html (int what, const char *burl, const char *path, const char 
       u1=url_escape(path,0);
       u2=url_escape(name,0);
       off+=snprintf(m+off, n-off,
-       "[<b>F</b>] <a href=\"%s?frame=100&amp;file=%s%s\">%s</a>",
-        burl,u1,u2,
-        name
+       "[<b>F</b>] <a href=\"%s?frame=100&amp;file=%s%s%s\">%s</a>",
+        burl, u1, SL_SEP(path), u2, name);
+      off+=snprintf(m+off, n-off,
+       " [<a href=\"%sinfo?file=%s%s&amp;format=html\">info</a>]",
+        burl,u1,u2
         );
-      //off+=snprintf(m+off, n-off,"&nbsp; <a href=\"http://localhost/sodan/seek.php?file=%s%s\" target=\"_blank\">Seek</a>",u1,u2);
       off+=snprintf(m+off, n-off,"<br/>\n");
       if (u1) free(u1);
       if (u2) free(u2);
@@ -63,11 +81,41 @@ static int print_html (int what, const char *burl, const char *path, const char 
       break;
     case 0:
       {
+      char *u2 = url_escape(name,0);
       off+=snprintf(m+off, n-off,
-       "[D]<a href=\"%s%s/\">%s</a><br/>\n",
-        burl,
-        name,name
-        );
+       "[D]<a href=\"%s%s%s/\">%s</a><br/>\n",
+        burl, SL_SEP(path), u2, name);
+      free(u2);
+      }
+      break;
+    default:
+      break;
+  }
+  return(off);
+}
+
+static int print_csv (int what, const char *burl, const char *path, const char *name, char *m, size_t n) {
+  size_t off =0;
+  switch(what) {
+    case 1:
+      {
+      char *u1, *u2, *c1;
+      u1=url_escape(path,0);
+      u2=url_escape(name,0);
+      c1=csv_escape(name,0);
+      off+=snprintf(m+off, n-off,
+       "F,\"%s\",\"%s%s%s\",\"%s\"\n", burl, u1, SL_SEP(path), u2, c1);
+      free(u1); free(u2); free(c1);
+      }
+      break;
+    case 0:
+      {
+      char *u2, *c1;
+      u2=url_escape(name,0);
+      c1=csv_escape(name,0);
+      off+=snprintf(m+off, n-off,
+       "D,\"%s%s%s\",\"%s\"\n", burl, SL_SEP(path), u2, c1);
+      free(u2); free(c1);
       }
       break;
     default:
@@ -79,9 +127,6 @@ static int print_html (int what, const char *burl, const char *path, const char 
 
 static int parse_direntry (const char *root, const char *burl, const char *path, const char *name, int opt, char *m, size_t n, int (*print_fn)(const int what, const char*, const char*, const char*, char*, size_t) ) {
   int rv= 0;
-  //int len=strlen(name);
-  //if (len < 5) return 0; // ".+\.[a-z{3}" = 5
-  // TODO check files permission, pre-sort by extension?
   char *url=strdup(burl);
   char *vurl=strstr(url,"/index"); // TODO - do once per dir.
   if (vurl) *++vurl = 0;
@@ -95,6 +140,16 @@ static int parse_direntry (const char *root, const char *burl, const char *path,
               ||!strcmp(&name[l], ".mp4")
               ||!strcmp(&name[l], ".mkv")
               ||!strcmp(&name[l], ".vob")
+              ||!strcmp(&name[l], ".asf")
+              ||!strcmp(&name[l], ".avs")
+              ||!strcmp(&name[l], ".dts")
+              ||!strcmp(&name[l], ".flv")
+              ||!strcmp(&name[l], ".m4v")
+              ||!strcmp(&name[l], ".matroska")
+              ||!strcmp(&name[l], ".h264")
+              ||!strcmp(&name[l], ".dv")
+              ||!strcmp(&name[l], ".dirac")
+              ||!strcmp(&name[l], ".webm")
               )
      ) {
     rv= print_fn(1, url, path, name, m, n);
@@ -108,28 +163,30 @@ int parse_dir (const char *root, const char *burl, const char *path, int opt, ch
   struct dirent *dd;
   char dn[MAX_PATH];
   size_t off =0;
-  sprintf(dn,"%s%s%s",root,SL_SEP(root),path);
+  sprintf(dn,"%s%s%s", root, SL_SEP(root), path);
 
-  dlog(LOG_DEBUG, "IndexDir: indexing '%s'\n",dn);
+  dlog(LOG_DEBUG, "IndexDir: indexing '%s'\n", dn);
   if (!(D = opendir (dn)))  {
-    dlog(LOG_WARNING, "IndexDir: could not open dir '%s'\n",dn);
+    dlog(LOG_WARNING, "IndexDir: could not open dir '%s'\n", dn);
     return 0;
   }
+
   while ((dd = readdir (D))) {
+    struct stat fs;
+    char rn[MAX_PATH]; // absolute, starting at local root /
     if (dd->d_name[0]=='.') continue; // make optional
 #if 0
     int delen=strlen(d->d_name);
-    if (dd->d_name[0]=='.' && delen==1) continue; // '.'
-    if (dd->d_name[0]=='.' && dd->d_name[1]=='.' && delen==2) continue; // '..'
+    if (delen==1 && dd->d_name[0]=='.' ) continue; // '.'
+    if (delen==2 && dd->d_name[0]=='.' && dd->d_name[1]=='.') continue; // '..'
 #endif
-    struct stat fs;
-    char rn[MAX_PATH]; // absolute, starting at local root /
-    sprintf(rn,"%s/%s",dn,dd->d_name);
+
+    sprintf(rn,"%s/%s", dn, dd->d_name);
     if(stat(rn,&fs)==0) {
       char fn[MAX_PATH]; // relative to this *root.
-      sprintf(fn,"%s%s%s",path,SL_SEP(path),dd->d_name);
+      sprintf(fn,"%s%s%s", path, SL_SEP(path), dd->d_name);
       if (S_ISDIR(fs.st_mode)) {
-        if ((opt&1)==1) {
+        if ((opt&OPT_FLAT) == OPT_FLAT) {
           char pn[MAX_PATH];
           sprintf(pn,"%s%s%s/",path, SL_SEP(path), dd->d_name);
           off+=parse_dir(root, burl, pn, opt, m+off, n-off, print_fn);
@@ -142,7 +199,7 @@ int parse_dir (const char *root, const char *burl, const char *path, int opt, ch
           S_ISLNK(fs.st_mode) ||
 #endif
           S_ISREG(fs.st_mode)) {
-        off+=parse_direntry(root,burl,path,dd->d_name, opt, m+off, n-off, print_fn);
+        off+=parse_direntry(root, burl, path, dd->d_name, opt, m+off, n-off, print_fn);
       }
     }
   }
@@ -154,21 +211,34 @@ int parse_dir (const char *root, const char *burl, const char *path, int opt, ch
 
 char *index_dir (const char *root, char *base_url, char *path, int opt) {
   char *sm = malloc(IDXSIZ * sizeof(char));
-  int off =0;
-  off+=snprintf(sm+off, IDXSIZ-off, DOCTYPE HTMLOPEN);
-  off+=snprintf(sm+off, IDXSIZ-off, "<title>ICS Index</title></head>\n<body>\n<h2>ICS - Index</h2>\n<p>\n");
-  int bl=strlen(base_url)-2;
+  int off = 0;
+  int bl = strlen(base_url) - 2;
+
+  if ((opt&OPT_CSV) == 0) {
+    off+=snprintf(sm+off, IDXSIZ-off, DOCTYPE HTMLOPEN);
+    off+=snprintf(sm+off, IDXSIZ-off, "<title>ICS Index</title></head>\n<body>\n<h2>ICS - Index</h2>\n<p>\n");
+  }
+
   if (bl>1) {
-    while (bl>0 && base_url[--bl]!='/');
+    while (bl > 0 && base_url[--bl] != '/');
     if (bl>0) {  // TODO: check for '/index/'
       base_url[bl]=0;
-      off+=snprintf(sm+off, IDXSIZ-off, "<a href=\"%s/\">..</a><br/>\n",base_url);
+      if ((opt&OPT_CSV) == 0) {
+        off+=snprintf(sm+off, IDXSIZ-off, "<a href=\"%s/\">..</a><br/>\n", base_url);
+      }
       base_url[bl]='/';
     }
   }
-  off+=parse_dir(root, base_url, path, opt, sm+off, IDXSIZ-off, print_html);
-  //off+=snprintf(sm+off, STASIZ-off, "<hr/><p>sodankyla-ics/%s at %s:%i</p>", ICSVERSION, c->d->local_addr, c->d->local_port);
-  off+=snprintf(sm+off, IDXSIZ-off, "\n</p>\n</body>\n</html>");
+
+  if ((opt&OPT_CSV) == 0) {
+    off+=parse_dir(root, base_url, path, opt, sm+off, IDXSIZ-off, print_html);
+    off+=snprintf(sm+off, IDXSIZ-off, "<hr/><p>sodankyla-ics/%s</p>", ICSVERSION);
+    off+=snprintf(sm+off, IDXSIZ-off, "\n</p>\n</body>\n</html>");
+  } else {
+    off+=parse_dir(root, base_url, path, opt, sm+off, IDXSIZ-off, print_csv);
+  }
+
+  sm[IDXSIZ-1] = '\0';
   return (sm);
 }
 
