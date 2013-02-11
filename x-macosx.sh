@@ -30,7 +30,7 @@ rm -rf $PREFIX
 cp -a pkg/osx/ $PREFIX
 
 export TDIR=$PREFIX/usr/local/bin
-export LREL=../lib/sodankyla
+export LREL=../lib/harvid
 export LDIR=$TDIR/$LREL
 export LPRE="@executable_path/$LREL"
 export INSTALLED=""
@@ -104,7 +104,7 @@ file "$TARGET"
 otool -arch all -L "$TARGET"
 
 echo "-------"
-export TARGET="$TDIR/ffprobe_sodankyla"
+export TARGET="$TDIR/ffprobe_harvid"
 lipo -create -o "$TARGET" ${FFSOURCE}ffmpeg-git*/ffprobe
 update_executable
 update_executable
@@ -112,7 +112,7 @@ file "$TARGET"
 otool -arch all -L "$TARGET"
 
 echo "-------"
-export TARGET="$TDIR/ffmpeg_sodankyla"
+export TARGET="$TDIR/ffmpeg_harvid"
 lipo -create -o "$TARGET" ${FFSOURCE}ffmpeg-git*/ffmpeg
 update_executable
 update_executable
@@ -137,17 +137,17 @@ echo "------- Install manual pages"
 cd "$TOPDIR"
 mkdir -p $PREFIX/usr/local/man/man1/
 cp doc/harvid.1 $PREFIX/usr/local/man/man1/
-cp ${FFSOURCE}ffmpeg-git-ppc/doc/ffmpeg.1 $PREFIX/usr/local/man/man1/ffmpeg_sodankyla.1
-cp ${FFSOURCE}ffmpeg-git-ppc/doc/ffprobe.1 $PREFIX/usr/local/man/man1/ffprobe_sodankyla.1
+cp ${FFSOURCE}ffmpeg-git-ppc/doc/ffmpeg.1 $PREFIX/usr/local/man/man1/ffmpeg_harvid.1
+cp ${FFSOURCE}ffmpeg-git-ppc/doc/ffprobe.1 $PREFIX/usr/local/man/man1/ffprobe_harvid.1
 
 echo "------- BUILD PACKAGE"
 cd "$TOPDIR"
-test -d $PREFIX/Resources/sodankyla.pmdoc || exit 1
+test -d $PREFIX/Resources/harvid.pmdoc || exit 1
 
 SHORTVS=$(echo $VERSION | sed 's/^v\([0-9.]*\).*$/\1/')
 echo "calling packagemaker"
 /Developer/usr/bin/packagemaker \
-	-d $PREFIX/Resources/sodankyla.pmdoc \
+	-d $PREFIX/Resources/harvid.pmdoc \
 	-v --id gareus.org.sodankyla.harvid.pkg \
 	--out ~/Desktop/harvid-${VERSION}.pkg \
 	--version $SHORTVS \

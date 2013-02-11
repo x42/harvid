@@ -94,7 +94,7 @@ static void usage (int status) {
 "if both syslog and logfile are given that last specified option will be used.\n"
 "\n"
 "Report bugs to <robin@gareus.org>.\n"
-"Website http://gareus.org/oss/sodankyla/\n"
+"Website https://github.com/x42/harvid\n"
 , DEFAULT_PORT
 );
   exit (status);
