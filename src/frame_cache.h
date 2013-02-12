@@ -27,7 +27,7 @@ void vcache_destroy(void **p);
 void vcache_resize(void **p, int size);
 void vcache_clear (void *p);
 
-uint8_t *vcache_get_buffer(void *p, int id, int64_t frame, int w, int h);
+uint8_t *vcache_get_buffer(void *p, void *dc, int id, int64_t frame, int w, int h);
 
 void vcache_info_dump(void *p); // dump debug info to stdout
 size_t vcache_info_html(void *p, char *m, size_t n); // write HTML to m - max length n

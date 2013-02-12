@@ -439,7 +439,7 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
   //dctrl_get_info(dc, vid, &ji);
   // TODO set a->decode_fmt; -- overridden by my_open_movie(..)
   dctrl_get_info_scale(dc, vid, &ji, a->out_width, a->out_height);
-  bptr = vcache_get_buffer(vc, vid, a->frame, ji.out_width, ji.out_height);
+  bptr = vcache_get_buffer(vc, dc, vid, a->frame, ji.out_width, ji.out_height);
 
   if (!bptr) {
     dlog(DLOG_ERR, "VID: error decoding video file for fd:%d\n",fd);

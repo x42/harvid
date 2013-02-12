@@ -181,7 +181,7 @@ static void fc_initialize_cache (xjcd *cc) {
   pthread_mutex_init(&cc->lock, NULL);
 }
 
-static videocacheline *fc_readcl(xjcd *cc, int64_t frame, int w, int h, int id) {
+static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, int w, int h, int id) {
   /* check if the requested frame is cached */
   videocacheline *rv = testclwh(cc->vcache, frame, w, h, id, 0);
   if (rv) {
@@ -198,18 +198,19 @@ static videocacheline *fc_readcl(xjcd *cc, int64_t frame, int w, int h, int id) 
   realloccl_buf(rv, w, h, SPP); // FIXME ; call ff_get_buffersize()  - use dctrl_get_info(); dctrl_decode(..) wrapper API
 
   // Fill cacheline with data - decode video
-  int uuid = dctrl_get_decoder(NULL, id, frame);
+  int uuid = dctrl_get_decoder(dc, id, frame);
   if (uuid < 1) {
     dlog(DLOG_WARNING, "Cache : invalid uuid.\n");
   }
-  if (dctrl_decode(NULL, uuid, frame, rv->b, w, h)) {
+  if (dctrl_decode(dc, uuid, frame, rv->b, w, h)) {
     rv->flags&=~CLF_VALID;
     rv->flags&=~CLF_USED;
     printf("Decode failed\n");
+    dctrl_release_decoder(dc, uuid); // XXX really? even if failed
     dlog(DLOG_WARNING, "Cache : decode failed.\n");
     return (rv); // XXX
   }
-  dctrl_release_decoder(NULL, uuid);
+  dctrl_release_decoder(dc, uuid);
 
   rv->id=id;
   rv->frame=frame;
@@ -262,8 +263,8 @@ void vcache_destroy(void **p) {
   *p=NULL;
 }
 
-uint8_t *vcache_get_buffer(void *p, int id, int64_t frame, int w, int h) {
-  videocacheline *cl = fc_readcl((xjcd*)p, frame, w ,h, id);
+uint8_t *vcache_get_buffer(void *p, void *dc, int id, int64_t frame, int w, int h) {
+  videocacheline *cl = fc_readcl((xjcd*)p, dc, frame, w ,h, id);
   if (!cl) return NULL;
   return cl->b;
 }
