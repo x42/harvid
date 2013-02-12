@@ -26,4 +26,7 @@ enum {OUT_HTML=0, OUT_JSON, OUT_PLAIN, OUT_CSV};
 /* http index - binary flags */
 enum {OPT_FLAT=1, OPT_CSV=2};
 
+/* cfg_adminmask - binary flags */
+enum {ADM_FLUSHCACHE=1, ADM_SHUTDOWN=2};
+
 #endif

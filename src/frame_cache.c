@@ -108,6 +108,7 @@ static videocacheline *getcl(videocacheline *cache, int cfg_cachesize) {
 
   /* all cache lines are in USE/locked */
 
+  dlog(DLOG_CRIT, "frame-cache, cache full all cache-lines in use");
   assert(0); // out of cache lines!
   return (NULL);
 }

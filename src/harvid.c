@@ -55,7 +55,7 @@ unsigned int  cfg_host = 0; /* = htonl(INADDR_ANY) */
 int   cfg_daemonize = 0;
 int   cfg_syslog = 0;
 int   cfg_noindex = 0;
-int   cfg_adminmask = 1;
+int   cfg_adminmask = ADM_FLUSHCACHE;
 char *cfg_logfile = NULL;
 char *cfg_chroot = NULL;
 char *cfg_username = NULL;
@@ -204,16 +204,12 @@ static int decode_switches (int argc, char **argv) {
 // -=-=-=-=-=-=- main -=-=-=-=-=-=-
 #include "ffcompat.h"
 
-void *dc = NULL; // decoder control - TODO make part of daemon struct ?
-void *vc = NULL; // video cache -> hook into dc ? or daemon ?
+void *dc = NULL; // decoder control
+void *vc = NULL; // video cache
 
 int main (int argc, char **argv) {
   program_name = argv[0];
-
   char *docroot = "/" ;
-
-  // TODO: read and apply resource configuration file
-
   debug_level=DLOG_WARNING;
 
   int i = decode_switches (argc, argv);
@@ -222,17 +218,21 @@ int main (int argc, char **argv) {
   else if (docroot && i==argc) ; // use default
   else usage(1);
 
-  // TODO: verify configuration ..
+  // TODO read rc file
+
+  /* verify configuration */
+
+  // TODO check if docroot exists
+
   if (cfg_daemonize && !cfg_logfile && !cfg_syslog) {
     dlog(DLOG_WARNING, "daemonizing without log file or syslog.\n");
   }
-  // TODO: summarize config
 
   /* all systems go */
 
   if (cfg_logfile || cfg_syslog) dlog_open(cfg_logfile);
   if (cfg_chroot) do_chroot(cfg_chroot);
-  if (cfg_daemonize) daemonize(); // FIXME: daemonize only after sucessfully opening socket ?! -> exit(1)
+  if (cfg_daemonize) daemonize();
 
   ff_initialize();
 

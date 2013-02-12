@@ -298,14 +298,14 @@ void ics_http_handler(
 		c->run=0;
 	} else if (CTP("/admin")) { /* /admin/ */
 		if (strncasecmp(path,  "/admin/flush_cache", 18) == 0 ) {
-			if (cfg_adminmask&1) {
+			if (cfg_adminmask&ADM_FLUSHCACHE) {
 				hdl_clear_cache();
 				SEND200("ok");
 			} else {
 				httperror(c->fd, 403, NULL, NULL);
 			}
 		}	else if (strncasecmp(path,  "/admin/shutdown", 15) == 0 ) {
-			if (cfg_adminmask&2) {
+			if (cfg_adminmask&ADM_SHUTDOWN) {
 				SEND200("ok");
 				c->d->run=0;
 			} else {
