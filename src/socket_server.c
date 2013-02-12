@@ -50,8 +50,10 @@
 #endif
 #endif
 
-//#define HAVE_PTHREAD_SIGMASK
-//#define CATCH_SIGNALS
+#ifndef HAVE_WINDOWS
+#define HAVE_PTHREAD_SIGMASK
+#define CATCH_SIGNALS
+#endif
 
 /** called to spawn thread for an incoming connection */
 static int create_client( void *(*cli)(void *), void *arg) {
@@ -73,7 +75,7 @@ static int create_client( void *(*cli)(void *), void *arg) {
 #endif /* HAVE_PTHREAD_SIGMASK */
   pthread_attr_t pth_attr;
   pthread_attr_init(&pth_attr);
-  pthread_attr_setdetachstate(&pth_attr,PTHREAD_CREATE_DETACHED);
+  pthread_attr_setdetachstate(&pth_attr, PTHREAD_CREATE_DETACHED);
 
   if(pthread_create(&thread, &pth_attr, cli, arg)) {
 #ifdef HAVE_PTHREAD_SIGMASK
@@ -150,12 +152,13 @@ static int server_bind(ICI *d, struct sockaddr_in addr) {
 //#define CON_TIMEOUT (30) // -- HTTP 30 sec
 #define CON_TIMEOUT (300) // ICSP 5 min
 
+static int global_shutdown = 0;
 #ifdef CATCH_SIGNALS
 void catchsig (int sig) {
-  signal(SIGHUP, catchsig); /* reset signal */
-  signal(SIGINT, catchsig);
-  signal(SIGPIPE, catchsig);
-  dlog(DLOG_CRIT,"SRV:   !!!  CAUGHT signal\n");
+  //signal(SIGHUP, catchsig); /* reset signal */
+  //signal(SIGINT, catchsig);
+  dlog(DLOG_INFO,"SRV: caught signal, shutting down\n");
+  global_shutdown = 1;
 }
 #endif
 
@@ -166,12 +169,6 @@ static void *socket_handler(void *cn) {
   c->buf_len=0;
   c->timeout_cnt=0;
   dlog(DLOG_DEBUG, "CON: socket-handler starting up for fd:%d\n", c->fd);
-
-#ifdef CATCH_SIGNALS
-  signal (SIGHUP, catchsig);
-  signal (SIGINT, catchsig);
-  signal (SIGPIPE, catchsig);
-#endif
 
   while(c->run && c->d->run) { // keep-alive
 
@@ -233,7 +230,6 @@ static void *socket_handler(void *cn) {
 
   if (c->client_address) free(c->client_address);
   free(c);
-  pthread_exit(0);
   return NULL; /* end close connection */
 }
 
@@ -330,7 +326,14 @@ static void *main_loop (void *arg) {
   else if (d->username || d->groupname)
     dlog(DLOG_ERR, "SRV: incomplete username/groupname pair. not using suid.\n");
 
-  while(d->run) {
+  global_shutdown = 0;
+#ifdef CATCH_SIGNALS
+  signal (SIGHUP, catchsig);
+  signal (SIGINT, catchsig);
+  //signal (SIGILL, catchsig);
+#endif
+
+  while(d->run && !global_shutdown) {
     fd_set rfds;
     struct timeval tv;
 
