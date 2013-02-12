@@ -7,14 +7,20 @@ bindir ?= $(PREFIX)/bin
 mandir ?= $(PREFIX)/share/man/man1
 
 LOGODEP=logo.o
-ECHOARG=-e
+ECHO=echo -e
+
+ARCHFLAGS=
+ARCHINCLUDES=
+ARCHLIBES=
+
+CONFIGTEMP=conf.out
 
 ifeq ($(ARCH),mingw)
   CC=i686-w64-mingw32-gcc
   LD=i686-w64-mingw32-ld
   WINEROOT?=$(HOME)/.wine/drive_c/x-prefix
   PKG_CONFIG_PATH=$(WINEROOT)/lib/pkgconfig/
-  ARCHFLAGS=-I$(WINEROOT)/include -DHAVE_WINDOWS
+  ARCHINCLUDES=-I$(WINEROOT)/include -DHAVE_WINDOWS
   ARCHLIBES=-lwsock32 -lws2_32 -lpthreadGC2
   LDFLAGS=-L$(WINEROOT)/lib/ -L${WINEROOT}/bin
 else
@@ -23,8 +29,8 @@ else
   ARCHFLAGS+=-isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
   ARCHFLAGS+=-headerpad_max_install_names -fnested-functions
   ARCHFLAGS+=-sectcreate __DATA __harvid_jpg ../doc/harvid.jpg
-	LOGODEP=
-	ECHOARG=
+  LOGODEP=
+  ECHO=echo
   else
   ARCHLIBES=-lrt -lpthread
   endif
@@ -39,12 +45,12 @@ ifeq ($(shell pkg-config --exists libpng || echo no), no)
   $(error "libpng is required - install libpng-dev")
 endif
 
-ifeq ($(shell echo $(ECHOARG) "\#include <stdio.h>\n\#include <jpeglib.h>\nint main() { struct jpeg_error_mgr jerr; jpeg_std_error(&jerr); return 0; }" | gcc -pipe -x c -o /dev/null - -ljpeg  || echo no), no)
+ifeq ($(shell $(ECHO) "\#include <stdio.h>\n\#include <jpeglib.h>\nint main() { struct jpeg_error_mgr jerr; jpeg_std_error(&jerr); return 0; }" | $(CC) -pipe -x c -o $(CONFIGTEMP) $(ARCHINCLUDES) $(LDFLAGS) - -ljpeg 2>/dev/null || echo no; $(RM) -f $(CONFIGTEMP)), no)
   $(error "libjpeg is required - install libjpeg-dev")
 endif
 
 
-CFLAGS+=$(ARCHFLAGS)
+CFLAGS+=$(ARCHINCLUDES) $(ARCHFLAGS)
 CFLAGS+=`pkg-config --cflags libavcodec libavformat libavutil libpng libswscale`
 
 LOADLIBES=$(ARCHLIBES)
