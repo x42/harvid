@@ -110,10 +110,9 @@ static int write_png(VInfo *ji, uint8_t *image, FILE *x) {
 		8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
 		PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
   png_write_info (png_ptr, info_ptr);
-  for (y = 0; y < ji->out_height; y++)
-    {
-      rowpointers[y] = image + y*ji->out_width*3;
-    }
+  for (y = 0; y < ji->out_height; y++) {
+    rowpointers[y] = image + y*ji->out_width*3;
+  }
   png_write_image(png_ptr, rowpointers);
   png_write_end (png_ptr, info_ptr);
   png_destroy_write_struct (&png_ptr, &info_ptr);
@@ -140,7 +139,7 @@ static FILE *open_outfile(char *filename) {
 #ifndef HAVE_WINDOWS
     usleep(25000);
 #else
-	  Sleep(25);
+    Sleep(25);
 #endif
   if (!x) return 0;
   return x;
@@ -148,11 +147,11 @@ static FILE *open_outfile(char *filename) {
 
 size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf) {
 #ifdef __USE_XOPEN2K8
-	size_t rs = 0;
-	FILE *x = open_memstream((char**) out, &rs);
+  size_t rs = 0;
+  FILE *x = open_memstream((char**) out, &rs);
 #elif defined HAVE_WINDOWS
   char tfn[L_tmpnam]; // = "C:\\icsd.tmp"
-	tmpnam(tfn);
+  tmpnam(tfn);
   FILE *x = fopen(tfn, "w+b");
 #else
   FILE *x = tmpfile();
@@ -176,33 +175,33 @@ size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf) {
 	break;
     }
 #ifdef __USE_XOPEN2K8
-		fclose(x);
-		return rs;
+    fclose(x);
+    return rs;
 #elif defined HAVE_WINDOWS
-		fclose(x);
-		x = fopen(tfn, "rb");
+    fclose(x);
+    x = fopen(tfn, "rb");
 #else
-		fflush(x);
+    fflush(x);
 #endif
     fseek (x , 0 , SEEK_END);
     long int rsize = ftell (x);
     rewind(x);
-		if (fseek(x, 0L, SEEK_SET) < 0) {
-			; // fprintf(stderr,"debug: seek failed!!!!!!!!!!!!!\n");
-		}
-		fflush(x);
+    if (fseek(x, 0L, SEEK_SET) < 0) {
+            ; // fprintf(stderr,"debug: seek failed!!!!!!!!!!!!!\n");
+    }
+    fflush(x);
     *out = (uint8_t*) malloc(rsize*sizeof(uint8_t));
     if (fread(*out, sizeof(char), rsize, x) !=rsize) {
       fprintf(stderr,"short read. - possibly incomplete image\n");
     }
     fclose(x);
 #ifdef HAVE_WINDOWS
-		unlink(tfn);
+    unlink(tfn);
 #endif
     return (rsize);
   } else {
-      fprintf(stderr,"critical error: tmpfile() failed.\n");
-	}
+    fprintf(stderr,"critical error: tmpfile() failed.\n");
+  }
   return(0);
 }
 
@@ -228,9 +227,11 @@ void write_image(char *file_name, int render_fmt, VInfo *ji, uint8_t *buf) {
     }
     if (strcmp(file_name,"-")) fclose(x);
     if (want_verbose)
-    	fprintf(stderr, "Outputfile %s closed\n", file_name);
+      fprintf(stderr, "Outputfile %s closed\n", file_name);
   }
   else
     fprintf(stderr, "Could not open outfile %s\n", file_name);
   return;
 }
+
+// vim:sw=2 sts=2 ts=8 et:
