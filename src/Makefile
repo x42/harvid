@@ -27,7 +27,7 @@ else
   ifeq ($(shell uname),Darwin)
   ARCHFLAGS=-arch i386 -arch ppc -arch x86_64
   ARCHFLAGS+=-isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
-  ARCHFLAGS+=-headerpad_max_install_names -fnested-functions
+  ARCHFLAGS+=-headerpad_max_install_names
   ARCHFLAGS+=-sectcreate __DATA __harvid_jpg ../doc/harvid.jpg
   LOGODEP=
   ECHO=echo

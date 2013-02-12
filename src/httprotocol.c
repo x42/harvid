@@ -294,6 +294,33 @@ void protocol_response(int fd, char *msg) {
   CSEND(fd, msg);
 }
 
+/* parse HTTP protocol header */
+static char *get_next_line(char **str) {
+  char *t = *str;
+  char *xx = strpbrk(t, "\n\r");
+  if (!xx) return (NULL);
+  *xx++ = '\0';
+  while (xx && (*xx=='\r' || *xx=='\n')) xx++;
+  *str=xx;
+  return t;
+}
+
+/* check accept  for image/png[;..] */
+static int compare_accept(char *line) {
+  int rv=0;
+  char *tmp;
+  if ((tmp=strchr(line,';'))) *tmp='\0'; // ignore opt. parameters
+  if (!strncmp(line,"image/",6)) {
+    rv|=1;
+    //dlog(DLOG_DEBUG, "accept image: %s\n",line);
+  } else if (!strcmp(line,"*/*")) {
+    rv|=2;
+    //dlog(DLOG_DEBUG, "accept all: %s\n",line);
+  }
+  if (tmp) *tmp=';';
+  return rv;
+}
+
 /*
  * HTTP protocol handler implements virtual
  * int protocol_handler(fd_set rd_set, CONN *c);
@@ -360,16 +387,6 @@ int protocol_handler(CONN *c, void *unused) {
   dlog(DLOG_DEBUG, "CON HTTP - header: ''%s''\n", header);
 #endif
 
-  /* parse HTTP protocol header */
-  char *get_next_line(char **str) {
-    char *t = *str;
-    char *xx = strpbrk(t, "\n\r");
-    if (!xx) return (NULL);
-    *xx++ = '\0';
-    while (xx && (*xx=='\r' || *xx=='\n')) xx++;
-    *str=xx;
-    return t;
-  }
 
   char *cookie=NULL, *host=NULL, *if_modified_since=NULL, *referer=NULL, *useragent=NULL, *accept=NULL;
   char *contenttype=NULL; long int contentlength = 0;
@@ -444,22 +461,6 @@ int protocol_handler(CONN *c, void *unused) {
   }
   dlog(DLOG_DEBUG, "CON HTTP-header co='%s' ho='%s' mo='%s' re='%s' ua='%s' ac='%s'\n",
      cookie, host, if_modified_since, referer, useragent, accept);
-
-  // check accept  for image/png[;..] */*
-  int compare_accept(char *line) {
-    int rv=0;
-    char *tmp;
-    if ((tmp=strchr(line,';'))) *tmp='\0'; // ignore opt. parameters
-    if (!strncmp(line,"image/",6)) {
-      rv|=1;
-      //dlog(DLOG_DEBUG, "accept image: %s\n",line);
-    } else if (!strcmp(line,"*/*")) {
-      rv|=2;
-      //dlog(DLOG_DEBUG, "accept all: %s\n",line);
-    }
-    if (tmp) *tmp=';';
-    return rv;
-  }
 
   /* process headers */
 
