@@ -260,6 +260,25 @@ int main (int argc, char **argv) {
 #include "ics_handler.h"
 #include "htmlconst.h"
 
+#define HPSIZE 4096 // max size of homepage in bytes.
+char *hdl_homepage_html (CONN *c) {
+  char *msg = malloc(HPSIZE * sizeof(char));
+  int off =0;
+  off+=snprintf(msg+off, HPSIZE-off, DOCTYPE HTMLOPEN);
+  off+=snprintf(msg+off, HPSIZE-off, "<title>ICS</title></head>\n");
+  off+=snprintf(msg+off, HPSIZE-off, HTMLBODY);
+  off+=snprintf(msg+off, HPSIZE-off, "<ul>");
+  if (!cfg_noindex) {
+    off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"index/\">File Index</a></li>\n");
+  }
+  off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"status/\">Server Status</a></li>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"rc/\">Server Config</a></li>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "</ul>");
+  off+=snprintf(msg+off, HPSIZE-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
+  off+=snprintf(msg+off, HPSIZE-off, "\n</body>\n</html>");
+  return msg;
+}
+
 #define STASIZ (262100)
 char *hdl_server_status_html (CONN *c) {
   char *sm = malloc(STASIZ * sizeof(char));

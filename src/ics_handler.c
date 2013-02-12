@@ -172,6 +172,7 @@ static int parse_http_query(CONN *c, char *query, httpheader *h, ics_request_arg
 
 // harvid.c
 int   hdl_decode_frame (int fd, httpheader *h, ics_request_args *a);
+char *hdl_homepage_html (CONN *c);
 char *hdl_server_status_html (CONN *c);
 char *hdl_file_info (CONN *c, ics_request_args *a);
 char *hdl_server_info (CONN *c, ics_request_args *a);
@@ -318,22 +319,10 @@ void ics_http_handler(
 		}
 		c->run=0;
 	} else if (CTP("/") && !strcmp(path, "/") && strlen(query)==0) { /* HOMEPAGE */
-#define HPSIZE 4096 // max size of homepage in bytes.
-		char msg[HPSIZE]; int off =0;
-		off+=snprintf(msg+off, HPSIZE-off, DOCTYPE HTMLOPEN);
-		off+=snprintf(msg+off, HPSIZE-off, "<title>ICS</title></head>\n");
-		off+=snprintf(msg+off, HPSIZE-off, HTMLBODY);
-		off+=snprintf(msg+off, HPSIZE-off, "<ul>");
-		if (!cfg_noindex) {
-			off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"index/\">File Index</a></li>\n");
-		}
-		off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"status/\">Server Status</a></li>\n");
-		off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"rc/\">Server Config</a></li>\n");
-		off+=snprintf(msg+off, HPSIZE-off, "</ul>");
-		off+=snprintf(msg+off, HPSIZE-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
-		off+=snprintf(msg+off, HPSIZE-off, "\n</body>\n</html>");
+		char *msg = hdl_homepage_html(c);
 		SEND200(msg);
-		c->run=0; // close connection
+		free(msg);
+		c->run=0;
 	}
 	else if (  (strncasecmp(protocol,  "HTTP/", 5) == 0 ) /* /?file= -> /file/frame?.. !! */
 			     &&(strcasecmp (method_str, "GET") == 0 )

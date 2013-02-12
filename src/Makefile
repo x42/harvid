@@ -23,12 +23,14 @@ ifeq ($(ARCH),mingw)
   ARCHINCLUDES=-I$(WINEROOT)/include -DHAVE_WINDOWS
   ARCHLIBES=-lwsock32 -lws2_32 -lpthreadGC2
   LDFLAGS=-L$(WINEROOT)/lib/ -L${WINEROOT}/bin
+  UNAME=mingw
 else
-  ifeq ($(shell uname),Darwin)
+  UNAME=$(shell uname)
+  ifeq ($(UNAME),Darwin)
   ARCHFLAGS=-arch i386 -arch ppc -arch x86_64
   ARCHFLAGS+=-isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
   ARCHFLAGS+=-headerpad_max_install_names
-  ARCHFLAGS+=-sectcreate __DATA __harvid_jpg ../doc/harvid.jpg
+  ARCHFLAGS+=-sectcreate __DATA __doc_harvid_jpg ../doc/harvid.jpg
   LOGODEP=
   ECHO=echo
   else
@@ -59,7 +61,7 @@ LOADLIBES+=-ljpeg
 LOADLIBES+=-lz -lm
 
 CFLAGS+=-DICSD_RGB24
-CFLAGS+=-DICSVERSION=\"$(VERSION)\"
+CFLAGS+=-DICSVERSION="\"$(VERSION) [$(UNAME)]\""
 
 all: harvid
 
