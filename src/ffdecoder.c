@@ -20,6 +20,7 @@
 #include <stdint.h>     /* uint8_t */
 #include <stdlib.h>     /* calloc et al.*/
 #include <string.h>     /* memset */
+#include <pthread.h>
 
 #include "ffcompat.h"
 #include <libswscale/swscale.h>
@@ -75,11 +76,12 @@ typedef struct {
 #include <sys/time.h>
 #include <unistd.h>
 
-/* Option flags and variables */
+/* Option flags and global variables */
 extern int want_quiet;
 extern int want_verbose;
 
-const AVRational c1_Q = { 1, 1 };
+static pthread_mutex_t avcodec_lock;
+static const AVRational c1_Q = { 1, 1 };
 
 //--------------------------------------------
 // Manage video file
@@ -147,11 +149,12 @@ void ff_initialize (void) {
   if (want_verbose) fprintf(stdout, "FFMPEG: registering codecs.\n");
   av_register_all();
   avcodec_register_all();
+  pthread_mutex_init(&avcodec_lock, NULL);
   if(!want_verbose) av_log_set_level(AV_LOG_QUIET);
 }
 
 void ff_cleanup (void) {
-  ;
+  pthread_mutex_destroy(&avcodec_lock);
 }
 
 int ff_close_movie(void *ptr) {
@@ -165,8 +168,10 @@ int ff_close_movie(void *ptr) {
   if (ff->pFrameFMT) av_free(ff->pFrameFMT);
   if (ff->pFrame) av_free(ff->pFrame);
   ff->buffer=NULL;ff->pFrameFMT=ff->pFrame=NULL;
+  pthread_mutex_lock(&avcodec_lock);
   avcodec_close(ff->pCodecCtx);
   avformat_close_input(&ff->pFormatCtx);
+  pthread_mutex_unlock(&avcodec_lock);
   if (ff->pSWSCtx) sws_freeContext(ff->pSWSCtx);
   return (0);
 }
@@ -249,12 +254,15 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   // TODO: live-stream: remember first pts as offset! -> don't use multiple-decoders for the same stream ?!
 #endif
 
+  pthread_mutex_lock(&avcodec_lock);
   /* Retrieve stream information */
   if(avformat_find_stream_info(ff->pFormatCtx, NULL)<0) {
     fprintf( stderr, "Cannot find stream information in file %s\n", file_name);
     avformat_close_input(&ff->pFormatCtx);
+    pthread_mutex_unlock(&avcodec_lock);
     return (-1);
   }
+  pthread_mutex_unlock(&avcodec_lock);
 
   if (want_verbose) av_dump_format(ff->pFormatCtx, 0, file_name, 0);
 
@@ -345,11 +353,14 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   }
 
   // Open codec
+  pthread_mutex_lock(&avcodec_lock);
   if(avcodec_open2(ff->pCodecCtx, pCodec, NULL)<0) {
     fprintf( stderr, "Cannot open the codec for file %s\n", file_name);
+    pthread_mutex_unlock(&avcodec_lock);
     avformat_close_input(&ff->pFormatCtx);
     return(-1);
   }
+  pthread_mutex_unlock(&avcodec_lock);
 
   if (!(ff->pFrame=avcodec_alloc_frame())) {
     fprintf( stderr, "Cannot allocate video frame buffer\n");
