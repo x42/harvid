@@ -182,36 +182,38 @@ void  hdl_clear_cache();
 char *hdl_index_dir (const char *root, char *base_url, const char *path, int opt);
 
 // logo.o
-#ifndef HAVE_WINDOWS
-#define BINPFX _binary
-#else
-#define BINPFX binary
-#endif
-
-#define XXEXTLD(ARCHPFX,NAME) \
-	extern const unsigned char ARCHPFX ## ____ ## NAME ## _start[]; \
-	extern const unsigned char ARCHPFX ## ____ ## NAME ## _end[];
-
-#define XXLDVAR(ARCHPFX,NAME) \
-	ARCHPFX ## ____ ## NAME ## _start
-
-#define XXLDLEN(ARCHPFX,NAME) \
-	((ARCHPFX ## ____ ## NAME ## _end) - (ARCHPFX ## ____ ## NAME ## _start))
-
-/* evaluator macros */
-#define XEXTLD(ARCHPFX,NAME) XXEXTLD(ARCHPFX,NAME)
-#define XLDVAR(ARCHPFX,NAME) XXLDVAR(ARCHPFX,NAME)
-#define XLDLEN(ARCHPFX,NAME) XXLDLEN(ARCHPFX,NAME)
-
-#define LDVAR(NAME) XLDVAR(BINPFX,NAME)
-#define EXTLD(NAME) XEXTLD(BINPFX,NAME)
-#define LDLEN(NAME) XLDLEN(BINPFX,NAME)
 
 #ifdef __APPLE__
-extern const unsigned char  _section$__DATA__harvid_jpg[];
-#else
-EXTLD(doc_harvid_jpg)
+#include <mach-o/getsect.h>
+
+#define EXTLD(NAME) \
+	extern const unsigned char _section$__DATA__ ## NAME [];
+#define LDVAR(NAME) _section$__DATA__ ## NAME
+#define LDLEN(NAME) (getsectbyname("__DATA", "__" #NAME)->size)
+
+#elif (defined HAVE_WINDOWS)  /* mingw */
+
+#define EXTLD(NAME) \
+	extern const unsigned char binary____ ## NAME ## _start[]; \
+	extern const unsigned char binary____ ## NAME ## _end[];
+#define LDVAR(NAME) \
+	binary____ ## NAME ## _start
+#define LDLEN(NAME) \
+	((binary____ ## NAME ## _end) - (binary____ ## NAME ## _start))
+
+#else /* gnu ld */
+
+#define EXTLD(NAME) \
+	extern const unsigned char _binary____ ## NAME ## _start[]; \
+	extern const unsigned char _binary____ ## NAME ## _end[];
+#define LDVAR(NAME) \
+	_binary____ ## NAME ## _start
+#define LDLEN(NAME) \
+	((_binary____ ## NAME ## _end) - (_binary____ ## NAME ## _start))
+
 #endif
+
+EXTLD(doc_harvid_jpg)
 
 /////////////////////////////////////////////////////////////////////
 
@@ -240,13 +242,8 @@ void ics_http_handler(
 		httpheader h;
 		memset(&h, 0, sizeof(httpheader));
 		h.ctype="image/jpeg";
-#ifdef __APPLE__
-		h.length= 0x5496; // XXX -- get size of segment
-		http_tx(c->fd, 200, &h, h.length, _section$__DATA__harvid_jpg);
-#else
 		h.length= LDLEN(doc_harvid_jpg);
 		http_tx(c->fd, 200, &h, h.length, LDVAR(doc_harvid_jpg));
-#endif
 		c->run=0;
 	} else if (CTP("/info")) { /* /info -> /file/info !! */
 		ics_request_args a;
