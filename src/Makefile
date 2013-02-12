@@ -6,6 +6,30 @@ PREFIX ?= /usr/local
 bindir ?= $(PREFIX)/bin
 mandir ?= $(PREFIX)/share/man/man1
 
+LOGODEP=logo.o
+ECHOARG=-e
+
+ifeq ($(ARCH),mingw)
+  CC=i686-w64-mingw32-gcc
+  LD=i686-w64-mingw32-ld
+  WINEROOT?=$(HOME)/.wine/drive_c/x-prefix
+  PKG_CONFIG_PATH=$(WINEROOT)/lib/pkgconfig/
+  ARCHFLAGS=-I$(WINEROOT)/include -DHAVE_WINDOWS
+  ARCHLIBES=-lwsock32 -lws2_32 -lpthreadGC2
+  LDFLAGS=-L$(WINEROOT)/lib/ -L${WINEROOT}/bin
+else
+  ifeq ($(shell uname),Darwin)
+  ARCHFLAGS=-arch i386 -arch ppc -arch x86_64
+  ARCHFLAGS+=-isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
+  ARCHFLAGS+=-headerpad_max_install_names -fnested-functions
+  ARCHFLAGS+=-sectcreate __DATA __harvid_jpg ../doc/harvid.jpg
+	LOGODEP=
+	ECHOARG=
+  else
+  ARCHLIBES=-lrt -lpthread
+  endif
+endif
+
 
 ifeq ($(shell pkg-config --exists libavcodec libavformat libswscale || echo no), no)
   $(error "http://ffmpeg.org is required - install libavcode-dev, libswcale-dev, etc")
@@ -15,7 +39,7 @@ ifeq ($(shell pkg-config --exists libpng || echo no), no)
   $(error "libpng is required - install libpng-dev")
 endif
 
-ifeq ($(shell echo -e '\#include <stdio.h>\n\#include <jpeglib.h>\nint main() { struct jpeg_error_mgr jerr; jpeg_std_error(&jerr); return 0; }' | gcc -x c -o /dev/null - -ljpeg &>/dev/null || echo no), no)
+ifeq ($(shell echo $(ECHOARG) "\#include <stdio.h>\n\#include <jpeglib.h>\nint main() { struct jpeg_error_mgr jerr; jpeg_std_error(&jerr); return 0; }" | gcc -pipe -x c -o /dev/null - -ljpeg  || echo no), no)
   $(error "libjpeg is required - install libjpeg-dev")
 endif
 
@@ -57,9 +81,9 @@ HARVID_SRC = \
 logo.o: ../doc/harvid.jpg
 	$(LD) -r -b binary -o logo.o ../doc/harvid.jpg
 
-harvid: $(HARVID_SRC) $(HARVID_H) logo.o
+harvid: $(HARVID_SRC) $(HARVID_H) $(LOGODEP)
 	export PKG_CONFIG_PATH=$(PKG_CONFIG_PATH);\
-	$(CC) -o $(@) $(CFLAGS) $(HARVID_SRC) logo.o $(LDFLAGS) $(LOADLIBES)
+	$(CC) -o $(@) $(CFLAGS) $(HARVID_SRC) $(LOGODEP) $(LDFLAGS) $(LOADLIBES)
 
 clean:
 	rm -f harvid logo.o cscope.* tags

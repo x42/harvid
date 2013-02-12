@@ -205,7 +205,11 @@ char *hdl_index_dir (const char *root, char *base_url, const char *path, int opt
 #define EXTLD(NAME) XEXTLD(BINPFX,NAME)
 #define LDLEN(NAME) XLDLEN(BINPFX,NAME)
 
+#ifdef __APPLE__
+extern const unsigned char  _section$__DATA__harvid_jpg[];
+#else
 EXTLD(doc_harvid_jpg)
+#endif
 
 /////////////////////////////////////////////////////////////////////
 
@@ -234,8 +238,13 @@ void ics_http_handler(
 		httpheader h;
 		memset(&h, 0, sizeof(httpheader));
 		h.ctype="image/jpeg";
+#ifdef __APPLE__
+		h.length= 0x5496; // XXX -- get size of segment
+		http_tx(c->fd, 200, &h, h.length, _section$__DATA__harvid_jpg);
+#else
 		h.length= LDLEN(doc_harvid_jpg);
 		http_tx(c->fd, 200, &h, h.length, LDVAR(doc_harvid_jpg));
+#endif
 		c->run=0;
 	} else if (CTP("/info")) { /* /info -> /file/info !! */
 		ics_request_args a;
