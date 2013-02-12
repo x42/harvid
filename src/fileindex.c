@@ -41,7 +41,7 @@
 
 char *url_escape(const char *string, int inlength); // from httprotocol.c
 
-static char *csv_escape(const char *string, int inlength) {
+char *csv_escape(const char *string, int inlength, const char esc) {
   char *ns;
   size_t i,o,a;
   const char *t = string;
@@ -53,8 +53,12 @@ static char *csv_escape(const char *string, int inlength) {
   }
   ns = malloc(a);
   for (i=0,o=0; i<a; ++i) {
-    ns[o++] = string[i];
-    if (string[i] == '"') ns[o++]='"';
+    if (string[i] == '"') {
+      ns[o++] = esc;
+      ns[o++] = '"';
+    } else {
+      ns[o++] = string[i];
+    }
   }
   return ns;
 }
@@ -100,9 +104,9 @@ static int print_csv (int what, const char *burl, const char *path, const char *
     case 1:
       {
       char *u1, *u2, *c1;
-      u1=url_escape(path,0);
-      u2=url_escape(name,0);
-      c1=csv_escape(name,0);
+      u1=url_escape(path, 0);
+      u2=url_escape(name, 0);
+      c1=csv_escape(name, 0, '"');
       off+=snprintf(m+off, n-off,
        "F,\"%s\",\"%s%s%s\",\"%s\"\n", burl, u1, SL_SEP(path), u2, c1);
       free(u1); free(u2); free(c1);
@@ -111,8 +115,8 @@ static int print_csv (int what, const char *burl, const char *path, const char *
     case 0:
       {
       char *u2, *c1;
-      u2=url_escape(name,0);
-      c1=csv_escape(name,0);
+      u2=url_escape(name, 0);
+      c1=csv_escape(name, 0, '"');
       off+=snprintf(m+off, n-off,
        "D,\"%s%s%s\",\"%s\"\n", burl, SL_SEP(path), u2, c1);
       free(u2); free(c1);
@@ -209,7 +213,7 @@ int parse_dir (const char *root, const char *burl, const char *path, int opt, ch
 
 #define IDXSIZ (65536*4) // TODO dynamic size
 
-char *index_dir (const char *root, char *base_url, char *path, int opt) {
+char *hdl_index_dir (const char *root, char *base_url, char *path, int opt) {
   char *sm = malloc(IDXSIZ * sizeof(char));
   int off = 0;
   int bl = strlen(base_url) - 2;

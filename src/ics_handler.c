@@ -169,14 +169,15 @@ static int parse_http_query(CONN *c, char *query, httpheader *h, ics_request_arg
 /////////////////////////////////////////////////////////////////////
 // Callbacks -- request handlers
 
-// see harvid.c
+// harvid.c
 int   hdl_decode_frame (int fd, httpheader *h, ics_request_args *a);
 char *hdl_server_status_html (CONN *c);
 char *hdl_file_info (CONN *c, ics_request_args *a);
+char *hdl_server_info (CONN *c, ics_request_args *a);
 void  hdl_clear_cache();
 
-// see fileindex.c
-char *index_dir (const char *root, char *base_url, const char *path, int opt);
+// fileindex.c
+char *hdl_index_dir (const char *root, char *base_url, const char *path, int opt);
 
 /////////////////////////////////////////////////////////////////////
 
@@ -216,6 +217,14 @@ void ics_http_handler(
 		}
 		if (a.file_name) free(a.file_name);
 		c->run=0;
+	} else if (CTP("/rc")) {
+		ics_request_args a;
+		struct queryparserstate qps = {&a, NULL, 0};
+		memset(&a, 0, sizeof(ics_request_args));
+		parse_http_query_params(&qps, query);
+		char *info = hdl_server_info(c, &a);
+		SEND200(info);
+		free(info);
 	} else if (CTP("/index/")) { /* /index/  -> /file/index/ ?! */
 		char *dp = url_unescape(&(path[7]), 0, NULL);
 		if (cfg_noindex) {
@@ -229,7 +238,7 @@ void ics_http_handler(
 			memset(&a, 0, sizeof(ics_request_args));
 			parse_http_query_params(&qps, query);
 			snprintf(base_url,1024, "http://%s%s", host, path);
-			char *msg = index_dir(c->d->docroot, base_url, dp, a.idx_option);
+			char *msg = hdl_index_dir(c->d->docroot, base_url, dp, a.idx_option);
 			send_http_status_fd(c->fd, 200);
 			if (a.idx_option & OPT_CSV) {
 				httpheader h;

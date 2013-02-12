@@ -344,6 +344,56 @@ char *hdl_file_info (CONN *c, ics_request_args *a) {
 
 /////////////
 
+char *csv_escape(const char *string, int inlength, const char esc);
+
+#define SINFOSIZ (1024)
+char *hdl_server_info (CONN *c, ics_request_args *a) {
+  char *info = malloc(SINFOSIZ * sizeof(char));
+  int off =0;
+  switch (a->render_fmt) {
+    case OUT_PLAIN:
+      off+=snprintf(info+off,SINFOSIZ-off, "%s\n", c->d->docroot);
+      off+=snprintf(info+off,SINFOSIZ-off, "%s\n", c->d->local_addr);
+      off+=snprintf(info+off,SINFOSIZ-off, "%d\n", c->d->local_port);
+      off+=snprintf(info+off,SINFOSIZ-off, "%d\n", initial_cache_size);
+      break;
+    case OUT_JSON:
+      {
+      char *dr = csv_escape(c->d->docroot, 0, '\\');
+      off+=snprintf(info+off,SINFOSIZ-off, "{");
+      off+=snprintf(info+off,SINFOSIZ-off, "\"docroot\":\"%s\"", dr);
+      off+=snprintf(info+off,SINFOSIZ-off, "\"listenaddr\":\"%s\"", c->d->local_addr);
+      off+=snprintf(info+off,SINFOSIZ-off, "\"listenport\":%d", c->d->local_port);
+      off+=snprintf(info+off,SINFOSIZ-off, "\"cachesize\":%d", initial_cache_size);
+      off+=snprintf(info+off,SINFOSIZ-off, "}");
+      }
+      break;
+    case OUT_CSV:
+      {
+      char *dr = csv_escape(c->d->docroot, 0, '"');
+      off+=snprintf(info+off,SINFOSIZ-off, "\"%s\",", dr);
+      off+=snprintf(info+off,SINFOSIZ-off, "%s,", c->d->local_addr);
+      off+=snprintf(info+off,SINFOSIZ-off, "%d,", c->d->local_port);
+      off+=snprintf(info+off,SINFOSIZ-off, "%d,", initial_cache_size);
+      free(dr);
+      }
+      break;
+    default: // HTML
+      off+=snprintf(info+off, SINFOSIZ-off, DOCTYPE HTMLOPEN);
+      off+=snprintf(info+off, SINFOSIZ-off, "<title>ICS Server Info</title></head>\n<body>\n<h2>ICS Server Info</h2>\n\n");
+      off+=snprintf(info+off, SINFOSIZ-off, "<ul>\n");
+      off+=snprintf(info+off, SINFOSIZ-off, "<li>Docroot: %s</li>\n", c->d->docroot);
+      off+=snprintf(info+off, SINFOSIZ-off, "<li>ListenAddr: %s</li>\n", c->d->local_addr);
+      off+=snprintf(info+off, SINFOSIZ-off, "<li>ListenPort: %d</li>\n", c->d->local_port);
+      off+=snprintf(info+off, SINFOSIZ-off, "<li>CacheSize: %d</li>\n", initial_cache_size);
+      off+=snprintf(info+off, SINFOSIZ-off, "\n</ul>\n</body>\n</html>");
+      break;
+  }
+  return info;
+}
+
+/////////////
+
 int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
   VInfo ji;
   int vid;
