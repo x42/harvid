@@ -27,7 +27,9 @@
 
 #ifndef HAVE_WINDOWS
 #include <syslog.h>
+#define PRIlld "lld"
 #else
+#define PRIlld "I64d"
 #include <windows.h>
 #include <winsock.h>
 #warning "NO SYSLOG"

@@ -445,7 +445,7 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
   while (cptr) {
     char *tmp = flags2txt(cptr->flags);
     off+=snprintf(m+off, n-off,
-        "<tr><td>%i</td><td>%i</td><td>%s</td><td>%s</td><td>%i</td><td>%lld</td><td>%s</td><td>%"PRId64"</td></tr>\n",
+        "<tr><td>%i</td><td>%i</td><td>%s</td><td>%s</td><td>%i</td><td>%"PRIlld"</td><td>%s</td><td>%"PRId64"</td></tr>\n",
         i, cptr->id, tmp, (cptr->fn?cptr->fn:"-"), cptr->uuid, (long long)cptr->lru, (cptr->decoder?"open":"null"), cptr->frame);
     free(tmp);
     i++;

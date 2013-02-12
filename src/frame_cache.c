@@ -314,7 +314,7 @@ size_t vcache_info_html(void *p, char *m, size_t n) {
   while (cptr) {
     char *tmp = flags2txt(cptr->flags);
     off+=snprintf(m+off, n-off,
-        "<tr><td>%d</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%"PRId64"</td><td>%lld</td><td>%s</td></tr>\n",
+        "<tr><td>%d</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%"PRId64"</td><td>%"PRIlld"</td><td>%s</td></tr>\n",
 	i, cptr->id, tmp, cptr->w, cptr->h, cptr->frame, (long long) cptr->lru,(cptr->b?"alloc":"null"));
     free(tmp);
     i++;
@@ -329,7 +329,7 @@ void vcache_info_dump(void *p) {
   int i=0;
   printf("cache info dump:\n");
   while (cptr) {
-    printf("%d,%d,%d,%d,%d,%"PRId64",%lld:%s\n",
+    printf("%d,%d,%d,%d,%d,%"PRId64",%"PRIlld":%s\n",
 	i, cptr->id, cptr->flags, cptr->w, cptr->h, cptr->frame, (long long) cptr->lru, (cptr->b?"allocated":"null"));
     i++;
     cptr=cptr->next;

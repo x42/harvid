@@ -301,7 +301,7 @@ static char *file_info_html (CONN *c, ics_request_args *a, VInfo *ji) {
   off+=snprintf(im+off, STASIZ-off, "<li>Framerate: %.2f</li>\n",timecode_rate_to_double(&ji->framerate));
   off+=snprintf(im+off, STASIZ-off, "<li>Duration: %s</li>\n",smpte);
   off+=snprintf(im+off, STASIZ-off, "<li>Duration: %.2f sec</li>\n",(double)ji->frames/timecode_rate_to_double(&ji->framerate));
-  off+=snprintf(im+off, STASIZ-off, "<li>Duration: %llu frames</li>\n",(long long unsigned) ji->frames);
+  off+=snprintf(im+off, STASIZ-off, "<li>Duration: %"PRId64" frames</li>\n", ji->frames);
   off+=snprintf(im+off, STASIZ-off, "\n</ul>\n</body>\n</html>");
   jvi_free(ji);
   return (im);
@@ -315,7 +315,7 @@ static char *file_info_raw (CONN *c, ics_request_args *a, VInfo *ji) {
 
   off+=snprintf(im+off, STASIZ-off, "1\n"); // FORMAT VERSION
   off+=snprintf(im+off, STASIZ-off, "%.3f\n",timecode_rate_to_double(&ji->framerate)); // fps
-  off+=snprintf(im+off, STASIZ-off, "%llu\n",(long long unsigned) ji->frames); // duration
+  off+=snprintf(im+off, STASIZ-off, "%"PRId64"\n", ji->frames); // duration
   off+=snprintf(im+off, STASIZ-off, "0.0\n"); // start-offset TODO
   off+=snprintf(im+off, STASIZ-off, "%f\n",ji->movie_aspect);
   jvi_free(ji);

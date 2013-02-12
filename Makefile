@@ -1,7 +1,8 @@
 SUBDIRS = src doc
 
 ifeq ($(ARCH),mingw)
-  CC=i586-mingw32msvc-gcc
+  CC=i686-w64-mingw32-gcc
+  LD=i686-w64-mingw32-ld
   WINEROOT?=$(HOME)/.wine/drive_c/x-prefix
   PKG_CONFIG_PATH=$(WINEROOT)/lib/pkgconfig/
   ARCHFLAGS=-I$(WINEROOT)/include -DHAVE_WINDOWS

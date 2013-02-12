@@ -129,11 +129,11 @@ void ff_init_moviebuffer(void *ptr) {
   #endif
 
   if (ff->internal_buffer) free(ff->internal_buffer);
-  ff_getbuffersize(ff,&numBytes);
-  ff->internal_buffer=(uint8_t *) calloc(numBytes,sizeof(uint8_t));
+  ff_getbuffersize(ff, &numBytes);
+  ff->internal_buffer=(uint8_t *) calloc(numBytes, sizeof(uint8_t));
   ff->buffer = ff->internal_buffer;
   if (!ff->buffer) {
-    fprintf(stderr, "out of memory -tying to alloc %zu bytes\n",numBytes);
+    fprintf(stderr, "out of memory\n");
     exit(1);
   }
   if (!ff->pFrameFMT) { // Assign appropriate parts of buffer to image planes in pFrameFMT

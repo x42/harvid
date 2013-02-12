@@ -98,6 +98,7 @@ update_executable() {
 echo "------- DEPLOY"
 export TARGET=$TDIR/harvid
 cp -f src/harvid "$TARGET"
+strip "$TARGET"
 update_executable
 update_executable
 file "$TARGET"
@@ -106,6 +107,7 @@ otool -arch all -L "$TARGET"
 echo "-------"
 export TARGET="$TDIR/ffprobe_harvid"
 lipo -create -o "$TARGET" ${FFSOURCE}ffmpeg-git*/ffprobe
+strip "$TARGET"
 update_executable
 update_executable
 file "$TARGET"
@@ -114,6 +116,7 @@ otool -arch all -L "$TARGET"
 echo "-------"
 export TARGET="$TDIR/ffmpeg_harvid"
 lipo -create -o "$TARGET" ${FFSOURCE}ffmpeg-git*/ffmpeg
+strip "$TARGET"
 update_executable
 update_executable
 file "$TARGET"

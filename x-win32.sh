@@ -24,6 +24,7 @@ echo $NSIDIR
 
 WINEBIN=${WINEROOT}/bin/
 cp -v src/harvid $NSIDIR/harvid.exe
+i686-w64-mingw32-strip $NSIDIR/harvid.exe
 
 dllssrc="avformat avcodec avdevice avutil swscale swresample avfilter avresample postproc jpeg"
 for fname in $dllssrc; do
