@@ -179,6 +179,34 @@ void  hdl_clear_cache();
 // fileindex.c
 char *hdl_index_dir (const char *root, char *base_url, const char *path, int opt);
 
+// logo.o
+#ifndef HAVE_WINDOWS
+#define BINPFX _binary
+#else
+#define BINPFX binary
+#endif
+
+#define XXEXTLD(ARCHPFX,NAME) \
+	extern const unsigned char ARCHPFX ## ____ ## NAME ## _start[]; \
+	extern const unsigned char ARCHPFX ## ____ ## NAME ## _end[];
+
+#define XXLDVAR(ARCHPFX,NAME) \
+	ARCHPFX ## ____ ## NAME ## _start
+
+#define XXLDLEN(ARCHPFX,NAME) \
+	((ARCHPFX ## ____ ## NAME ## _end) - (ARCHPFX ## ____ ## NAME ## _start))
+
+/* evaluator macros */
+#define XEXTLD(ARCHPFX,NAME) XXEXTLD(ARCHPFX,NAME)
+#define XLDVAR(ARCHPFX,NAME) XXLDVAR(ARCHPFX,NAME)
+#define XLDLEN(ARCHPFX,NAME) XXLDLEN(ARCHPFX,NAME)
+
+#define LDVAR(NAME) XLDVAR(BINPFX,NAME)
+#define EXTLD(NAME) XEXTLD(BINPFX,NAME)
+#define LDLEN(NAME) XLDLEN(BINPFX,NAME)
+
+EXTLD(doc_harvid_jpg)
+
 /////////////////////////////////////////////////////////////////////
 
 /** main http request handler / dispatch requests */
@@ -201,6 +229,13 @@ void ics_http_handler(
 		h.ctype="image/x-icon";
 		h.length=sizeof(favicon_data);
 		http_tx(c->fd, 200, &h, sizeof(favicon_data), favicon_data);
+		c->run=0;
+	} else if (CTP("/logo.jpg")) {
+		httpheader h;
+		memset(&h, 0, sizeof(httpheader));
+		h.ctype="image/jpeg";
+		h.length= LDLEN(doc_harvid_jpg);
+		http_tx(c->fd, 200, &h, h.length, LDVAR(doc_harvid_jpg));
 		c->run=0;
 	} else if (CTP("/info")) { /* /info -> /file/info !! */
 		ics_request_args a;

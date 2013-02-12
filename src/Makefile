@@ -54,12 +54,15 @@ HARVID_SRC = \
   image_format.c \
   timecode.c
 
-harvid: $(HARVID_SRC) $(HARVID_H)
+logo.o: ../doc/harvid.jpg
+	$(LD) -r -b binary -o logo.o ../doc/harvid.jpg
+
+harvid: $(HARVID_SRC) $(HARVID_H) logo.o
 	export PKG_CONFIG_PATH=$(PKG_CONFIG_PATH);\
-	$(CC) -o $(@) $(CFLAGS) $(HARVID_SRC) $(LDFLAGS) $(LOADLIBES)
+	$(CC) -o $(@) $(CFLAGS) $(HARVID_SRC) logo.o $(LDFLAGS) $(LOADLIBES)
 
 clean:
-	rm -f harvid cscope.* tags
+	rm -f harvid logo.o cscope.* tags
 
 man: harvid
 	help2man -N -n 'video server' -o ../doc/harvid.1 ./harvid
