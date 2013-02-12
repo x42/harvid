@@ -21,15 +21,17 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <assert.h>
+
 #include "decoder_ctrl.h"
 #include "ffdecoder.h"
 #include "ffcompat.h"
-#include <assert.h>
-
 #include "daemon_log.h"
 
+///////////////////////////////////////////////////////////////////////////////
+// ffdecoder wrapper
+
 static int my_decode(void *vd, unsigned long frame, uint8_t *b, int w, int h) {
-  //printf("JV: decode into buffer.\n");
   ff_resize(vd, w, h, NULL, NULL);
   ff_set_bufferptr(vd, b);
   // TODO: if check rendering failed !!
@@ -75,17 +77,15 @@ static void my_get_info_scale(void *vd, VInfo *i, int w, int h) {
   ff_resize(vd, w, h, NULL, i);
 }
 
-///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // Video object management
-
-// part 1 - internal list mgmnt.
+//
 
 /// Video Object Flags
 #define VOF_USED 1 //< decoder is currently in use - decoder locked
 #define VOF_OPEN 2 //< decoder is idle - decoder is a valid pointer for the file/ID
 #define VOF_VALID 4 //<  ID and filename are valid (ID may be in use by cache)
-//#define VOF_EXCLUSIVE 8 //< TODO - use uuid to address this decoder and not id=filename
-//#define VOF_NOLRU 16 //< TODO - don't close this decoder even if it's unused and the cache is full ;(
+#define VOF_PENDING 8 //< decoder is just opening a file (my_open_movie)
 
 typedef struct JVOBJECT {
   struct JVOBJECT *next;
@@ -125,7 +125,7 @@ static JVOBJECT *testjvd(JVOBJECT *jvo, int id, int64_t frame) {
 
     found++; // DEBUG
 
-    if (cptr->flags&VOF_USED) {
+    if (cptr->flags&VOF_USED || cptr->flags&VOF_PENDING) {
       continue;
     }
 
@@ -192,11 +192,11 @@ static void gc_jvo(JVOBJECT *jvo, int min_age) {
   JVOBJECT *cptr = jvo;
   time_t lru = time(NULL);
   while (cptr) {
-    if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID)) == 0) {
+    if ((jvo->flags&(VOF_USED|VOF_PENDING|VOF_OPEN|VOF_VALID)) == 0) {
       cptr = cptr->next;
       continue;
     }
-    if ((cptr->flags&VOF_USED) != 0 || cptr->lru + min_age > lru) {
+    if ((cptr->flags&VOF_USED) || (cptr->flags&VOF_PENDING) || cptr->lru + min_age > lru) {
       cptr = cptr->next;
       continue;
     }
@@ -224,20 +224,27 @@ static JVOBJECT *getjvo(JVOBJECT *jvo, int max_objects) {
   JVOBJECT *cptr = jvo;
   // gc_jvo (jvo, 600);  // disabled until fixed
   while (cptr) {
-    if ((cptr->flags&(VOF_USED|VOF_OPEN|VOF_VALID)) == 0) return (cptr);
+    pthread_mutex_lock(&cptr->lock);
+    if ((cptr->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_PENDING)) == 0) {
+      pthread_mutex_unlock(&cptr->lock);
+      return (cptr);
+    }
+    pthread_mutex_unlock(&cptr->lock);
 
-    if (!(cptr->flags&(VOF_USED|VOF_OPEN)) && (cptr->lru < lru)) {
+    if (!(cptr->flags&(VOF_USED|VOF_OPEN|VOF_PENDING)) && (cptr->lru < lru)) {
       lru = cptr->lru;
       dec_closed = cptr;
-    } else if (!(cptr->flags&(VOF_USED)) && (cptr->lru < lru)) {
+    } else if (!(cptr->flags&(VOF_USED|VOF_PENDING)) && (cptr->lru < lru)) {
       lru = cptr->lru;
       dec_open = cptr;
     }
     cptr = cptr->next;
     i++;
   }
+#if 0
   if (i < max_objects)
     return(newjvo(jvo));
+#endif
 
   if (dec_closed)
     cptr = dec_closed; // replace LRU
@@ -251,8 +258,8 @@ static JVOBJECT *getjvo(JVOBJECT *jvo, int max_objects) {
   }
 
   // reset LRU or invalidate
-  if (cptr && !(cptr->flags&VOF_USED)) {
-    //printf("JV - LRU %d - %lu\n", i, cptr->lru);
+  if (cptr && !(cptr->flags&VOF_USED)&& !(cptr->flags&VOF_PENDING)) {
+    dlog(DLOG_WARNING, "re-using decoder..\n"); // XXX
     pthread_mutex_lock(&cptr->lock); // TODO check flags again after taking lock !
     if (cptr->fn) free(cptr->fn);
     cptr->id = 0;
@@ -264,6 +271,12 @@ static JVOBJECT *getjvo(JVOBJECT *jvo, int max_objects) {
     return (cptr);
   }
 
+#if 1
+  if (i < max_objects)
+    return(newjvo(jvo));
+#endif
+
+  dlog(DLOG_CRIT, "decoder control: out of memory");
   assert(0); // out of memory..
   return (NULL);
 }
@@ -327,7 +340,10 @@ static int clearjvo(JVOBJECT *jvo, int f, int id) {
   return (cleared);
 }
 
-// --- API
+
+///////////////////////////////////////////////////////////////////////////////
+// Video decoder management
+//
 
 typedef struct JVD {
   JVOBJECT *jvo; // list of all decoder objects
@@ -430,6 +446,10 @@ static char *flags2txt(int f) {
   if (f&VOF_VALID) {
     rv = (char*) realloc(rv, (off+7) * sizeof(char));
     off+=sprintf(rv+off, "valid ");
+  }
+  if (f&VOF_PENDING) {
+    rv = (char*) realloc(rv, (off+9) * sizeof(char));
+    off+=sprintf(rv+off, "pending ");
   }
   return rv;
 }
@@ -551,12 +571,26 @@ tryagain:
     return(-1);
   }
 
+  // TODO set USED early on - check before waitning on lock
   pthread_mutex_lock(&jvo->lock);
 
+  if ((jvo->flags&(VOF_PENDING))) {
+    pthread_mutex_unlock(&jvo->lock);
+    goto tryagain;
+  }
+  jvo->flags |= VOF_PENDING;
+  pthread_mutex_unlock(&jvo->lock);
+
+
   if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID)) == (VOF_VALID)) {
-    if (!my_open_movie(&jvo->decoder, jvo->fn))
+    if (!my_open_movie(&jvo->decoder, jvo->fn)) {
+      pthread_mutex_lock(&jvo->lock);
       jvo->flags |= VOF_OPEN;
-    else {
+      jvo->flags &= ~VOF_PENDING;
+      pthread_mutex_unlock(&jvo->lock);
+    } else {
+      pthread_mutex_lock(&jvo->lock);
+      jvo->flags &= ~VOF_PENDING;
       pthread_mutex_unlock(&jvo->lock);
       dlog(DLOG_ERR, "JV : ERROR: opening of movie file failed.\n");
       return(-1);
@@ -564,12 +598,12 @@ tryagain:
   }
 
   if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID)) == (VOF_VALID|VOF_OPEN)) {
+    pthread_mutex_lock(&jvo->lock);
+    jvo->flags &= ~VOF_PENDING;
     jvo->flags |= VOF_USED;
     pthread_mutex_unlock(&jvo->lock);
     return(jvo->uuid);
   }
-
-  pthread_mutex_unlock(&jvo->lock);
 
   dlog(DLOG_DEBUG, "JV : WARNING: decoder object was busy.\n");
   goto tryagain;
@@ -581,14 +615,12 @@ tryagain:
 int dctrl_decode(void *p, int uuid, unsigned long frame, uint8_t *b, int w, int h) {
   JVD *jvd = p ? (JVD*)p : g_decoder;
   JVOBJECT *jvo;
-  //printf("dctrl_decode: decoder: %i frame:%lu - %x \n", uuid, frame, b);
   if (!(jvo = get_obj(jvd, uuid))) return -1;
   jvo->lru = time(NULL);
   int rv= my_decode(jvo->decoder, frame, b, w, h);
   if (!rv) {
     jvo->frame = frame;
   }
-  //printf("dctrl_finish: decoder: %i frame:%lu\n", uuid, frame);
   return rv;
 }
 
