@@ -160,15 +160,15 @@ size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf) {
   if (x) {
     switch (render_fmt) {
       case 1:
-	while (write_jpeg(ji, buf, x))
+	if (write_jpeg(ji, buf, x))
 	  fprintf(stderr, "Could not write tmpfile\n");
 	break;
       case 2:
-	while (write_png(ji, buf, x))
+	if (write_png(ji, buf, x))
 	  fprintf(stderr, "Could not write tmpfile\n");
 	break;
       case 3:
-	while (write_ppm(ji, buf, x))
+	if (write_ppm(ji, buf, x))
 	  fprintf(stderr, "Could not write tmpfile\n");
 	break;
       default:
@@ -211,15 +211,15 @@ void write_image(char *file_name, int render_fmt, VInfo *ji, uint8_t *buf) {
   if ( (x = open_outfile(file_name)) ) {
     switch (render_fmt) {
       case FMT_JPG:
-	while (write_jpeg(ji, buf, x))
+	if (write_jpeg(ji, buf, x))
 	  fprintf(stderr, "Could not write outputfile %s\n", file_name);
 	break;
       case FMT_PNG:
-	while (write_png(ji, buf, x))
+	if (write_png(ji, buf, x))
 	  fprintf(stderr, "Could not write outputfile %s\n", file_name);
 	break;
       case FMT_PPM:
-	while (write_ppm(ji, buf, x))
+	if (write_ppm(ji, buf, x))
 	  fprintf(stderr, "Could not write outputfile %s\n", file_name);
 	break;
       default:
