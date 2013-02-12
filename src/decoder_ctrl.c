@@ -439,7 +439,7 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
   int i = 0;
   size_t off = 0;
   off+=snprintf(m+off, n-off, "<h3>Decoder Objects:</h3>\n");
-  off+=snprintf(m+off, n-off, "<table style=\"text-align:center\">\n");
+  off+=snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
   off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th><th>decoder-id</th><th>LRU</th><th>decoder</th><th>frame#</th></tr>\n");
   off+=snprintf(m+off, n-off, "\n");
   while (cptr) {

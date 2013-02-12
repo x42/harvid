@@ -27,6 +27,7 @@
 #include "ffcompat.h"
 #include "httprotocol.h"
 #include "ics_handler.h"
+#include "htmlconst.h"
 #include "enums.h"
 
 extern int cfg_noindex;
@@ -317,18 +318,19 @@ void ics_http_handler(
 		}
 		c->run=0;
 	} else if (CTP("/") && !strcmp(path, "/") && strlen(query)==0) { /* HOMEPAGE */
-#define HPSIZE 1024 // max size of homepage in bytes.
+#define HPSIZE 4096 // max size of homepage in bytes.
 		char msg[HPSIZE]; int off =0;
 		off+=snprintf(msg+off, HPSIZE-off, DOCTYPE HTMLOPEN);
-		off+=snprintf(msg+off, HPSIZE-off, "<title>ICS</title></head>\n<body>\n<h2>ICS</h2>\n\n");
-		off+=snprintf(msg+off, HPSIZE-off, "<p>Hello World,</p>\n");
+		off+=snprintf(msg+off, HPSIZE-off, "<title>ICS</title></head>\n");
+		off+=snprintf(msg+off, HPSIZE-off, HTMLBODY);
 		off+=snprintf(msg+off, HPSIZE-off, "<ul>");
-		off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"status/\">Server Status</a></li>\n");
 		if (!cfg_noindex) {
 			off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"index/\">File Index</a></li>\n");
 		}
+		off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"status/\">Server Status</a></li>\n");
+		off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"rc/\">Server Config</a></li>\n");
 		off+=snprintf(msg+off, HPSIZE-off, "</ul>");
-		off+=snprintf(msg+off, HPSIZE-off, "<hr/><p>%s at %s:%i</p>", SERVERVERSION, c->d->local_addr, c->d->local_port);
+		off+=snprintf(msg+off, HPSIZE-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
 		off+=snprintf(msg+off, HPSIZE-off, "\n</body>\n</html>");
 		SEND200(msg);
 		c->run=0; // close connection

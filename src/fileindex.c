@@ -27,6 +27,7 @@
 
 #include "daemon_log.h"
 #include "httprotocol.h"
+#include "htmlconst.h"
 #include "enums.h"
 
 #ifndef MAX_PATH
@@ -220,7 +221,9 @@ char *hdl_index_dir (const char *root, char *base_url, char *path, int opt) {
 
   if ((opt&OPT_CSV) == 0) {
     off+=snprintf(sm+off, IDXSIZ-off, DOCTYPE HTMLOPEN);
-    off+=snprintf(sm+off, IDXSIZ-off, "<title>harvid Index</title></head>\n<body>\n<h2>harvid - Index</h2>\n<p>\n");
+    off+=snprintf(sm+off, IDXSIZ-off, "<title>harvid Index</title></head>\n");
+    off+=snprintf(sm+off, IDXSIZ-off, HTMLBODY);
+    off+=snprintf(sm+off, IDXSIZ-off, "<h2>harvid - Index</h2>\n<p>\n");
   }
 
   if (bl>1) {
@@ -236,8 +239,8 @@ char *hdl_index_dir (const char *root, char *base_url, char *path, int opt) {
 
   if ((opt&OPT_CSV) == 0) {
     off+=parse_dir(root, base_url, path, opt, sm+off, IDXSIZ-off, print_html);
-    off+=snprintf(sm+off, IDXSIZ-off, "<hr/><p>"SERVERVERSION"</p>");
-    off+=snprintf(sm+off, IDXSIZ-off, "\n</p>\n</body>\n</html>");
+    off+=snprintf(sm+off, IDXSIZ-off, "<hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION"</div>");
+    off+=snprintf(sm+off, IDXSIZ-off, "</body>\n</html>");
   } else {
     off+=parse_dir(root, base_url, path, opt, sm+off, IDXSIZ-off, print_csv);
   }

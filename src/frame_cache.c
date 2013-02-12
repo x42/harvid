@@ -308,7 +308,7 @@ size_t vcache_info_html(void *p, char *m, size_t n) {
   off+=snprintf(m+off, n-off, "<h3>Cache Info:</h3>\n");
   off+=snprintf(m+off, n-off, "<p>Size: max. %i entries.\n", ((xjcd*)p)->cfg_cachesize);
   off+=snprintf(m+off, n-off, "Hits: %d, Misses: %d</p>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
-  off+=snprintf(m+off, n-off, "<table style=\"text-align:center\">\n");
+  off+=snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
   off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>W</th><th>H</th><th>Frame#</th><th>LRU</th><th>buffer</th></tr>\n");
   int i=0;
   while (cptr) {

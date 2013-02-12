@@ -258,19 +258,22 @@ int main (int argc, char **argv) {
  */
 #include "httprotocol.h"
 #include "ics_handler.h"
+#include "htmlconst.h"
 
 #define STASIZ (262100)
 char *hdl_server_status_html (CONN *c) {
   char *sm = malloc(STASIZ * sizeof(char));
   int off =0;
   off+=snprintf(sm+off, STASIZ-off, DOCTYPE HTMLOPEN);
-  off+=snprintf(sm+off, STASIZ-off, "<title>ICS Status</title></head>\n<body>\n<h2>ICS - Status</h2>\n\n");
+  off+=snprintf(sm+off, STASIZ-off, "<title>ICS Status</title></head>\n");
+  off+=snprintf(sm+off, STASIZ-off, HTMLBODY);
+  off+=snprintf(sm+off, STASIZ-off, "<h2>ICS - Status</h2>\n");
   off+=snprintf(sm+off, STASIZ-off, "<p>status: ok, online.</p>\n");
   off+=snprintf(sm+off, STASIZ-off, "<p>concurrent connections: current/max-seen/limit: %d/%d/%d</p>\n", c->d->num_clients,c->d->max_clients, MAXCONNECTIONS );
   off+=dctrl_info_html(dc, sm+off, STASIZ-off);
   off+=vcache_info_html(vc, sm+off, STASIZ-off);
-  off+=snprintf(sm+off, STASIZ-off, "<hr/><p>harvid %s at %s:%i</p>", ICSVERSION, c->d->local_addr, c->d->local_port);
-  off+=snprintf(sm+off, STASIZ-off, "\n</body>\n</html>");
+  off+=snprintf(sm+off, STASIZ-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
+  off+=snprintf(sm+off, STASIZ-off, "</body>\n</html>");
   return (sm);
 }
 
@@ -295,14 +298,18 @@ static char *file_info_html (CONN *c, ics_request_args *a, VInfo *ji) {
   timecode_framenumber_to_string(smpte, &ji->framerate, ji->frames);
 
   off+=snprintf(im+off, STASIZ-off, DOCTYPE HTMLOPEN);
-  off+=snprintf(im+off, STASIZ-off, "<title>ICS File Info</title></head>\n<body>\n<h2>ICS - Info</h2>\n\n");
+  off+=snprintf(im+off, STASIZ-off, "<title>ICS File Info</title></head>\n");
+  off+=snprintf(im+off, STASIZ-off, HTMLBODY);
+  off+=snprintf(im+off, STASIZ-off, "<h2>ICS - Info</h2>\n\n");
   off+=snprintf(im+off, STASIZ-off, "<p>File: %s</p><ul>\n",a->file_name);
   off+=snprintf(im+off, STASIZ-off, "<li>Geometry: %ix%i</li>\n",ji->movie_width, ji->movie_height);
   off+=snprintf(im+off, STASIZ-off, "<li>Framerate: %.2f</li>\n",timecode_rate_to_double(&ji->framerate));
   off+=snprintf(im+off, STASIZ-off, "<li>Duration: %s</li>\n",smpte);
   off+=snprintf(im+off, STASIZ-off, "<li>Duration: %.2f sec</li>\n",(double)ji->frames/timecode_rate_to_double(&ji->framerate));
   off+=snprintf(im+off, STASIZ-off, "<li>Duration: %"PRId64" frames</li>\n", ji->frames);
-  off+=snprintf(im+off, STASIZ-off, "\n</ul>\n</body>\n</html>");
+  off+=snprintf(im+off, STASIZ-off, "\n</ul>\n");
+  off+=snprintf(im+off, STASIZ-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
+  off+=snprintf(im+off, STASIZ-off, "</body>\n</html>");
   jvi_free(ji);
   return (im);
 }
@@ -380,13 +387,17 @@ char *hdl_server_info (CONN *c, ics_request_args *a) {
       break;
     default: // HTML
       off+=snprintf(info+off, SINFOSIZ-off, DOCTYPE HTMLOPEN);
-      off+=snprintf(info+off, SINFOSIZ-off, "<title>ICS Server Info</title></head>\n<body>\n<h2>ICS Server Info</h2>\n\n");
+      off+=snprintf(info+off, SINFOSIZ-off, "<title>ICS Server Info</title></head>\n");
+      off+=snprintf(info+off, SINFOSIZ-off, HTMLBODY);
+      off+=snprintf(info+off, SINFOSIZ-off, "<h2>ICS Server Info</h2>\n\n");
       off+=snprintf(info+off, SINFOSIZ-off, "<ul>\n");
       off+=snprintf(info+off, SINFOSIZ-off, "<li>Docroot: %s</li>\n", c->d->docroot);
       off+=snprintf(info+off, SINFOSIZ-off, "<li>ListenAddr: %s</li>\n", c->d->local_addr);
       off+=snprintf(info+off, SINFOSIZ-off, "<li>ListenPort: %d</li>\n", c->d->local_port);
       off+=snprintf(info+off, SINFOSIZ-off, "<li>CacheSize: %d</li>\n", initial_cache_size);
-      off+=snprintf(info+off, SINFOSIZ-off, "\n</ul>\n</body>\n</html>");
+      off+=snprintf(info+off, SINFOSIZ-off, "\n</ul>\n");
+      off+=snprintf(info+off, SINFOSIZ-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
+      off+=snprintf(info+off, SINFOSIZ-off, "</body>\n</html>");
       break;
   }
   return info;
