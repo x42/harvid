@@ -21,7 +21,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <assert.h>
 
 #include "decoder_ctrl.h"
 #include "ffdecoder.h"
@@ -112,7 +111,7 @@ static JVOBJECT *newjvo (JVOBJECT *jvo, pthread_mutex_t *appendlock) {
   return(n);
 }
 
-/* return idle decoder-object for give file-id
+/* return idle decoder-object for given file-id
  * prefer decoders with nearby (lower) frame-number
  *
  * this function is non-blocking (no locking):
@@ -258,7 +257,6 @@ static JVOBJECT *getjvo(JVOBJECT *jvo, int max_objects, pthread_mutex_t *appendl
   if (i < max_objects)
     return(newjvo(jvo, appendlock));
 
-  dlog(DLOG_CRIT, "decoder control: out of memory");
   return (NULL);
 }
 
@@ -370,7 +368,7 @@ typedef struct JVD {
   int monotonic;
   int max_objects;
   pthread_mutex_t lock_jvo; // lock to modify (append to) jvo list
-  pthread_mutex_t lock_vml; // lock to modify (append to) vid list
+  pthread_mutex_t lock_vml; // lock to modify (append to) vid list  -- XXX superfluous w/ lock_monotonic
   pthread_mutex_t lock_monotonic; // lock to read/increment monotonic;
 } JVD;
 
@@ -380,6 +378,7 @@ static int get_id(JVD *jvd, const char *fn) {
     if (vm) return vm->id;
 
     if (pthread_mutex_trylock(&jvd->lock_monotonic)) {
+      // TODO limit vml length to cache-size
       vm = newvid(jvd->vml, &jvd->lock_vml);
       vm->id = jvd->monotonic++;
       vm->fn = strdup(fn);
@@ -404,7 +403,14 @@ static int new_video_object_fn(JVD *jvd, const char *fn) {
   do {
     jvo = getjvo(jvd->jvo, jvd->max_objects, &jvd->lock_jvo);
     if (!jvo) {
-      sched_yield(); // sleep ?!
+#if 0
+#ifdef HAVE_WINDOWS
+      Sleep(5);
+#else
+      usleep(5000);
+#endif
+#endif
+      sched_yield();
       continue;
     }
     if (pthread_mutex_trylock(&jvo->lock))
@@ -416,15 +422,10 @@ static int new_video_object_fn(JVD *jvd, const char *fn) {
   } while (!jvo);
 
   jvo->id = get_id(jvd, fn);
-
-  pthread_mutex_lock(&jvd->lock_monotonic);
-  if (jvo->id < 0) jvo->id = jvd->monotonic++;
-  pthread_mutex_unlock(&jvd->lock_monotonic);
-
   jvo->frame = -1;
   jvo->flags |= VOF_VALID;
   pthread_mutex_unlock(&jvo->lock);
-  return(jvo->id); // ID
+  return(jvo->id);
 }
 
 #if 0 // unused
@@ -448,7 +449,7 @@ static void * dctrl_get_decoder(void *p, int id, int64_t frame) {
   JVD *jvd = (JVD*)p;
 
 tryagain:
-  dlog(DLOG_DEBUG, "JV : get_decoder fileid=%i\n", id);
+  dlog(DLOG_DEBUG, "JV: get_decoder fileid=%i\n", id);
 
   JVOBJECT *jvo;
   int timeout = 10;
@@ -463,7 +464,7 @@ tryagain:
   }
 
   if (!jvo) {
-    dlog(DLOG_ERR, "JV : ERROR: no decoder object available.\n");
+    dlog(DLOG_ERR, "JV: ERROR: no decoder object available.\n");
     return(NULL);
   }
 
@@ -613,6 +614,7 @@ static char *flags2txt(int f) {
 
 size_t dctrl_info_html (void *p, char *m, size_t n) {
   JVOBJECT *cptr = ((JVD*)p)->jvo;
+  VidMap *vptr = ((JVD*)p)->vml;
   int i = 0;
   size_t off = 0;
   off+=snprintf(m+off, n-off, "<h3>Decoder Objects:</h3>\n");
@@ -621,14 +623,28 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
   off+=snprintf(m+off, n-off, "\n");
   while (cptr) {
     char *tmp = flags2txt(cptr->flags);
+    char *fn = get_fn((JVD*)p, cptr->id);
     off+=snprintf(m+off, n-off,
         "<tr><td>%i</td><td>%i</td><td>%s</td><td>%s</td><td>%"PRIlld"</td><td>%s</td><td>%"PRId64"</td></tr>\n",
-        i, cptr->id, tmp, get_fn(((JVD*)p), cptr->id), (long long)cptr->lru, (cptr->decoder?"open":"null"), cptr->frame);
+        i++, cptr->id, tmp, fn?fn:"-", (long long)cptr->lru, (cptr->decoder?"open":"null"), cptr->frame);
     free(tmp);
-    i++;
     cptr = cptr->next;
   }
   off+=snprintf(m+off, n-off, "</table>\n");
+
+  i=0;
+  off+=snprintf(m+off, n-off, "<h3>File Mapping:</h3>\n");
+  off+=snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
+  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Filename</th></tr>\n");
+  off+=snprintf(m+off, n-off, "\n");
+  while (vptr) {
+    if (vptr->id) // skip the first node
+      off+=snprintf(m+off, n-off, "<tr><td>%i</td><td>%i</td><td>%s</td></tr>\n", i++, vptr->id, vptr->fn);
+    vptr = vptr->next;
+  }
+
+  off+=snprintf(m+off, n-off, "</table>\n");
+
   return(off);
 }
 
@@ -637,8 +653,9 @@ void dctrl_info_dump(void *p) {
   int i = 0;
   printf("decoder info dump:\n");
   while (cptr) {
+    char *fn = get_fn((JVD*)p, cptr->id);
     printf("%i,%i,%i,%s,%lu:%s:%"PRId64"\n",
-        i, cptr->id, cptr->flags, get_fn(((JVD*)p), cptr->id), cptr->lru, (cptr->decoder?"open":"null"), cptr->frame);
+        i, cptr->id, cptr->flags, fn?fn:"-", cptr->lru, (cptr->decoder?"open":"null"), cptr->frame);
     i++;
     cptr = cptr->next;
   }
