@@ -353,7 +353,9 @@ char *hdl_file_info (CONN *c, ics_request_args *a) {
   int vid;
   vid = dctrl_get_id(dc, a->file_name);
   jvi_init(&ji);
-  dctrl_get_info(dc, vid, &ji);
+  if (dctrl_get_info(dc, vid, &ji)) {
+    return NULL;
+  }
   switch (a->render_fmt) {
     case OUT_PLAIN:
       return file_info_raw(c,a,&ji);
@@ -439,14 +441,18 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
   // TODO set a->decode_fmt; -- overridden by my_open_movie(..)
 
   /* get canonical output width/height and corresponding buffersize */
-  dctrl_get_info_scale(dc, vid, &ji, a->out_width, a->out_height);
+  if (dctrl_get_info_scale(dc, vid, &ji, a->out_width, a->out_height)) {
+    dlog(DLOG_WARNING, "VID: Server is overloaded (no decoder available). n",fd);
+    httperror(fd, 503, "Service Unavailable", "<p>Server is overloaded (no decoder available).</p>");
+    return 0;
+  }
   /* get frame from cache */
   bptr = vcache_get_buffer(vc, dc, vid, a->frame, ji.out_width, ji.out_height);
 
   if (!bptr) {
     dlog(DLOG_ERR, "VID: error decoding video file for fd:%d\n",fd);
     httperror(fd, 500, NULL, NULL);
-    return (0);
+    return 0;
   }
 
   switch (a->render_fmt) {

@@ -21,6 +21,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <assert.h>
 
 #include "decoder_ctrl.h"
 #include "ffdecoder.h"
@@ -87,6 +88,7 @@ static void my_get_info_canonical(void *vd, VInfo *i, int w, int h) {
 #define VOF_OPEN 2 //< decoder is idle - decoder is a valid pointer for the file/ID
 #define VOF_VALID 4 //<  ID and filename are valid (ID may be in use by cache)
 #define VOF_PENDING 8 //< decoder is just opening a file (my_open_movie)
+#define VOF_INFO 16 //< decoder is currently in use for info (size/fps) lookup only
 
 typedef struct JVOBJECT {
   struct JVOBJECT *next;
@@ -96,6 +98,7 @@ typedef struct JVOBJECT {
   int64_t frame; // last decoded frame
   pthread_mutex_t lock; // lock to modify flags;
   int flags;
+  int infolock_refcnt;
 } JVOBJECT;
 
 static JVOBJECT *newjvo (JVOBJECT *jvo, pthread_mutex_t *appendlock) {
@@ -131,7 +134,7 @@ static JVOBJECT *testjvd(JVOBJECT *jvo, int id, int64_t frame) {
     }
     found++;
 
-    if (cptr->flags&VOF_USED || cptr->flags&VOF_PENDING) {
+    if (cptr->flags&(VOF_USED|VOF_PENDING|VOF_INFO)) {
       continue;
     }
     avail++;
@@ -184,11 +187,11 @@ static void gc_jvo(JVOBJECT *jvo, int min_age) {
   JVOBJECT *cptr = jvo;
   time_t lru = time(NULL);
   while (cptr) {
-    if ((jvo->flags&(VOF_USED|VOF_PENDING|VOF_OPEN|VOF_VALID)) == 0) {
+    if ((jvo->flags&(VOF_USED|VOF_INFO|VOF_PENDING|VOF_OPEN|VOF_VALID)) == 0) {
       cptr = cptr->next;
       continue;
     }
-    if ((cptr->flags&VOF_USED) || (cptr->flags&VOF_PENDING) || cptr->lru + min_age > lru) {
+    if ((cptr->flags&(VOF_USED|VOF_PENDING|VOF_INFO)) || cptr->lru + min_age > lru) {
       cptr = cptr->next;
       continue;
     }
@@ -214,14 +217,14 @@ static JVOBJECT *getjvo(JVOBJECT *jvo, int max_objects, pthread_mutex_t *appendl
   JVOBJECT *cptr = jvo;
   // gc_jvo (jvo, 600);  // disabled until fixed
   while (cptr) {
-    if ((cptr->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_PENDING)) == 0) {
+    if ((cptr->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_PENDING|VOF_INFO)) == 0) {
       return (cptr);
     }
 
-    if (!(cptr->flags&(VOF_USED|VOF_OPEN|VOF_PENDING)) && (cptr->lru < lru)) {
+    if (!(cptr->flags&(VOF_USED|VOF_OPEN|VOF_PENDING|VOF_INFO)) && (cptr->lru < lru)) {
       lru = cptr->lru;
       dec_closed = cptr;
-    } else if (!(cptr->flags&(VOF_USED|VOF_PENDING)) && (cptr->lru < lru)) {
+    } else if (!(cptr->flags&(VOF_USED|VOF_PENDING|VOF_INFO)) && (cptr->lru < lru)) {
       lru = cptr->lru;
       dec_open = cptr;
     }
@@ -236,7 +239,7 @@ static JVOBJECT *getjvo(JVOBJECT *jvo, int max_objects, pthread_mutex_t *appendl
   }
 
   if (cptr && !pthread_mutex_trylock(&cptr->lock)) {
-      if (!(cptr->flags&(VOF_USED|VOF_PENDING))) {
+      if (!(cptr->flags&(VOF_USED|VOF_PENDING|VOF_INFO))) {
 
         if (cptr->flags&(VOF_OPEN)) {
           my_destroy(&cptr->decoder); // close it.
@@ -246,6 +249,7 @@ static JVOBJECT *getjvo(JVOBJECT *jvo, int max_objects, pthread_mutex_t *appendl
         cptr->id = 0;
         cptr->lru = 0;
         cptr->flags = 0;
+        cptr->infolock_refcnt = 0;
         pthread_mutex_unlock(&cptr->lock);
         return (cptr);
     }
@@ -254,7 +258,6 @@ static JVOBJECT *getjvo(JVOBJECT *jvo, int max_objects, pthread_mutex_t *appendl
 
   if (i < max_objects)
     return(newjvo(jvo, appendlock));
-
   return (NULL);
 }
 
@@ -279,7 +282,7 @@ static int clearjvo(JVOBJECT *jvo, int f, int id) {
     count++;
 
     pthread_mutex_lock(&cptr->lock);
-    if (cptr->flags&VOF_USED) {
+    if (cptr->flags&(VOF_USED|VOF_PENDING|VOF_INFO)) {
       if (f < 3) { // FIXME - set jvo->next pointer
 	pthread_mutex_unlock(&cptr->lock);
 	busy++;
@@ -287,7 +290,8 @@ static int clearjvo(JVOBJECT *jvo, int f, int id) {
 	continue;
       }
       dlog(DLOG_CRIT, "JV : WARNING - requesting to free a used decoder.\n");
-      cptr->flags &= ~VOF_USED;
+      cptr->flags &= ~(VOF_USED|VOF_PENDING|VOF_INFO);
+      cptr->infolock_refcnt = 0;
     }
 
     if (cptr->flags&VOF_OPEN) {
@@ -396,34 +400,28 @@ static char *get_fn(JVD *jvd, int id) {
 }
 
 
-static int new_video_object_fn(JVD *jvd, const char *fn) {
+static JVOBJECT *new_video_object(JVD *jvd, int id) {
   JVOBJECT *jvo;
   do {
     jvo = getjvo(jvd->jvo, jvd->max_objects, &jvd->lock_jvo);
     if (!jvo) {
-#if 0
-#ifdef HAVE_WINDOWS
-      Sleep(5);
-#else
-      usleep(5000);
-#endif
-#endif
+      mymsleep(5);
       sched_yield();
-      continue;
+      return NULL;
     }
     if (pthread_mutex_trylock(&jvo->lock))
       continue;
-    if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_PENDING))) {
+    if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_PENDING|VOF_INFO))) {
       pthread_mutex_unlock(&jvo->lock);
       continue;
     }
   } while (!jvo);
 
-  jvo->id = get_id(jvd, fn);
+  jvo->id = id;
   jvo->frame = -1;
   jvo->flags |= VOF_VALID;
   pthread_mutex_unlock(&jvo->lock);
-  return(jvo->id);
+  return(jvo);
 }
 
 #if 0 // unused
@@ -450,16 +448,11 @@ tryagain:
   dlog(DLOG_DEBUG, "JV: get_decoder fileid=%i\n", id);
 
   JVOBJECT *jvo;
-  int timeout = 10;
-  while (--timeout > 0 && !(jvo = testjvd(jvd->jvo, id, frame))) {
-    char *fn;
-    if ((fn = get_fn(jvd, id))) {
-      new_video_object_fn(jvd, fn);
-      continue;
-    } else {
-      return(NULL); // we're screwed without a filename
-    }
-  }
+  int timeout = 40; // new_video_object() delays 5ms at a time.
+  do {
+    jvo = testjvd(jvd->jvo, id, frame);
+    if (!jvo) jvo = new_video_object(jvd, id);
+  } while (--timeout > 0 && !jvo);
 
   if (!jvo) {
     dlog(DLOG_ERR, "JV: ERROR: no decoder object available.\n");
@@ -474,7 +467,7 @@ tryagain:
   jvo->flags |= VOF_PENDING;
   pthread_mutex_unlock(&jvo->lock);
 
-  if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID)) == (VOF_VALID)) {
+  if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_INFO)) == (VOF_VALID)) {
     if (!my_open_movie(&jvo->decoder, get_fn(jvd, jvo->id))) {
       pthread_mutex_lock(&jvo->lock);
       jvo->flags |= VOF_OPEN;
@@ -491,12 +484,22 @@ tryagain:
 
   pthread_mutex_lock(&jvo->lock);
   jvo->flags &= ~VOF_PENDING;
-
-  if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID)) == (VOF_VALID|VOF_OPEN)) {
-    jvo->flags |= VOF_USED;
+  if (frame < 0) {
+    /* we only need info -> decoder may be in use */
+    if ((jvo->flags&(VOF_OPEN|VOF_VALID)) == (VOF_VALID|VOF_OPEN)) {
+      jvo->infolock_refcnt++;
+      jvo->flags |= VOF_INFO;
+    }
+    pthread_mutex_unlock(&jvo->lock);
+    return(jvo);
+  } else {
+    if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID)) == (VOF_VALID|VOF_OPEN)) {
+      jvo->flags |= VOF_USED;
+    }
     pthread_mutex_unlock(&jvo->lock);
     return(jvo);
   }
+
   pthread_mutex_unlock(&jvo->lock);
 
   dlog(DLOG_WARNING, "JV : WARNING: decoder object was busy.\n");
@@ -509,6 +512,16 @@ static void dctrl_release_decoder(void *dec) {
   JVOBJECT *jvo = (JVOBJECT *) dec;
   pthread_mutex_lock(&jvo->lock);
   jvo->flags &= ~VOF_USED;
+  pthread_mutex_unlock(&jvo->lock);
+}
+
+static void dctrl_release_infolock(void *dec) {
+  JVOBJECT *jvo = (JVOBJECT *) dec;
+  pthread_mutex_lock(&jvo->lock);
+  if (--jvo->infolock_refcnt < 1) {
+    assert(jvo->infolock_refcnt >= 0);
+    jvo->flags &= ~(VOF_INFO);
+  }
   pthread_mutex_unlock(&jvo->lock);
 }
 
@@ -533,7 +546,7 @@ void dctrl_create(void **p) {
 
   (*((JVD**)p))->vml = newvid(NULL, &((*((JVD**)p))->lock_vml));
   (*((JVD**)p))->jvo = newjvo(NULL, &((*((JVD**)p))->lock_jvo));
-  (*((JVD**)p))->max_objects = 1024;
+  (*((JVD**)p))->max_objects = 64; // MAXCONNECTIONS
 }
 
 void dctrl_destroy(void **p) {
@@ -546,9 +559,7 @@ void dctrl_destroy(void **p) {
 
 int dctrl_get_id(void *p, const char *fn) {
   JVD *jvd = (JVD*)p;
-  int id;
-  if ((id = get_id(jvd, fn)) >= 0) return id;
-  return new_video_object_fn(jvd, fn);
+  return get_id(jvd, fn);
 }
 
 
@@ -567,7 +578,7 @@ int dctrl_get_info(void *p, int id, VInfo *i) {
   JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, -1);
   if (!jvo) return -1;
   my_get_info(jvo->decoder, i);
-  dctrl_release_decoder(jvo);
+  dctrl_release_infolock(jvo);
   return(0);
 }
 
@@ -575,7 +586,7 @@ int dctrl_get_info_scale(void *p, int id, VInfo *i, int w, int h) {
   JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, -1);
   if (!jvo) return -1;
   my_get_info_canonical(jvo->decoder, i, w, h);
-  dctrl_release_decoder(jvo);
+  dctrl_release_infolock(jvo);
   return(0);
 }
 
@@ -606,6 +617,10 @@ static char *flags2txt(int f) {
   if (f&VOF_PENDING) {
     rv = (char*) realloc(rv, (off+9) * sizeof(char));
     off+=sprintf(rv+off, "pending ");
+  }
+  if (f&VOF_INFO) {
+    rv = (char*) realloc(rv, (off+9) * sizeof(char));
+    off+=sprintf(rv+off, "info ");
   }
   return rv;
 }
@@ -659,6 +674,5 @@ void dctrl_info_dump(void *p) {
   }
   printf("------------\n");
 }
-
 
 // vim:sw=2 sts=2 ts=8 et:

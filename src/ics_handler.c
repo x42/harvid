@@ -253,8 +253,12 @@ void ics_http_handler(
 			;
 		} else if (rv&2) {
 			char *info = hdl_file_info(c,&a);
-			SEND200(info);
-			free(info);
+			if (info) {
+				SEND200(info);
+				free(info);
+			} else {
+				httperror(c->fd, 503, "Service Unavailable", "<p>Server is overloaded (no decoder available).</p>");
+			}
 		} else {
 			httperror(c->fd, 400, "Bad Request", "<p>Insufficient parse query parameters.</p>");
 		}

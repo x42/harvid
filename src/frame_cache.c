@@ -215,7 +215,6 @@ static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, int w, int h
   if (dctrl_decode(dc, vid, frame, rv->b, w, h)) {
     rv->flags&=~CLF_VALID;
     rv->flags&=~CLF_USED;
-    printf("Decode failed\n");
     dlog(DLOG_WARNING, "Cache : decode failed.\n");
     return (rv); // XXX
   }
