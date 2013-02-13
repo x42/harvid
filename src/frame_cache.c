@@ -21,6 +21,7 @@
 #include <inttypes.h>
 #include <stdlib.h>     /* calloc et al.*/
 #include <string.h>     /* memset */
+#include <unistd.h>
 
 #include "decoder_ctrl.h"
 #include "daemon_log.h"
@@ -108,8 +109,7 @@ static videocacheline *getcl(videocacheline *cache, int cfg_cachesize) {
 
   /* all cache lines are in USE/locked */
 
-  dlog(DLOG_CRIT, "frame-cache, cache full all cache-lines in use");
-  assert(0); // out of cache lines!
+  dlog(DLOG_CRIT, "frame-cache, cache full all cache-lines in use\n");
   return (NULL);
 }
 
@@ -191,10 +191,24 @@ static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, int w, int h
   }
 
   /* too bad, now we need to allocate a cacheline and then decode the video.. */
-  pthread_mutex_lock(&cc->lock);
-  rv=getcl(cc->vcache, cc->cfg_cachesize);
-  rv->flags|=CLF_USED;
-  pthread_mutex_unlock(&cc->lock);
+
+  int timeout=100;
+  do {
+    pthread_mutex_lock(&cc->lock);
+    rv=getcl(cc->vcache, cc->cfg_cachesize);
+    if (rv) {
+      rv->flags|=CLF_USED;
+    }
+    pthread_mutex_unlock(&cc->lock);
+    if (!rv) {
+      usleep(5000);
+    }
+  } while(--timeout > 0 && !rv);
+
+  if (!rv) {
+    return (rv);
+  }
+
   realloccl_buf(rv, w, h, SPP); // FIXME ; call ff_get_buffersize()  - use dctrl_get_info(); dctrl_decode(..) wrapper API
 
   // Fill cacheline with data - decode video
