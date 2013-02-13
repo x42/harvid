@@ -41,7 +41,7 @@ void dctrl_destroy(void **p);
  *
  * @param p pointer to a decoder-control object
  * @param fn file name to look up
- * @return file-id use with: dctrl_get_info() or dctrl_get_decoder()
+ * @return file-id use with: dctrl_get_info() or dctrl_decode()
  */
 int dctrl_get_id(void *p, const char *fn);
 /**
@@ -76,8 +76,7 @@ int dctrl_get_info(void *p, int id, VInfo *i);
 int dctrl_get_info_scale(void *p, int id, VInfo *i, int w, int h);
 
 // the following are wrapped by the frame-cache:
-int dctrl_get_decoder(void *p, int id, int64_t frame); // returns decoder-uuid reference and locks the decoder.
-int dctrl_decode(void *p, int uuid, unsigned long frame, uint8_t *b, int w, int h);
-void dctrl_release_decoder(void *p, int uuid);
+
+int dctrl_decode(void *p, int vid, int64_t frame, uint8_t *b, int w, int h);
 
 #endif
