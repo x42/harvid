@@ -55,6 +55,8 @@
 #define CATCH_SIGNALS
 #endif
 
+//#define VERBOSE_SHUTDOWN 1
+
 /** called to spawn thread for an incoming connection */
 static int create_client( void *(*cli)(void *), void *arg) {
   pthread_t thread; // TODO: register/remember threads/connections !? why?
@@ -358,18 +360,25 @@ static void *main_loop (void *arg) {
     if (s>=0) start_child(d,s,rh,rp);
   }
 
-  // wait until all connections are closed
-  int timeout =31;
-  dlog(DLOG_INFO, "SRV: server shut down procesdure: waiting %i sec for clients to disconnect..\n", timeout-1);
+  /* wait until all connections are closed */
+  int timeout = 31;
 
-  #if 0 // show shutdown countdown.
-  fflush(stdout);
+  if (d->num_clients > 0)
+    dlog(DLOG_INFO, "SRV: server shut down procedure: waiting %i sec for clients to disconnect..\n", timeout-1);
+
   while (d->num_clients> 0 && --timeout > 0) {
+#ifdef VERBOSE_SHUTDOWN
     if (timeout%5 == 0) printf("(%i)",timeout); fflush(stdout);
+#endif
+#ifndef HAVE_WINDOWS
     sleep(1);
+#else
+    Sleep(1000);
+#endif
   }
+#ifdef VERBOSE_SHUTDOWN
   printf("\n");
-  #endif
+#endif
 
   if (d->num_clients> 0) {
     dlog(DLOG_WARNING, "SRV: Terminating %i remaining connections.\n", d->num_clients);
