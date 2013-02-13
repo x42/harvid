@@ -92,18 +92,41 @@ static const AVRational c1_Q = { 1, 1 };
 // Manage video file
 //--------------------------------------------
 
-static void ff_getbuffersize(void *ptr, size_t *s) {
+static int ff_getbuffersize(void *ptr, size_t *s) {
   ffst *ff=(ffst*)ptr;
-  *s=(avpicture_get_size(ff->render_fmt, ff->out_width, ff->out_height));
-  //*s=(avpicture_get_size(ff->render_fmt, ff->movie_width, ff->movie_height));
+  const int ps = avpicture_get_size(ff->render_fmt, ff->out_width, ff->out_height);
+  if (s) *s = ps;
+  return ps;
 }
 
 static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, int ys) {
-  fprintf(stderr, "render_empty_frame NYI\n"); // TODO
+  switch (ff->render_fmt) {
+    case PIX_FMT_UYVY422:
+      {
+	int i;
+	for (i=0;i<w*h*2;i+=2) {
+	 buf[i]=0x80;
+	 buf[i+1]=0x00;
+	}
+      }
+      break;
+    case PIX_FMT_YUV420P:
+      {
+	size_t Ylen  = w * h;
+	memset(buf,0,Ylen);
+	memset(buf+Ylen,0x80,Ylen/2);
+      }
+      break;
+    case PIX_FMT_RGB24:
+    case PIX_FMT_RGB32:
+      memset(buf, 0, ff_getbuffersize(ff, NULL));
+      break;
+    default:
+      fprintf(stderr, "render_empty_frame() with unknown render format\n");
+  }
 }
 
-
-float ff_get_aspectratio(void *ptr) {
+static float ff_get_aspectratio(void *ptr) {
   ffst *ff=(ffst*)ptr;
   float aspect_ratio;
   if (ff->pCodecCtx->sample_aspect_ratio.num == 0)
@@ -116,24 +139,38 @@ float ff_get_aspectratio(void *ptr) {
   return (aspect_ratio);
 }
 
-void ff_init_moviebuffer(void *ptr) {
+static void ff_caononicalize_size2(void *ptr, int *w, int *h) {
+  ffst *ff=(ffst*)ptr;
+  float aspect_ratio = ff_get_aspectratio(ptr);
+  if (!w || !h) return;
+
+  if ((*h) <0  && (*w) >0) (*h) = (int) floorf((float)(*w)/aspect_ratio);
+  else if ((*h) >0  && (*w) <0) (*w) = (int) floorf((float)(*h)*aspect_ratio);
+
+  #ifdef SCALE_UP
+  if ((*w)  <0 ) (*w)  = (int) floorf((float)ff->pCodecCtx->height * aspect_ratio);
+  if ((*h) <0 ) (*h) = ff->pCodecCtx->height;
+  #else
+  if ((*w)  <0 ) (*w) = ff->pCodecCtx->width ;
+  if ((*h) <0 )  (*h)  = (int) floorf((float)ff->pCodecCtx->width / aspect_ratio);
+  #endif
+}
+
+static void ff_caononical_size(void *ptr) {
+  ffst *ff=(ffst*)ptr;
+  ff_caononicalize_size2(ptr, &ff->out_width, &ff->out_height);
+}
+
+static void ff_init_moviebuffer(void *ptr) {
   size_t numBytes;
   ffst *ff=(ffst*)ptr;
 
-  float aspect_ratio = ff_get_aspectratio(ptr);
-  if (ff->out_height <0  && ff->out_width >0) ff->out_height = (int) floorf((float)ff->out_width/aspect_ratio);
-  else if (ff->out_height >0  && ff->out_width <0) ff->out_width = (int) floorf((float)ff->out_height*aspect_ratio);
-
-  #ifdef SCALE_UP
-  if (ff->out_width  <0 ) ff->out_width  = (int) floorf((float)ff->pCodecCtx->height * aspect_ratio);
-  if (ff->out_height <0 ) ff->out_height = ff->pCodecCtx->height;
-  #else
-  if (ff->out_width  <0 ) ff->out_width = ff->pCodecCtx->width ;
-  if (ff->out_height <0 )  ff->out_height  = (int) floorf((float)ff->pCodecCtx->width / aspect_ratio);
-  #endif
+  ff_caononical_size(ptr);
 
   if (ff->buf_width == ff->out_width && ff->buf_height == ff->out_height) {
     return;
+  } else {
+    printf("ff_init_moviebuffer %dx%d vs %dx%d\n", ff->buf_width, ff->buf_height, ff->out_width, ff->out_height);
   }
 
   if (ff->internal_buffer) free(ff->internal_buffer);
@@ -185,7 +222,7 @@ int ff_close_movie(void *ptr) {
   return (0);
 }
 
-void ff_get_framerate(void *ptr, TimecodeRate *fr) {
+static void ff_get_framerate(void *ptr, TimecodeRate *fr) {
   ffst *ff=(ffst*)ptr;
   AVStream *av_stream;
   if (!ff->current_file || !ff->pFormatCtx) {
@@ -211,7 +248,7 @@ void ff_get_framerate(void *ptr, TimecodeRate *fr) {
 }
 
 
-void ff_set_framerate(ffst *ff) {
+static void ff_set_framerate(ffst *ff) {
   AVStream *av_stream;
   av_stream = ff->pFormatCtx->streams[ff->videoStream];
 
@@ -390,13 +427,12 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   }
 
   ff->out_width=ff->out_height=-1;
-  ff_init_moviebuffer(ff);
 
   ff->current_file=strdup(file_name);
   return(0);
 }
 
-void reset_video_head(ffst *ff, AVPacket *packet) {
+static void reset_video_head(ffst *ff, AVPacket *packet) {
 	int             frameFinished=0;
 fprintf(stderr, "DEBUG: resetting decoder - seek/playhead rewind.\n");
 #if LIBAVFORMAT_BUILD < 4617
@@ -422,7 +458,7 @@ fprintf(stderr, "DEBUG: resetting decoder - seek/playhead rewind.\n");
 // TODO: set this high (>1000) if transport stopped and to a low value (<100) if transport is running.
 #define MAX_CONT_FRAMES (1000)
 
-int my_seek_frame (ffst *ff, AVPacket *packet, int64_t timestamp) {
+static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t timestamp) {
   AVStream *v_stream;
   int rv=1;
   int64_t mtsb = 0;
@@ -564,6 +600,10 @@ int ff_render(void *ptr, unsigned long frame,
   int frameFinished = 0;
   int64_t timestamp = (int64_t) frame;
 
+  if (ff->buffer == ff->internal_buffer && (ff->buf_width <=0 || ff->buf_height <=0 )) {
+    ff_init_moviebuffer(ff);
+  }
+
     // if (ff->avprev == timestamp) return;
   //printf("Debug: ff-render %lu\n",frame);
 
@@ -620,6 +660,16 @@ void ff_get_info(void *ptr, VInfo *i) {
   ff_get_framerate(ptr, &i->framerate);
 }
 
+void ff_get_info_canonical(void *ptr, VInfo *i, int w, int h) {
+  ffst *ff = (ffst*) ptr;
+  if (!i) return;
+  ff_get_info(ptr,i);
+  i->out_width = w;
+  i->out_height = h;
+  ff_caononicalize_size2(ptr, &i->out_width, &i->out_height);
+  i->buffersize = avpicture_get_size(ff->render_fmt, i->out_width, i->out_height);
+}
+
 void ff_create(void **ff) {
   (*((ffst**)ff)) = (ffst*) calloc(1,sizeof(ffst));
   (*((ffst**)ff))->render_fmt=PIX_FMT_RGB24;
@@ -658,7 +708,7 @@ void ff_resize(void *ptr, int w, int h, uint8_t *buf, VInfo *i) {
   ff->out_width=w;
   ff->out_height=h;
   if (!buf)
-    ff_init_moviebuffer(ff);
+    ff_caononical_size(ff);
   else
     ff_set_bufferptr(ptr,buf);
   if (i) ff_get_info(ptr,i);

@@ -436,9 +436,11 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
 
   jvi_init(&ji);
 
-  //dctrl_get_info(dc, vid, &ji);
   // TODO set a->decode_fmt; -- overridden by my_open_movie(..)
+
+  /* get canonical output width/height and corresponding buffersize */
   dctrl_get_info_scale(dc, vid, &ji, a->out_width, a->out_height);
+  /* get frame from cache */
   bptr = vcache_get_buffer(vc, dc, vid, a->frame, ji.out_width, ji.out_height);
 
   if (!bptr) {

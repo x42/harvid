@@ -31,9 +31,7 @@
 // ffdecoder wrapper
 
 static int my_decode(void *vd, unsigned long frame, uint8_t *b, int w, int h) {
-  ff_resize(vd, w, h, NULL, NULL);
-  ff_set_bufferptr(vd, b);
-  // TODO: if check rendering failed !!
+  ff_resize(vd, w, h, b, NULL);
   ff_render(vd, frame, NULL, w, h, 0, w, w);
   ff_set_bufferptr(vd, NULL);
   return 0;
@@ -76,8 +74,8 @@ static void my_get_info(void *vd, VInfo *i) {
   ff_get_info(vd, i);
 }
 
-static void my_get_info_scale(void *vd, VInfo *i, int w, int h) {
-  ff_resize(vd, w, h, NULL, i);
+static void my_get_info_canonical(void *vd, VInfo *i, int w, int h) {
+  ff_get_info_canonical(vd, i, w, h);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -576,7 +574,7 @@ int dctrl_get_info(void *p, int id, VInfo *i) {
 int dctrl_get_info_scale(void *p, int id, VInfo *i, int w, int h) {
   JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, -1);
   if (!jvo) return -1;
-  my_get_info_scale(jvo->decoder, i, w, h);
+  my_get_info_canonical(jvo->decoder, i, w, h);
   dctrl_release_decoder(jvo);
   return(0);
 }
@@ -603,7 +601,7 @@ static char *flags2txt(int f) {
   }
   if (f&VOF_VALID) {
     rv = (char*) realloc(rv, (off+7) * sizeof(char));
-    off+=sprintf(rv+off, "valid ");
+    off+=sprintf(rv+off, "hasID ");
   }
   if (f&VOF_PENDING) {
     rv = (char*) realloc(rv, (off+9) * sizeof(char));
@@ -626,7 +624,7 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
     char *fn = get_fn((JVD*)p, cptr->id);
     off+=snprintf(m+off, n-off,
         "<tr><td>%i</td><td>%i</td><td>%s</td><td>%s</td><td>%"PRIlld"</td><td>%s</td><td>%"PRId64"</td></tr>\n",
-        i++, cptr->id, tmp, fn?fn:"-", (long long)cptr->lru, (cptr->decoder?"open":"null"), cptr->frame);
+        i++, cptr->id, tmp, fn?fn:"-", (long long)cptr->lru, (cptr->decoder?LIBAVCODEC_IDENT:"null"), cptr->frame);
     free(tmp);
     cptr = cptr->next;
   }

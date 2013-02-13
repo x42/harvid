@@ -24,6 +24,7 @@
 void ff_create(void **ff);
 void ff_destroy(void **ff);
 void ff_get_info(void *ptr, VInfo *i);
+void ff_get_info_canonical(void *ptr, VInfo *i, int w, int h);
 
 int ff_render(void *ptr, unsigned long frame,
     uint8_t* buf, int w, int h, int xoff, int xw, int ys);
