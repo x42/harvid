@@ -41,8 +41,12 @@ static int my_decode(void *vd, unsigned long frame, uint8_t *b, int w, int h) {
 }
 
 static int my_open_movie(void **vd, char *fn) {
-  ff_create(vd);
   int render_fmt;
+  if (!fn) {
+    dlog(DLOG_ERR, "JV: trying to open file w/o filename.\n");
+    return -1;
+  }
+  ff_create(vd);
 #ifdef VIBER
   #warning Hardcoded YUV420P / YV12
   render_fmt = PIX_FMT_YUV420P; // TODO allow to set, override
@@ -90,7 +94,6 @@ static void my_get_info_scale(void *vd, VInfo *i, int w, int h) {
 typedef struct JVOBJECT {
   struct JVOBJECT *next;
   void *decoder;
-  char *fn;
   int id;  // this ID is linked to the filename
   time_t lru;
   int64_t frame; // last decoded frame
@@ -178,17 +181,6 @@ static JVOBJECT *testjvd(JVOBJECT *jvo, int id, int64_t frame) {
   return(NULL);
 }
 
-static JVOBJECT *testjvo(JVOBJECT *jvo, int cmpmode, int id, const char *fn) {
-  JVOBJECT *cptr;
-  for (cptr = jvo; cptr ; cptr = cptr->next) {
-    if (    ((cmpmode&1) == 1 || cptr->id == id)
-        &&  ((cmpmode&2) == 2 || ((cptr->flags&VOF_VALID) && cptr->fn && !strcmp(cptr->fn, fn)))
-       )
-      return(cptr);
-  }
-  return(NULL);
-}
-
 #if 0 // yet unused -- b0rked
 // garbage collect decoder objects
 static void gc_jvo(JVOBJECT *jvo, int min_age) {
@@ -207,8 +199,6 @@ static void gc_jvo(JVOBJECT *jvo, int min_age) {
     pthread_mutex_lock(&cptr->lock); // TODO check flags again after taking lock !
     my_destroy(&cptr->decoder); // close it.
     cptr->decoder = NULL; // not really need..
-    if (cptr->fn) free(cptr->fn);
-    cptr->fn = NULL;
     cptr->flags &= ~(VOF_VALID|VOF_OPEN);
     cptr->lru = 0; cptr->id = 0;
     pthread_mutex_unlock(&cptr->lock);
@@ -256,9 +246,7 @@ static JVOBJECT *getjvo(JVOBJECT *jvo, int max_objects, pthread_mutex_t *appendl
           dec_open->decoder = NULL; // not really need..
         }
 
-        if (cptr->fn) free(cptr->fn);
         cptr->id = 0;
-        cptr->fn = NULL;
         cptr->lru = 0;
         cptr->flags = 0;
         pthread_mutex_unlock(&cptr->lock);
@@ -312,8 +300,6 @@ static int clearjvo(JVOBJECT *jvo, int f, int id) {
     }
 
     if (f > 0) {
-      if (cptr->fn) free(cptr->fn);
-      cptr->fn = NULL;
       cptr->id = 0;
       cptr->lru = 0;
       cptr->flags &= ~VOF_VALID;
@@ -338,47 +324,80 @@ static int clearjvo(JVOBJECT *jvo, int f, int id) {
 // Video decoder management
 //
 
+typedef struct VidMap {
+  struct VidMap * next;
+  int id;
+  char *fn;
+} VidMap;
+
+static VidMap *newvid(VidMap *vml, pthread_mutex_t *vmllock) {
+  VidMap *n = calloc(1, sizeof(VidMap));
+  VidMap *vptr = vml;
+  pthread_mutex_lock(vmllock);
+  while (vptr && vptr->next) vptr = vptr->next;
+  if (vptr) vptr->next = n;
+  pthread_mutex_unlock(vmllock);
+  return(n);
+}
+
+static void clearvid(VidMap *vml, pthread_mutex_t *vmllock) {
+  VidMap *vptr = vml;
+  pthread_mutex_lock(vmllock);
+  while (vptr) {
+    VidMap *vnext = vptr->next;
+    free(vptr->fn);
+    vptr->next=NULL;
+    free(vptr);
+    vptr = vnext;
+  }
+  pthread_mutex_unlock(vmllock);
+}
+
+static VidMap *searchvidmap(VidMap *vml, int cmpmode, int id, const char *fn) {
+  VidMap *vptr;
+  for (vptr = vml; vptr ; vptr = vptr->next) {
+    if (    ((cmpmode&1) == 1 || vptr->id == id)
+        &&  ((cmpmode&2) == 2 || (vptr->fn && !strcmp(vptr->fn, fn)))
+       )
+      return(vptr);
+  }
+  return(NULL);
+}
+
 typedef struct JVD {
   JVOBJECT *jvo; // list of all decoder objects
-  pthread_mutex_t lock_jvo; // lock to modify (append to) jvo list
-  pthread_mutex_t lock_monotonic; // lock to read/increment monotonic;
+  VidMap *vml;   // filename <> id map
   int monotonic;
   int max_objects;
+  pthread_mutex_t lock_jvo; // lock to modify (append to) jvo list
+  pthread_mutex_t lock_vml; // lock to modify (append to) vid list
+  pthread_mutex_t lock_monotonic; // lock to read/increment monotonic;
 } JVD;
 
 static int get_id(JVD *jvd, const char *fn) {
-  int rv = -1;
-  while (rv < 0) {
-    JVOBJECT *jvo = testjvo(jvd->jvo, 1, 0, fn);
-    if (!jvo) return -1;
+  while (1) {
+    VidMap *vm = searchvidmap(jvd->vml, 1, 0, fn);
+    if (vm) return vm->id;
 
-    if (pthread_mutex_trylock(&jvo->lock)) {
-      continue;
+    if (pthread_mutex_trylock(&jvd->lock_monotonic)) {
+      vm = newvid(jvd->vml, &jvd->lock_vml);
+      vm->id = jvd->monotonic++;
+      vm->fn = strdup(fn);
+      pthread_mutex_unlock(&jvd->lock_monotonic);
+      return vm->id;
+    } else {
+      sched_yield();
     }
-    if ((jvo->flags&(VOF_VALID))) {
-      rv = jvo->id;
-    }
-    pthread_mutex_unlock(&jvo->lock);
   }
-  return rv;
+  return -1; // never reached
 }
 
 static char *get_fn(JVD *jvd, int id) {
-  char *rv = NULL;
-  while (!rv) {
-    JVOBJECT *jvo = testjvo(jvd->jvo, 2, id, NULL);
-    if (!jvo) return (NULL);
-
-    if (pthread_mutex_trylock(&jvo->lock)) {
-      continue;
-    }
-    if ((jvo->flags&(VOF_VALID))) {
-      rv = strdup(jvo->fn);
-    }
-    pthread_mutex_unlock(&jvo->lock);
-  }
-  return rv;
+  VidMap *vm = searchvidmap(jvd->vml, 2, id, NULL);
+  if (!vm) return (NULL);
+  return vm->fn;
 }
+
 
 static int new_video_object_fn(JVD *jvd, const char *fn) {
   JVOBJECT *jvo;
@@ -400,9 +419,8 @@ static int new_video_object_fn(JVD *jvd, const char *fn) {
 
   pthread_mutex_lock(&jvd->lock_monotonic);
   if (jvo->id < 0) jvo->id = jvd->monotonic++;
-  pthread_mutex_unlock(&jvd->lock_monotonic); 
+  pthread_mutex_unlock(&jvd->lock_monotonic);
 
-  jvo->fn = strdup(fn);
   jvo->frame = -1;
   jvo->flags |= VOF_VALID;
   pthread_mutex_unlock(&jvo->lock);
@@ -423,7 +441,7 @@ static int release_video_object(JVD *jvd, char *fn) {
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// part 2a - video decoder control 
+// part 2a - video decoder control
 
 // lookup or create new decoder for file ID
 static void * dctrl_get_decoder(void *p, int id, int64_t frame) {
@@ -438,7 +456,6 @@ tryagain:
     char *fn;
     if ((fn = get_fn(jvd, id))) {
       new_video_object_fn(jvd, fn);
-      free(fn);
       continue;
     } else {
       return(NULL); // we're screwed without a filename
@@ -459,7 +476,7 @@ tryagain:
   pthread_mutex_unlock(&jvo->lock);
 
   if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID)) == (VOF_VALID)) {
-    if (!my_open_movie(&jvo->decoder, jvo->fn)) {
+    if (!my_open_movie(&jvo->decoder, get_fn(jvd, jvo->id))) {
       pthread_mutex_lock(&jvo->lock);
       jvo->flags |= VOF_OPEN;
       jvo->flags &= ~VOF_PENDING;
@@ -515,12 +532,14 @@ void dctrl_create(void **p) {
   pthread_mutex_init(&((*((JVD**)p))->lock_monotonic), NULL);
   pthread_mutex_init(&((*((JVD**)p))->lock_jvo), NULL);
 
+  (*((JVD**)p))->vml = newvid(NULL, &((*((JVD**)p))->lock_vml));
   (*((JVD**)p))->jvo = newjvo(NULL, &((*((JVD**)p))->lock_jvo));
   (*((JVD**)p))->max_objects = 1024;
 }
 
 void dctrl_destroy(void **p) {
   clearjvo((*((JVD**)p))->jvo, 4, -1);
+  clearvid((*((JVD**)p))->vml, &((*((JVD**)p))->lock_vml));
   free((*((JVD**)p))->jvo);
   free(*((JVD**)p));
   *p = NULL;
@@ -604,7 +623,7 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
     char *tmp = flags2txt(cptr->flags);
     off+=snprintf(m+off, n-off,
         "<tr><td>%i</td><td>%i</td><td>%s</td><td>%s</td><td>%"PRIlld"</td><td>%s</td><td>%"PRId64"</td></tr>\n",
-        i, cptr->id, tmp, (cptr->fn?cptr->fn:"-"), (long long)cptr->lru, (cptr->decoder?"open":"null"), cptr->frame);
+        i, cptr->id, tmp, get_fn(((JVD*)p), cptr->id), (long long)cptr->lru, (cptr->decoder?"open":"null"), cptr->frame);
     free(tmp);
     i++;
     cptr = cptr->next;
@@ -619,7 +638,7 @@ void dctrl_info_dump(void *p) {
   printf("decoder info dump:\n");
   while (cptr) {
     printf("%i,%i,%i,%s,%lu:%s:%"PRId64"\n",
-        i, cptr->id, cptr->flags, cptr->fn, cptr->lru, (cptr->decoder?"open":"null"), cptr->frame);
+        i, cptr->id, cptr->flags, get_fn(((JVD*)p), cptr->id), cptr->lru, (cptr->decoder?"open":"null"), cptr->frame);
     i++;
     cptr = cptr->next;
   }
