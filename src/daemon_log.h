@@ -25,14 +25,22 @@
 #ifndef _dlog_H
 #define _dlog_H
 
+/* some common win/posix issues */
 #ifndef HAVE_WINDOWS
-#include <syslog.h>
 #define PRIlld "lld"
+#define mymsleep(ms) usleep((ms) * 1000)
 #else
 #define PRIlld "I64d"
+#define mymsleep(ms) Sleep(ms)
+#endif
+
+/* syslog */
+#ifndef HAVE_WINDOWS
+#include <syslog.h>
+#else
 #include <windows.h>
 #include <winsock.h>
-#warning "NO SYSLOG"
+
 #define LOG_CRIT 0
 #define LOG_ERR 1
 #define LOG_WARNING 2

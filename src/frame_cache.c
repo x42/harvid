@@ -201,7 +201,7 @@ static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, int w, int h
     }
     pthread_mutex_unlock(&cc->lock);
     if (!rv) {
-      usleep(5000);
+      mymsleep(5);
     }
   } while(--timeout > 0 && !rv);
 

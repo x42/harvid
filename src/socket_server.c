@@ -370,11 +370,7 @@ static void *main_loop (void *arg) {
 #ifdef VERBOSE_SHUTDOWN
     if (timeout%5 == 0) printf("(%i)",timeout); fflush(stdout);
 #endif
-#ifndef HAVE_WINDOWS
-    sleep(1);
-#else
-    Sleep(1000);
-#endif
+    mymsleep(1000);
   }
 #ifdef VERBOSE_SHUTDOWN
   printf("\n");
