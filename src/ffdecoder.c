@@ -43,10 +43,11 @@ typedef struct {
   int   want_genpts;
   int   seekflags;
   /* Video File Info */
-  int   movie_width;
-  int   movie_height;
-  int   out_width;
-  int   out_height;
+  int   movie_width;  ///< original file geometry
+  int   movie_height; ///< original file geometry
+  int   out_width;  ///< aspect scaled geometry
+  int   out_height; ///< aspect scaled geometry
+
   double duration;
   double framerate;
   double file_frame_offset;
@@ -59,6 +60,8 @@ typedef struct {
   /* */
   uint8_t *internal_buffer; //< if !NULL this buffer is free()d on destroy
   uint8_t *buffer;
+  int   buf_width;  ///< current geometry for allocated buffer
+  int   buf_height; ///< current geometry for allocated buffer
   int   videoStream;
   int   render_fmt;  //< pFrame/buffer output format (RGB24)
   /* ffmpeg internals*/
@@ -83,6 +86,8 @@ extern int want_verbose;
 static pthread_mutex_t avcodec_lock;
 static const AVRational c1_Q = { 1, 1 };
 
+//#define SCALE_UP  ///< positive pixel-aspect scales up X axis - else positive pixel-aspect scales down Y-Axis.
+
 //--------------------------------------------
 // Manage video file
 //--------------------------------------------
@@ -97,10 +102,7 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
   fprintf(stderr, "render_empty_frame NYI\n"); // TODO
 }
 
-//#define SCALE_UP  ///< positive pixel-aspect scales up X axis - else positive pixel-aspect scales down Y-Axis.
-// TODO: option: grow/shrink to aspect ratio.
 
-  // calc scale/aspect
 float ff_get_aspectratio(void *ptr) {
   ffst *ff=(ffst*)ptr;
   float aspect_ratio;
@@ -130,17 +132,24 @@ void ff_init_moviebuffer(void *ptr) {
   if (ff->out_height <0 )  ff->out_height  = (int) floorf((float)ff->pCodecCtx->width / aspect_ratio);
   #endif
 
+  if (ff->buf_width == ff->out_width && ff->buf_height == ff->out_height) {
+    return;
+  }
+
   if (ff->internal_buffer) free(ff->internal_buffer);
   ff_getbuffersize(ff, &numBytes);
   ff->internal_buffer=(uint8_t *) calloc(numBytes, sizeof(uint8_t));
   ff->buffer = ff->internal_buffer;
+  ff->buf_width = ff->out_width;
+  ff->buf_height = ff->out_height;
   if (!ff->buffer) {
     fprintf(stderr, "out of memory\n");
     exit(1);
   }
-  if (!ff->pFrameFMT) { // Assign appropriate parts of buffer to image planes in pFrameFMT
+  if (!ff->pFrameFMT) {
+    // XXX can this really happen?
     fprintf(stderr, "could not initialize output frame/scaling.\n");
-    exit(1); // TODO: don't die
+    exit(1);
   }
   avpicture_fill((AVPicture *)ff->pFrameFMT, ff->buffer, ff->render_fmt, ff->out_width, ff->out_height);
 }
@@ -222,13 +231,16 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
     if (ff->current_file && !strcmp(file_name, ff->current_file)) return(0);
     /* close currently open movie */
     if (!want_quiet)
-    fprintf(stderr,"replacing current video file buffer\n");
+      fprintf(stderr,"replacing current video file buffer\n");
     ff_close_movie(ff);
   }
 
   // initialize values
+  ff->pFormatCtx = NULL;
   ff->pFrameFMT = NULL;
   ff->movie_width  = 320;
+  ff->movie_height = 180;
+  ff->buf_width = ff->buf_height = 0;
   ff->movie_height = 180;
   ff->framerate = ff->duration = ff->frames = 1;
   ff->file_frame_offset = 0.0;
@@ -546,10 +558,10 @@ read_frame:
  * @arg xw unused -  really unused
  * @arg ys unused -  soon: y-stride (aka width of container)
  */
-void ff_render(void *ptr, unsigned long frame,
+int ff_render(void *ptr, unsigned long frame,
     uint8_t* buf, int w, int h, int xoff, int xw, int ys) {
   ffst *ff = (ffst*) ptr;
-  int frameFinished;
+  int frameFinished = 0;
   int64_t timestamp = (int64_t) frame;
 
     // if (ff->avprev == timestamp) return;
@@ -565,11 +577,6 @@ void ff_render(void *ptr, unsigned long frame,
 	avcodec_decode_video2(ff->pCodecCtx, ff->pFrame, &frameFinished, &ff->packet);
 #endif
       if(frameFinished) { /* Convert the image from its native format to FMT */
-  //
-  // TODO allow offset - letterbox
-  //
-        //printf("%dx%d@%d - %dx%d@%d\n",  ff->pCodecCtx->width, ff->pCodecCtx->height, ff->pCodecCtx->pix_fmt, ff->pCodecCtx->width, ff->pCodecCtx->height, ff->render_fmt);
-        //ff->pSWSCtx = sws_getCachedContext(ff->pSWSCtx, ff->pCodecCtx->width, ff->pCodecCtx->height, ff->pCodecCtx->pix_fmt, ff->pCodecCtx->width, ff->pCodecCtx->height, ff->render_fmt, SWS_BICUBIC, NULL, NULL, NULL);
         ff->pSWSCtx = sws_getCachedContext(ff->pSWSCtx, ff->pCodecCtx->width, ff->pCodecCtx->height, ff->pCodecCtx->pix_fmt, ff->out_width, ff->out_height, ff->render_fmt, SWS_BICUBIC, NULL, NULL, NULL);
         sws_scale(ff->pSWSCtx, (const uint8_t * const*) ff->pFrame->data, ff->pFrame->linesize, 0, ff->pCodecCtx->height, ff->pFrameFMT->data, ff->pFrameFMT->linesize);
 	av_free_packet(&ff->packet); /* XXX */
@@ -595,13 +602,13 @@ void ff_render(void *ptr, unsigned long frame,
     if (ff->pFrameFMT && !want_quiet) fprintf( stderr, "frame seek unsucessful (frame: %lu).\n",frame);
     render_empty_frame(ff, buf, w, h, xoff, ys);
   }
+  return frameFinished ? 0 : -1;
 }
 
 void ff_get_info(void *ptr, VInfo *i) {
   ffst *ff = (ffst*) ptr;
   if (!i) return;
-  //printf("DEBUG xjv-ffmpeg get_info\n");
-// TODO check if move is open..
+  // TODO check if move is open.. (not needed, dctrl prevents that)
   i->movie_width = ff->movie_width;
   i->movie_height = ff->movie_height;
   i->movie_aspect = ff_get_aspectratio(ptr);
