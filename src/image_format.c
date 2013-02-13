@@ -128,21 +128,8 @@ static int write_ppm(VInfo *ji, uint8_t *image, FILE *x) {
 }
 
 static FILE *open_outfile(char *filename) {
-  FILE *x;
-  int err_count=0;
   if (!strcmp(filename,"-")) return stdout;
-#if 0
-  if (atoi(filename) >0 ) return fdopen(atoi(filename), "w+");
-  if (!strcmp("%",filename))  return tmpfile();
-#endif
-  while (!(x = fopen(filename, "w+")) && (++err_count < 200) )
-#ifndef HAVE_WINDOWS
-    usleep(25000);
-#else
-    Sleep(25);
-#endif
-  if (!x) return 0;
-  return x;
+  return fopen(filename, "w+");
 }
 
 size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf) {
