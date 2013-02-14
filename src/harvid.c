@@ -512,7 +512,7 @@ void hdl_clear_cache() {
 
 void hdl_purge_cache() {
   vcache_clear(vc);
-  dctrl_cache_clear(dc, 1, -1);
+  dctrl_cache_clear(dc, 2, -1);
 }
 
 
