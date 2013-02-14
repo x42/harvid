@@ -1,4 +1,4 @@
-VERSION=$(shell git describe --tags HEAD || echo "X.X.X")
+VERSION?=$(shell git describe --tags HEAD || echo "X.X.X")
 
 CFLAGS ?= -Wall -g -O2
 PREFIX ?= /usr/local
@@ -61,7 +61,7 @@ LOADLIBES+=-ljpeg
 LOADLIBES+=-lz -lm
 
 FLAGS+=-DICSD_RGB24
-FLAGS+=-DICSVERSION="\"$(VERSION) [$(UNAME)]\""
+FLAGS+=-DICSVERSION="\"$(VERSION)\"" -DICSARCH="\"$(UNAME)\""
 
 all: harvid
 

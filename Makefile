@@ -1,3 +1,4 @@
+VERSION=$(shell git describe --tags HEAD || echo "X.X.X")
 SUBDIRS = src doc
 
 default: all

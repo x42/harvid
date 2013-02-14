@@ -1,8 +1,8 @@
 
 #ifdef NDEBUG
-#define SERVERVERSION "harvid " ICSVERSION
+#define SERVERVERSION "harvid " ICSVERSION " ["ICSARCH"]"
 #else
-#define SERVERVERSION "harvid " ICSVERSION " [debug]"
+#define SERVERVERSION "harvid " ICSVERSION " ["ICSARCH" debug]"
 #endif
 
 #define HTMLBODY \
