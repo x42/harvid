@@ -51,6 +51,7 @@ typedef struct VidMap {
   struct VidMap * next;
   int id;
   char *fn;
+  time_t lru;
 } VidMap;
 
 typedef struct JVD {
@@ -58,11 +59,11 @@ typedef struct JVD {
   VidMap *vml;   // filename <> id map
   int monotonic;
   int max_objects;
+  int cache_size;
   int busycnt;
   int purge_in_progress;
   pthread_mutex_t lock_jvo; // lock to modify (append to) jvo list
-  pthread_mutex_t lock_vml; // lock to modify (append to) vid list  -- XXX superfluous w/ lock_monotonic
-  pthread_mutex_t lock_monotonic; // lock to read/increment monotonic;
+  pthread_mutex_t lock_vml; // lock to modify (append to) vid list (inc monotonic)
   pthread_mutex_t lock_busy; // lock to read/increment monotonic;
 } JVD;
 
@@ -371,14 +372,31 @@ static JVOBJECT *getjvo(JVD *jvd) {
 // Video decoder management
 //
 
-static VidMap *newvid(VidMap *vml, pthread_mutex_t *vmllock) {
-  VidMap *n = calloc(1, sizeof(VidMap));
-  VidMap *vptr = vml;
-  pthread_mutex_lock(vmllock);
-  while (vptr && vptr->next) vptr = vptr->next;
-  if (vptr) vptr->next = n;
-  pthread_mutex_unlock(vmllock);
-  return(n);
+static VidMap *newvid(VidMap *vml, int max_size) {
+  VidMap *vptr = vml, *vlru = NULL, *vlast = vml;
+  int i = 0;
+  time_t lru = time(NULL) + 1;
+  while (vptr) {
+    if (vptr->lru == 0) return vptr;
+    if (vptr->lru < lru) {
+      lru = vptr->lru;
+      vlru = vptr;
+    }
+    vlast = vptr;
+    vptr = vptr->next;
+    i++;
+  }
+  if (i < max_size) {
+    VidMap *n = calloc(1, sizeof(VidMap));
+    if (vlast) vlast->next = n;
+    return(n);
+  } else {
+    vlru->lru = 0;
+    vlru->id = 0;
+    free(vlru->fn);
+    vlru->fn=NULL;
+    return vlru;
+  }
 }
 
 static void clearvid(VidMap *vml, pthread_mutex_t *vmllock) {
@@ -399,6 +417,7 @@ static VidMap *searchvidmap(VidMap *vml, int cmpmode, int id, const char *fn) {
   for (vptr = vml; vptr ; vptr = vptr->next) {
     if (    ((cmpmode&1) == 1 || vptr->id == id)
         &&  ((cmpmode&2) == 2 || (vptr->fn && !strcmp(vptr->fn, fn)))
+        &&  vptr->lru > 0
        )
       return(vptr);
   }
@@ -408,14 +427,30 @@ static VidMap *searchvidmap(VidMap *vml, int cmpmode, int id, const char *fn) {
 static int get_id(JVD *jvd, const char *fn) {
   while (1) {
     VidMap *vm = searchvidmap(jvd->vml, 1, 0, fn);
-    if (vm) return vm->id;
+    if (vm) {
+      pthread_mutex_lock(&jvd->lock_vml);
+      if (vm->lru == 0) {
+        pthread_mutex_unlock(&jvd->lock_vml);
+        continue;
+      }
+      vm->lru=time(NULL);
+      pthread_mutex_unlock(&jvd->lock_vml);
+      return vm->id;
+    }
 
-    if (pthread_mutex_trylock(&jvd->lock_monotonic)) {
-      // TODO limit vml length to cache-size
-      vm = newvid(jvd->vml, &jvd->lock_vml);
+    /* add new entry */
+    if (pthread_mutex_trylock(&jvd->lock_vml)) {
+      /* check that no other thread got ahead of us */
+      vm = searchvidmap(jvd->vml, 1, 0, fn);
+      if (vm) {
+        pthread_mutex_unlock(&jvd->lock_vml);
+        return vm->id;
+      }
+      vm = newvid(jvd->vml, jvd->cache_size);
       vm->id = jvd->monotonic++;
       vm->fn = strdup(fn);
-      pthread_mutex_unlock(&jvd->lock_monotonic);
+      vm->lru=time(NULL);
+      pthread_mutex_unlock(&jvd->lock_vml);
       return vm->id;
     } else {
       sched_yield();
@@ -425,9 +460,30 @@ static int get_id(JVD *jvd, const char *fn) {
 }
 
 static char *get_fn(JVD *jvd, int id) {
-  VidMap *vm = searchvidmap(jvd->vml, 2, id, NULL);
-  if (!vm) return (NULL);
+  VidMap *vm;
+  do {
+    vm = searchvidmap(jvd->vml, 2, id, NULL);
+    if (!vm) return (NULL);
+    pthread_mutex_lock(&jvd->lock_vml);
+    if (vm->lru == 0) {
+      pthread_mutex_unlock(&jvd->lock_vml);
+      continue;
+    }
+    pthread_mutex_unlock(&jvd->lock_vml);
+  } while (!vm);
   return vm->fn;
+}
+
+static void release_id(JVD *jvd, int id) {
+  pthread_mutex_lock(&jvd->lock_vml);
+  VidMap *vm = searchvidmap(jvd->vml, 2, id, NULL);
+  if (vm) {
+    vm->lru=0;
+    vm->id = 0;
+    free(vm->fn);
+    vm->fn=NULL;
+  }
+  pthread_mutex_unlock(&jvd->lock_vml);
 }
 
 
@@ -522,6 +578,7 @@ tryagain:
       pthread_mutex_lock(&jvo->lock);
       jvo->flags &= ~VOF_PENDING;
       pthread_mutex_unlock(&jvo->lock);
+      release_id(jvd, jvo->id); // mark ID as invalid
       dlog(DLOG_ERR, "DCTL: opening of movie file failed.\n");
       BUSYDEC(jvd)
       return(NULL);
@@ -585,19 +642,20 @@ static inline int xdctrl_decode(void *dec, int64_t frame, uint8_t *b, int w, int
 ///////////////////////////////////////////////////////////////////////////////
 // part 2b - video object/decoder API - public API
 
-void dctrl_create(void **p) {
+void dctrl_create(void **p, int max_decoders, int cache_size) {
   JVD *jvd;
   (*((JVD**)p)) = (JVD*) calloc(1, sizeof(JVD));
   jvd = (*((JVD**)p));
   jvd->monotonic = 1;
+  jvd->max_objects = max_decoders;
+  jvd->cache_size = cache_size;
+
   pthread_mutex_init(&jvd->lock_busy, NULL);
-  pthread_mutex_init(&jvd->lock_monotonic, NULL);
   pthread_mutex_init(&jvd->lock_jvo, NULL);
   pthread_mutex_init(&jvd->lock_vml, NULL);
 
-  jvd->vml = newvid(NULL, &jvd->lock_vml);
+  jvd->vml = newvid(NULL, jvd->cache_size);
   jvd->jvo = newjvo(NULL, &jvd->lock_jvo);
-  jvd->max_objects = 64; // MAXCONNECTIONS
 }
 
 void dctrl_destroy(void **p) {
@@ -605,7 +663,6 @@ void dctrl_destroy(void **p) {
   clearjvo(jvd, 3, -1, -1, &jvd->lock_jvo);
   clearvid(jvd->vml, &jvd->lock_vml);
   pthread_mutex_destroy(&jvd->lock_busy);
-  pthread_mutex_destroy(&jvd->lock_monotonic);
   pthread_mutex_destroy(&jvd->lock_jvo);
   pthread_mutex_destroy(&jvd->lock_vml);
   free(jvd->jvo);
@@ -710,11 +767,11 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
   i=0;
   off+=snprintf(m+off, n-off, "<h3>File Mapping:</h3>\n");
   off+=snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
-  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Filename</th></tr>\n");
+  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Filename</th><th>LRU</th></tr>\n");
   off+=snprintf(m+off, n-off, "\n");
   while (vptr) {
-    if (vptr->id) // skip the first node
-      off+=snprintf(m+off, n-off, "<tr><td>%i</td><td>%i</td><td>%s</td></tr>\n", i++, vptr->id, vptr->fn);
+      off+=snprintf(m+off, n-off, "<tr><td>%i</td><td>%i</td><td>%s</td><td>%"PRIlld"</td></tr>\n",
+          i++, vptr->id, vptr->fn?vptr->fn:"(null)", (long long)vptr->lru);
     vptr = vptr->next;
   }
 

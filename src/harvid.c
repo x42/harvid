@@ -268,7 +268,7 @@ int main (int argc, char **argv) {
 
   vcache_create(&vc);
   vcache_resize(&vc, initial_cache_size);
-  dctrl_create(&dc);
+  dctrl_create(&dc, 64, initial_cache_size);
 
   dlog(DLOG_INFO, "Initialization complete. starting server.\n");
   start_tcp_server(cfg_host, cfg_port, docroot, cfg_username, cfg_groupname, NULL);
@@ -488,8 +488,8 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
 
   /* get canonical output width/height and corresponding buffersize */
   if (dctrl_get_info_scale(dc, vid, &ji, a->out_width, a->out_height)) {
-    dlog(DLOG_WARNING, "VID: Server is overloaded (no decoder available). n",fd);
-    httperror(fd, 503, "Service Unavailable", "<p>Server is overloaded (no decoder available).</p>");
+    dlog(DLOG_WARNING, "VID: no decoder available (overload or invalid file). n",fd);
+    httperror(fd, 503, "Service Unavailable", "<p>No decoder is available. Either the server is overloaded or the file is invalid (no video track, unknown codec,..)</p>");
     return 0;
   }
 

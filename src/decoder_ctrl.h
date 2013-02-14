@@ -30,7 +30,7 @@
 /** create and allocate a decoder control object
  * @param p pointer to allocated object
  */
-void dctrl_create(void **p);
+void dctrl_create(void **p, int max_decoders, int cache_size);
 
 /** close and destroy a decoder control object
  * @param p object pointer to free
