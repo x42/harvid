@@ -134,13 +134,18 @@ static videocacheline *testclwh(videocacheline *cache, int64_t frame, int w, int
  */
 static void clearcache(videocacheline *cache, int f) {
   videocacheline *cptr = cache;
+  videocacheline *prev = cache;
   while (cptr) {
     videocacheline *mem = cptr;
     if (f) cptr->flags&=~CLF_USED;
-    assert(!freecl(cptr));
-    cptr=cptr->next;
-    mem->next=NULL;
-    if (f && mem!=cache) free(mem);
+    if (freecl(cptr)) {
+      prev = cptr;
+      cptr = cptr->next;
+    } else {
+      cptr = cptr->next;
+      prev->next = cptr;
+      if (mem!=cache) free(mem);
+    }
   }
   if (f) cache->next=NULL;
 }
@@ -150,7 +155,7 @@ static void clearcache(videocacheline *cache, int f) {
 static void realloccl_buf(videocacheline *cptr, int w, int h, int spp) {
   if (cptr->flags&CLF_ALLOC)
     if (cptr->w==w && cptr->h==h)
-      return; // already allocated  // TODO: check SPP
+      return; // already allocated  // TODO: check SPP, render_fmt
 
   if (cptr->flags&CLF_ALLOC) free(cptr->b);
   cptr->b=NULL;
@@ -234,7 +239,7 @@ static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, int w, int h
 
 static void fc_flush_cache (xjcd *cc) {
   pthread_mutex_lock(&cc->lock);
-  clearcache(cc->vcache,1);
+  clearcache(cc->vcache, 1);
   cc->cache_hits = 0;
   cc->cache_miss = 0;
   pthread_mutex_unlock(&cc->lock);
@@ -243,7 +248,7 @@ static void fc_flush_cache (xjcd *cc) {
 void vcache_clear (void *p) {
   xjcd *cc = (xjcd*) p;
   pthread_mutex_lock(&cc->lock);
-  clearcache(cc->vcache,0);
+  clearcache(cc->vcache, 0);
   cc->cache_hits = 0;
   cc->cache_miss = 0;
   pthread_mutex_unlock(&cc->lock);

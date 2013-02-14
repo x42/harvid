@@ -177,6 +177,7 @@ char *hdl_server_status_html (CONN *c);
 char *hdl_file_info (CONN *c, ics_request_args *a);
 char *hdl_server_info (CONN *c, ics_request_args *a);
 void  hdl_clear_cache();
+void  hdl_purge_cache();
 
 // fileindex.c
 char *hdl_index_dir (const char *root, char *base_url, const char *path, int opt);
@@ -304,6 +305,13 @@ void ics_http_handler(
 		if (strncasecmp(path,  "/admin/flush_cache", 18) == 0 ) {
 			if (cfg_adminmask&ADM_FLUSHCACHE) {
 				hdl_clear_cache();
+				SEND200("ok");
+			} else {
+				httperror(c->fd, 403, NULL, NULL);
+			}
+		}	else if (strncasecmp(path,  "/admin/purge_cache", 18) == 0 ) {
+			if (cfg_adminmask&ADM_PURGECACHE) {
+				hdl_purge_cache();
 				SEND200("ok");
 			} else {
 				httperror(c->fd, 403, NULL, NULL);

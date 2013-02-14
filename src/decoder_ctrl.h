@@ -75,8 +75,12 @@ int dctrl_get_info(void *p, int id, VInfo *i);
  */
 int dctrl_get_info_scale(void *p, int id, VInfo *i, int w, int h);
 
-// the following are wrapped by the frame-cache:
-
+/**
+ * used by the frame-cache to decode a frame
+ */
 int dctrl_decode(void *p, int vid, int64_t frame, uint8_t *b, int w, int h);
 
+/**
+ */
+void dctrl_cache_clear(void *p, int f, int id);
 #endif

@@ -249,7 +249,8 @@ static JVOBJECT *getjvo(JVOBJECT *jvo, int max_objects, pthread_mutex_t *appendl
         cptr->id = 0;
         cptr->lru = 0;
         cptr->flags = 0;
-        cptr->infolock_refcnt = 0;
+        cptr->frame = -1;
+        assert(cptr->infolock_refcnt == 0);
         pthread_mutex_unlock(&cptr->lock);
         return (cptr);
     }
@@ -261,59 +262,84 @@ static JVOBJECT *getjvo(JVOBJECT *jvo, int max_objects, pthread_mutex_t *appendl
   return (NULL);
 }
 
-/* clear object information,
- if f==3 force also to flush data (even if it's in USE)
+/* clear object information
+ if f==4 force also to flush data (even if it's in USE -- may segfault)
+ if f==3 force also to flush data (wait fo it to become unused)
  if f==2 all /unused objects/ are invalidated and freed.
  if f==1 all /unused objects/ are invalidated.
  if f==0 all /unused and open objects/ are closed.
- time a cacheline is needed
+
+ (f>=2 must not be used during /normal/ operation -- it is exclusive to multithread operation)
+
  @param id ; filter on id ; -1: all in cache.
 */
-static int clearjvo(JVOBJECT *jvo, int f, int id) {
+static int clearjvo(JVOBJECT *jvo, int f, int id, pthread_mutex_t *l) {
   JVOBJECT *cptr = jvo;
+  JVOBJECT *prev = NULL;
   int busy = 0, cleared = 0, freed = 0, count = 0, skipped = 0; // DEBUG
+  pthread_mutex_lock(l);
+
   while (cptr) {
+    JVOBJECT *mem = cptr;
     if (id > 0 && cptr->id != id) {
-      cptr = cptr->next;
+      prev = cptr; cptr = cptr->next;
       skipped++;
       continue;
     }
-    JVOBJECT *mem = cptr;
     count++;
 
     pthread_mutex_lock(&cptr->lock);
     if (cptr->flags&(VOF_USED|VOF_PENDING|VOF_INFO)) {
-      if (f < 3) { // FIXME - set jvo->next pointer
+      if (f < 3) {
 	pthread_mutex_unlock(&cptr->lock);
+        if (prev) {
+          prev->next = cptr;
+        }
 	busy++;
-	cptr = cptr->next;
+        prev = cptr; cptr = cptr->next;
 	continue;
       }
-      dlog(DLOG_CRIT, "JV : WARNING - requesting to free a used decoder.\n");
-      cptr->flags &= ~(VOF_USED|VOF_PENDING|VOF_INFO);
-      cptr->infolock_refcnt = 0;
+      if (f < 4) {
+        do {
+          pthread_mutex_unlock(&cptr->lock);
+          mymsleep(5);
+          pthread_mutex_lock(&cptr->lock);
+        } while (cptr->flags&(VOF_USED|VOF_PENDING|VOF_INFO));
+      } else {
+        dlog(DLOG_ERR, "DCTL: request to free an active decoder.\n");
+        cptr->flags &= ~(VOF_USED|VOF_PENDING|VOF_INFO);
+        cptr->infolock_refcnt = 0;
+      }
     }
 
     if (cptr->flags&VOF_OPEN) {
       my_destroy(&cptr->decoder);
+      cptr->decoder=NULL;
       cptr->flags &= ~VOF_OPEN;
     }
 
     if (f > 0) {
       cptr->id = 0;
       cptr->lru = 0;
+      cptr->frame = -1;
       cptr->flags &= ~VOF_VALID;
       cleared++;
     }
 
-    pthread_mutex_unlock(&cptr->lock);
-
-    // TODO lock  lock_jvo
     cptr = cptr->next;
-    mem->next = NULL;
-    if (f > 1 && mem != jvo) {free(mem); freed++;}
+    mem->next = cptr;
+    pthread_mutex_unlock(&mem->lock);
+
+    if (f > 1 && mem != jvo) {
+      pthread_mutex_destroy(&mem->lock);
+      free(mem);
+      freed++;
+    } else {
+      prev = mem;
+      if (f > 1) mem->next = NULL;
+    }
   }
-  if (f > 2) jvo->next = NULL;
+  pthread_mutex_unlock(l);
 
   dlog(LOG_INFO, "DCTL: GC processed %d VObj, skipped: %d, freed: %d, cleared: %d - busy: %d\n", count, skipped, freed, cleared, busy);
   return (cleared);
@@ -528,10 +554,8 @@ static void dctrl_release_infolock(void *dec) {
 static inline int xdctrl_decode(void *dec, int64_t frame, uint8_t *b, int w, int h) {
   JVOBJECT *jvo = (JVOBJECT *) dec;
   jvo->lru = time(NULL);
-  int rv= my_decode(jvo->decoder, frame, b, w, h);
-  if (!rv) {
-    jvo->frame = frame;
-  }
+  int rv = my_decode(jvo->decoder, frame, b, w, h);
+  jvo->frame = frame;
   return rv;
 }
 
@@ -539,20 +563,27 @@ static inline int xdctrl_decode(void *dec, int64_t frame, uint8_t *b, int w, int
 // part 2b - video object/decoder API - public API
 
 void dctrl_create(void **p) {
+  JVD *jvd;
   (*((JVD**)p)) = (JVD*) calloc(1, sizeof(JVD));
-  (*((JVD**)p))->monotonic = 1;
-  pthread_mutex_init(&((*((JVD**)p))->lock_monotonic), NULL);
-  pthread_mutex_init(&((*((JVD**)p))->lock_jvo), NULL);
+  jvd = (*((JVD**)p));
+  jvd->monotonic = 1;
+  pthread_mutex_init(&jvd->lock_monotonic, NULL);
+  pthread_mutex_init(&jvd->lock_jvo, NULL);
+  pthread_mutex_init(&jvd->lock_vml, NULL);
 
-  (*((JVD**)p))->vml = newvid(NULL, &((*((JVD**)p))->lock_vml));
-  (*((JVD**)p))->jvo = newjvo(NULL, &((*((JVD**)p))->lock_jvo));
-  (*((JVD**)p))->max_objects = 64; // MAXCONNECTIONS
+  jvd->vml = newvid(NULL, &jvd->lock_vml);
+  jvd->jvo = newjvo(NULL, &jvd->lock_jvo);
+  jvd->max_objects = 64; // MAXCONNECTIONS
 }
 
 void dctrl_destroy(void **p) {
-  clearjvo((*((JVD**)p))->jvo, 4, -1);
-  clearvid((*((JVD**)p))->vml, &((*((JVD**)p))->lock_vml));
-  free((*((JVD**)p))->jvo);
+  JVD *jvd = (*((JVD**)p));
+  clearjvo(jvd->jvo, 3, -1, &jvd->lock_jvo);
+  clearvid(jvd->vml, &jvd->lock_vml);
+  pthread_mutex_destroy(&jvd->lock_monotonic);
+  pthread_mutex_destroy(&jvd->lock_jvo);
+  pthread_mutex_destroy(&jvd->lock_vml);
+  free(jvd->jvo);
   free(*((JVD**)p));
   *p = NULL;
 }
@@ -588,6 +619,11 @@ int dctrl_get_info_scale(void *p, int id, VInfo *i, int w, int h) {
   my_get_info_canonical(jvo->decoder, i, w, h);
   dctrl_release_infolock(jvo);
   return(0);
+}
+
+void dctrl_cache_clear(void *p, int f, int id) {
+  JVD *jvd = (JVD*)p;
+  clearjvo(jvd->jvo, f, id, &jvd->lock_jvo);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

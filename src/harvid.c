@@ -507,4 +507,10 @@ void hdl_clear_cache() {
   vcache_clear(vc);
 }
 
+void hdl_purge_cache() {
+  vcache_clear(vc);
+  dctrl_cache_clear(dc, 1, -1);
+}
+
+
 // vim:sw=2 sts=2 ts=8 et:
