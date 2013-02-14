@@ -69,8 +69,10 @@ const char * send_http_status_fd (int fd, int status) {
   return title;
 }
 
+#define HTHSIZE (1024)
+
 void send_http_header_fd(int fd , int s, httpheader *h) {
-  char hd[BUFSIZ];
+  char hd[HTHSIZE];
   int off=0;
 
   time_t now;
@@ -78,55 +80,55 @@ void send_http_header_fd(int fd , int s, httpheader *h) {
 
   now = time(NULL);
   strftime(timebuf, sizeof(timebuf), RFC1123FMT, gmtime(&now));
-  off+=snprintf(hd+off, BUFSIZ-off,"Date: %s\n", timebuf);
-  off+=snprintf(hd+off, BUFSIZ-off,"Server: %s\r\n", SERVERVERSION);
+  off+=snprintf(hd+off, HTHSIZE-off,"Date: %s\n", timebuf);
+  off+=snprintf(hd+off, HTHSIZE-off,"Server: %s\r\n", SERVERVERSION);
 
   if (h && h->ctype)
-    off+=snprintf(hd+off, BUFSIZ-off,"Content-type: %s\r\n", h->ctype);
+    off+=snprintf(hd+off, HTHSIZE-off,"Content-type: %s\r\n", h->ctype);
   else
-    off+=snprintf(hd+off, BUFSIZ-off,"Content-type: text/html; charset=UTF-8\r\n");
+    off+=snprintf(hd+off, HTHSIZE-off,"Content-type: text/html; charset=UTF-8\r\n");
   if (h && h->encoding)
-    off+=snprintf(hd+off, BUFSIZ-off,"Content-Encoding: %s\r\n", h->encoding);
+    off+=snprintf(hd+off, HTHSIZE-off,"Content-Encoding: %s\r\n", h->encoding);
   if (h && h->extra)
-    off+=snprintf(hd+off, BUFSIZ-off,"%s\r\n", h->extra);
+    off+=snprintf(hd+off, HTHSIZE-off,"%s\r\n", h->extra);
   if (h && h->length > 0)
 #ifdef HAVE_WINDOWS
-    off+=snprintf(hd+off, BUFSIZ-off,"Content-Length:%lu\r\n", (unsigned long) h->length);
+    off+=snprintf(hd+off, HTHSIZE-off,"Content-Length:%lu\r\n", (unsigned long) h->length);
 #else
-    off+=snprintf(hd+off, BUFSIZ-off,"Content-Length:%zd\r\n", h->length);
+    off+=snprintf(hd+off, HTHSIZE-off,"Content-Length:%zd\r\n", h->length);
 #endif
   if (h && h->retryafter)
-    off+=snprintf(hd+off, BUFSIZ-off,"Retry-After:%s\r\n", h->retryafter);
+    off+=snprintf(hd+off, HTHSIZE-off,"Retry-After:%s\r\n", h->retryafter);
   else if (s == 503)
-    off+=snprintf(hd+off, BUFSIZ-off,"Retry-After:5\r\n");
+    off+=snprintf(hd+off, HTHSIZE-off,"Retry-After:5\r\n");
   if (h && h->mtime) {
     strftime(timebuf, sizeof(timebuf), RFC1123FMT, gmtime(&h->mtime));
-    off+=snprintf(hd+off, BUFSIZ-off,"Last-Modified: %s\r\n",timebuf);
+    off+=snprintf(hd+off, HTHSIZE-off,"Last-Modified: %s\r\n",timebuf);
   }
 
-  off+=snprintf( hd+off, BUFSIZ-off,"Connection: close\r\n" );
-  off+=snprintf( hd+off, BUFSIZ-off,"\r\n" );
+  off+=snprintf( hd+off, HTHSIZE-off,"Connection: close\r\n" );
+  off+=snprintf( hd+off, HTHSIZE-off,"\r\n" );
   CSEND(fd, hd);
 }
 
 void httperror(int fd , int s, const char *title, const char *str) {
-  char hd[BUFSIZ];
+  char hd[HTHSIZE];
   int off=0;
 
   const char *t = send_http_status_fd(fd, s);
   send_http_header_fd(fd, s, NULL);
 
   if (!title) title=t;
-  off+=snprintf( hd+off, BUFSIZ-off, DOCTYPE HTMLOPEN);
-  off+=snprintf( hd+off, BUFSIZ-off,"<title>Error %i %s</title></head>", s, title );
-  off+=snprintf( hd+off, BUFSIZ-off,"<body><h1>%s</h1>", title);
+  off+=snprintf( hd+off, HTHSIZE-off, DOCTYPE HTMLOPEN);
+  off+=snprintf( hd+off, HTHSIZE-off,"<title>Error %i %s</title></head>", s, title );
+  off+=snprintf( hd+off, HTHSIZE-off,"<body><h1>%s</h1>", title);
 
   if (str && strlen(str)>0) {
-    off+=snprintf( hd+off, BUFSIZ-off,"<p>%s</p>\r\n", str);
+    off+=snprintf( hd+off, HTHSIZE-off,"<p>%s</p>\r\n", str);
   } else {
-    off+=snprintf( hd+off, BUFSIZ-off,"<p>%s</p>\r\n", "Sorry.");
+    off+=snprintf( hd+off, HTHSIZE-off,"<p>%s</p>\r\n", "Sorry.");
   }
-  off+=snprintf( hd+off, BUFSIZ-off, ERRFOOTER);
+  off+=snprintf( hd+off, HTHSIZE-off, ERRFOOTER);
   CSEND(fd, hd);
 }
 
