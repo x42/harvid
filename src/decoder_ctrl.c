@@ -29,19 +29,20 @@
 #include "daemon_log.h"
 
 ///////////////////////////////////////////////////////////////////////////////
-// ffdecoder wrapper
+// ffdecoder wrappers
 
-static int my_decode(void *vd, unsigned long frame, uint8_t *b, int w, int h) {
+static inline int my_decode(void *vd, unsigned long frame, uint8_t *b, int w, int h) {
+  int rv;
   ff_resize(vd, w, h, b, NULL);
-  ff_render(vd, frame, NULL, w, h, 0, w, w);
+  rv = ff_render(vd, frame, b, w, h, 0, w, w);
   ff_set_bufferptr(vd, NULL);
-  return 0;
+  return rv;
 }
 
-static int my_open_movie(void **vd, char *fn) {
+static inline int my_open_movie(void **vd, char *fn) {
   int render_fmt;
   if (!fn) {
-    dlog(DLOG_ERR, "JV: trying to open file w/o filename.\n");
+    dlog(DLOG_ERR, "DCTL: trying to open file w/o filename.\n");
     return -1;
   }
   ff_create(vd);
@@ -57,25 +58,24 @@ static int my_open_movie(void **vd, char *fn) {
 #endif
 
   if (!ff_open_movie (*vd, fn, render_fmt)) {
-    dlog(DLOG_DEBUG, "JV : opened video file: '%s'\n", fn);
+    dlog(DLOG_DEBUG, "DCTL: opened file: '%s'\n", fn);
   } else {
-    dlog(DLOG_ERR, "JV : error opening video file.\n");
+    dlog(DLOG_ERR, "DCTL: Cannot open file: '%s'\n", fn);
     ff_destroy(vd);
     return(1); // TODO cleanup - destroy ff ..
   }
   return(0);
 }
 
-static int my_destroy(void **vd) {
+static inline void my_destroy(void **vd) {
   ff_destroy(vd);
-  return(0);
 }
 
-static void my_get_info(void *vd, VInfo *i) {
+static inline void my_get_info(void *vd, VInfo *i) {
   ff_get_info(vd, i);
 }
 
-static void my_get_info_canonical(void *vd, VInfo *i, int w, int h) {
+static inline void my_get_info_canonical(void *vd, VInfo *i, int w, int h) {
   ff_get_info_canonical(vd, i, w, h);
 }
 
@@ -169,7 +169,7 @@ static JVOBJECT *testjvd(JVOBJECT *jvo, int id, int64_t frame) {
     }
   } /* end loop over all decoder objects */
 
-  dlog(LOG_INFO, "JV : found %d avail. from %d total decoder(s) for file-id:%d. [%s]\n",
+  dlog(LOG_DEBUG, "DCTL: found %d avail. from %d total decoder(s) for file-id:%d. [%s]\n",
       avail, found, id, dec_open?"open":dec_closed?"closed":"N/A");
 
   if (dec_open) {
@@ -195,7 +195,7 @@ static void gc_jvo(JVOBJECT *jvo, int min_age) {
       cptr = cptr->next;
       continue;
     }
-    dlog(DLOG_CRIT, "JV : GARBAGE COLLECTOR\n");
+    dlog(DLOG_CRIT, "DCTL: GARBAGE COLLECTOR\n");
     pthread_mutex_lock(&cptr->lock); // TODO check flags again after taking lock !
     my_destroy(&cptr->decoder); // close it.
     cptr->decoder = NULL; // not really need..
@@ -315,7 +315,7 @@ static int clearjvo(JVOBJECT *jvo, int f, int id) {
   }
   if (f > 2) jvo->next = NULL;
 
-  dlog(LOG_INFO, "JV : GC processed %d VObj, skipped: %d, freed: %d, cleared: %d - busy: %d\n", count, skipped, freed, cleared, busy);
+  dlog(LOG_INFO, "DCTL: GC processed %d VObj, skipped: %d, freed: %d, cleared: %d - busy: %d\n", count, skipped, freed, cleared, busy);
   return (cleared);
 }
 
@@ -445,7 +445,7 @@ static void * dctrl_get_decoder(void *p, int id, int64_t frame) {
   JVD *jvd = (JVD*)p;
 
 tryagain:
-  dlog(DLOG_DEBUG, "JV: get_decoder fileid=%i\n", id);
+  dlog(DLOG_DEBUG, "DCTL: get_decoder fileid=%i\n", id);
 
   JVOBJECT *jvo;
   int timeout = 40; // new_video_object() delays 5ms at a time.
@@ -455,7 +455,7 @@ tryagain:
   } while (--timeout > 0 && !jvo);
 
   if (!jvo) {
-    dlog(DLOG_ERR, "JV: ERROR: no decoder object available.\n");
+    dlog(DLOG_ERR, "DCTL: no decoder object available.\n");
     return(NULL);
   }
 
@@ -477,7 +477,7 @@ tryagain:
       pthread_mutex_lock(&jvo->lock);
       jvo->flags &= ~VOF_PENDING;
       pthread_mutex_unlock(&jvo->lock);
-      dlog(DLOG_ERR, "JV : ERROR: opening of movie file failed.\n");
+      dlog(DLOG_ERR, "DCTL: opening of movie file failed.\n");
       return(NULL);
     }
   }
@@ -502,7 +502,7 @@ tryagain:
 
   pthread_mutex_unlock(&jvo->lock);
 
-  dlog(DLOG_WARNING, "JV : WARNING: decoder object was busy.\n");
+  dlog(DLOG_WARNING, "DCTL: decoder object was busy.\n");
   goto tryagain;
 
   return(NULL);
@@ -566,7 +566,7 @@ int dctrl_get_id(void *p, const char *fn) {
 int dctrl_decode(void *p, int id, int64_t frame, uint8_t *b, int w, int h) {
   void *dec = dctrl_get_decoder(p, id, frame);
   if (!dec) {
-    dlog(DLOG_WARNING, "dctrl_decode: no decoder available.\n");
+    dlog(DLOG_WARNING, "DCTL: no decoder available.\n");
     return -1;
   }
   int rv = xdctrl_decode(dec, frame, b, w, h);

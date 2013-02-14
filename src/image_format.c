@@ -31,11 +31,9 @@
 #include <jpeglib.h>
 #include <png.h>
 
+#include "daemon_log.h"
 #include "vinfo.h"
 #include "enums.h"
-
-extern int want_quiet;
-extern int want_verbose;
 
 int cfg_jpeg_quality = 75;
 
@@ -49,7 +47,8 @@ static int write_jpeg(VInfo *ji, uint8_t *buffer, FILE *x) {
 
   line=malloc(ji->out_width * 3);
   if (!line) {
-    fprintf(stderr, "OUT OF MEMORY, Exiting...\n"); exit(1);
+    dlog(DLOG_CRIT, "IMF: OUT OF MEMORY, Exiting...\n");
+    exit(1);
   }
   cjpeg.err = jpeg_std_error(&jerr);
   jpeg_create_compress (&cjpeg);
@@ -143,53 +142,56 @@ size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf) {
 #else
   FILE *x = tmpfile();
 #endif
-  if (x) {
-    switch (render_fmt) {
-      case 1:
-	if (write_jpeg(ji, buf, x))
-	  fprintf(stderr, "Could not write tmpfile\n");
-	break;
-      case 2:
-	if (write_png(ji, buf, x))
-	  fprintf(stderr, "Could not write tmpfile\n");
-	break;
-      case 3:
-	if (write_ppm(ji, buf, x))
-	  fprintf(stderr, "Could not write tmpfile\n");
-	break;
-      default:
-	fprintf(stderr, "Unknown outformat %d\n", render_fmt);
-	break;
-    }
-#ifdef __USE_XOPEN2K8
-    fclose(x);
-    return rs;
-#elif defined HAVE_WINDOWS
-    fclose(x);
-    x = fopen(tfn, "rb");
-#else
-    fflush(x);
-#endif
-    fseek (x , 0 , SEEK_END);
-    long int rsize = ftell (x);
-    rewind(x);
-    if (fseek(x, 0L, SEEK_SET) < 0) {
-            ; // fprintf(stderr,"debug: seek failed!!!!!!!!!!!!!\n");
-    }
-    fflush(x);
-    *out = (uint8_t*) malloc(rsize*sizeof(uint8_t));
-    if (fread(*out, sizeof(char), rsize, x) !=rsize) {
-      fprintf(stderr,"short read. - possibly incomplete image\n");
-    }
-    fclose(x);
-#ifdef HAVE_WINDOWS
-    unlink(tfn);
-#endif
-    return (rsize);
-  } else {
-    fprintf(stderr,"critical error: tmpfile() failed.\n");
+  if (!x) {
+    dlog(LOG_ERR, "IMF: tmpfile() creation failed.\n");
+    return(0);
   }
-  return(0);
+
+  switch (render_fmt) {
+    case 1:
+      if (write_jpeg(ji, buf, x))
+        dlog(LOG_ERR, "IMF: Could not write jpeg\n");
+      break;
+    case 2:
+      if (write_png(ji, buf, x))
+        dlog(LOG_ERR, "IMF: Could not write png\n");
+      break;
+    case 3:
+      if (write_ppm(ji, buf, x))
+        dlog(LOG_ERR, "IMF: Could not write ppm\n");
+      break;
+    default:
+        dlog(LOG_ERR, "IMF: Unknown outformat %d\n", render_fmt);
+        fclose(x);
+        return 0;
+      break;
+  }
+#ifdef __USE_XOPEN2K8
+  fclose(x);
+  return rs;
+#elif defined HAVE_WINDOWS
+  fclose(x);
+  x = fopen(tfn, "rb");
+#else
+  fflush(x);
+#endif
+  /* re-read image from tmp-file */
+  fseek (x , 0 , SEEK_END);
+  long int rsize = ftell (x);
+  rewind(x);
+  if (fseek(x, 0L, SEEK_SET) < 0) {
+    dlog(LOG_DEBUG, "IMF: fseek failed\n");
+  }
+  fflush(x);
+  *out = (uint8_t*) malloc(rsize*sizeof(uint8_t));
+  if (fread(*out, sizeof(char), rsize, x) !=rsize) {
+    dlog(LOG_WARNING, "IMF: short read. - possibly incomplete image\n");
+  }
+  fclose(x);
+#ifdef HAVE_WINDOWS
+  unlink(tfn);
+#endif
+  return (rsize);
 }
 
 void write_image(char *file_name, int render_fmt, VInfo *ji, uint8_t *buf) {
@@ -198,26 +200,25 @@ void write_image(char *file_name, int render_fmt, VInfo *ji, uint8_t *buf) {
     switch (render_fmt) {
       case FMT_JPG:
 	if (write_jpeg(ji, buf, x))
-	  fprintf(stderr, "Could not write outputfile %s\n", file_name);
+	  dlog(LOG_ERR, "IMF: Could not write jpeg: %s\n", file_name);
 	break;
       case FMT_PNG:
 	if (write_png(ji, buf, x))
-	  fprintf(stderr, "Could not write outputfile %s\n", file_name);
+	  dlog(LOG_ERR, "IMF: Could not write png: %s\n", file_name);
 	break;
       case FMT_PPM:
 	if (write_ppm(ji, buf, x))
-	  fprintf(stderr, "Could not write outputfile %s\n", file_name);
+	  dlog(LOG_ERR, "IMF: Could not write ppm: %s\n", file_name);
 	break;
       default:
-	fprintf(stderr, "Unknown outformat %d\n", render_fmt);
+	dlog(LOG_ERR, "IMF: Unknown outformat %d\n", render_fmt);
 	break;
     }
     if (strcmp(file_name,"-")) fclose(x);
-    if (want_verbose)
-      fprintf(stderr, "Outputfile %s closed\n", file_name);
+    dlog(LOG_INFO, "IMF: Outputfile %s closed\n", file_name);
   }
   else
-    fprintf(stderr, "Could not open outfile %s\n", file_name);
+    dlog(LOG_ERR, "IMF: Could not open outfile: %s\n", file_name);
   return;
 }
 

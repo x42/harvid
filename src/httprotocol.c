@@ -157,10 +157,10 @@ int http_tx(int fd, int s, httpheader *h, size_t len, const uint8_t *buf) {
 #endif
       //dlog(DLOG_DEBUG, "  written (%u/%u) @%u on fd:%i\n", rv, len-offset, offset, fd);
       if (rv <0 ) {
-        dlog(DLOG_WARNING,"  !!  write to socket failed: %s\n", strerror(errno));
+        dlog(DLOG_WARNING,"HTTP: write to socket failed: %s\n", strerror(errno));
         break; // TODO: don't break on EAGAIN, ENOBUFS, ENOMEM or similar
       } else if (rv != len-offset) {
-         dlog(DLOG_INFO, "  !!  short-write (%u/%u) @%u on fd:%i\n", rv, len-offset, offset, fd);
+         dlog(DLOG_WARNING, "HTTP: short-write (%u/%u) @%u on fd:%i\n", rv, len-offset, offset, fd);
          timeout=WRITE_TIMEOUT;
          offset+=rv;
       } else {
@@ -170,10 +170,10 @@ int http_tx(int fd, int s, httpheader *h, size_t len, const uint8_t *buf) {
     }
   }
   if (!timeout)
-    dlog(DLOG_ERR, "  !!  write timeout fd:%i\n",fd);
+    dlog(DLOG_ERR, "HTTP: write timeout fd:%i\n",fd);
 
   if (offset != len) {
-    dlog(DLOG_ERR, "  !!  write to fd:%d failed at (%u/%u) = %.2f%%\n",fd, offset, len, (float)offset*100.0/(float)len);
+    dlog(DLOG_WARNING, "HTTP: write to fd:%d failed at (%u/%u) = %.2f%%\n",fd, offset, len, (float)offset*100.0/(float)len);
     return (1);
   }
   return (0);
@@ -312,10 +312,10 @@ static int compare_accept(char *line) {
   if ((tmp=strchr(line,';'))) *tmp='\0'; // ignore opt. parameters
   if (!strncmp(line,"image/",6)) {
     rv|=1;
-    //dlog(DLOG_DEBUG, "accept image: %s\n",line);
+    //dlog(DLOG_DEBUG, "HTTP: accept image: %s\n",line);
   } else if (!strcmp(line,"*/*")) {
     rv|=2;
-    //dlog(DLOG_DEBUG, "accept all: %s\n",line);
+    //dlog(DLOG_DEBUG, "HTTP: accept all: %s\n",line);
   }
   if (tmp) *tmp=';';
   return rv;
@@ -342,7 +342,7 @@ int protocol_handler(CONN *c, void *unused) {
   else if (!strncmp(c->buf, "shutdown", 8)) { c->d->run=0; return(0);}
 #endif
 
-  //dlog(DLOG_DEBUG, "CON: GOT:'%s'\n",c->buf);
+  //dlog(DLOG_DEBUG, "HTTP: CON raw-input: '%s'\n",c->buf);
 
   char *method_str;
   char *path, *protocol, *query;
@@ -383,8 +383,8 @@ int protocol_handler(CONN *c, void *unused) {
   }
 
 #if 0
-  dlog(DLOG_INFO, "CON HTTP - header-len: %i\n", strlen(header));
-  dlog(DLOG_DEBUG, "CON HTTP - header: ''%s''\n", header);
+  dlog(DLOG_DEBUG, "HTTP: CON header-len: %i\n", strlen(header));
+  dlog(DLOG_DEBUG, "HTTP: CON header: ''%s''\n", header);
 #endif
 
 
@@ -451,15 +451,13 @@ int protocol_handler(CONN *c, void *unused) {
         cp += strspn( cp, " \t" );
         contentlength = atoll(cp);
         }
-#if 1
+#if 0
     else
-        {
-        dlog(DLOG_INFO, "CON HTTP-header not parsed: '%s'\n",line);
-        }
+        dlog(DLOG_DEBUG, "HTTP: CON header not parsed: '%s'\n",line);
 #endif
 
   }
-  dlog(DLOG_DEBUG, "CON HTTP-header co='%s' ho='%s' mo='%s' re='%s' ua='%s' ac='%s'\n",
+  dlog(DLOG_DEBUG, "HTTP: CON header co='%s' ho='%s' mo='%s' re='%s' ua='%s' ac='%s'\n",
      cookie, host, if_modified_since, referer, useragent, accept);
 
   /* process headers */
@@ -480,7 +478,7 @@ int protocol_handler(CONN *c, void *unused) {
     return(0);
   }
 
-  dlog(DLOG_INFO, "CON HTTP - Proto: '%s', method: '%s', path: '%s' query:'%s'\n", protocol, method_str, path, query);
+  dlog(DLOG_DEBUG, "HTTP: CON Proto: '%s', method: '%s', path: '%s' query:'%s'\n", protocol, method_str, path, query);
 
   /* pre-process request */
   if (!strcmp("POST",method_str)
@@ -489,8 +487,8 @@ int protocol_handler(CONN *c, void *unused) {
       && (num < BUFSIZ)
         ) {
       header[contentlength]='\0';
-      dlog(DLOG_INFO, "CON HTTP - translate to GET query - length data:%i cl:%i\n", strlen(header), contentlength);
-      dlog(DLOG_DEBUG, "CON HTTP - x-www-form-urlencoded:'%s'\n", header);
+      dlog(DLOG_DEBUG, "HTTP: CON translate POST->GET query - length data:%i cl:%i\n", strlen(header), contentlength);
+      dlog(DLOG_DEBUG, "HTTP: CON x-www-form-urlencoded:'%s'\n", header);
       query=header;
       method_str="GET";
   }

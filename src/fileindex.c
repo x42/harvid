@@ -168,7 +168,7 @@ int parse_dir (const char *root, const char *burl, const char *path, int opt, ch
   struct dirent *dd;
   char dn[MAX_PATH];
   size_t off =0;
-  sprintf(dn,"%s%s%s", root, SL_SEP(root), path);
+  snprintf(dn, MAX_PATH, "%s%s%s", root, SL_SEP(root), path);
 
   dlog(LOG_DEBUG, "IndexDir: indexing '%s'\n", dn);
   if (!(D = opendir (dn)))  {
@@ -186,14 +186,14 @@ int parse_dir (const char *root, const char *burl, const char *path, int opt, ch
     if (delen==2 && dd->d_name[0]=='.' && dd->d_name[1]=='.') continue; // '..'
 #endif
 
-    sprintf(rn,"%s/%s", dn, dd->d_name);
+    snprintf(rn, MAX_PATH, "%s/%s", dn, dd->d_name);
     if(stat(rn,&fs)==0) {
       char fn[MAX_PATH]; // relative to this *root.
-      sprintf(fn,"%s%s%s", path, SL_SEP(path), dd->d_name);
+      snprintf(fn, MAX_PATH, "%s%s%s", path, SL_SEP(path), dd->d_name);
       if (S_ISDIR(fs.st_mode)) {
         if ((opt&OPT_FLAT) == OPT_FLAT) {
           char pn[MAX_PATH];
-          sprintf(pn,"%s%s%s/",path, SL_SEP(path), dd->d_name);
+          snprintf(pn, MAX_PATH, "%s%s%s/",path, SL_SEP(path), dd->d_name);
           off+=parse_dir(root, burl, pn, opt, m+off, n-off, print_fn);
         } else {
           off+=print_fn(0, burl, path, dd->d_name, m+off, n-off);

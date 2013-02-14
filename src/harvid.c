@@ -48,8 +48,8 @@
 extern int debug_level;
 
 char *program_name;
-int   want_quiet =0;
-int   want_verbose =0;
+int   want_quiet = 0;
+int   want_verbose = 0;
 unsigned short  cfg_port = DEFAULT_PORT;
 unsigned int  cfg_host = 0; /* = htonl(INADDR_ANY) */
 int   cfg_daemonize = 0;
@@ -155,14 +155,17 @@ static int decode_switches (int argc, char **argv) {
         break;
       case 'D':		/* --daemonize */
         cfg_daemonize = 1;
+        want_quiet = 1;
         break;
       case 'l':		/* --logfile */
         cfg_syslog = 0;
+        want_quiet = 1;
         if (cfg_logfile) free(cfg_logfile);
         cfg_logfile = strdup(optarg);
         break;
       case 's':		/* --syslog */
         cfg_syslog = 1;
+        want_quiet = 1;
         if (cfg_logfile) free(cfg_logfile);
         cfg_logfile = NULL;
         break;
@@ -231,8 +234,14 @@ int main (int argc, char **argv) {
   /* all systems go */
 
   if (cfg_logfile || cfg_syslog) dlog_open(cfg_logfile);
-  if (cfg_chroot) do_chroot(cfg_chroot);
-  if (cfg_daemonize) daemonize();
+
+  if (cfg_chroot) {
+    if (do_chroot(cfg_chroot)) goto errexit;
+  }
+
+  if (cfg_daemonize) {
+    if (daemonize()) goto errexit;
+  }
 
   ff_initialize();
 
@@ -248,6 +257,7 @@ int main (int argc, char **argv) {
   ff_cleanup();
   dctrl_destroy(&dc);
   vcache_destroy(&vc);
+errexit:
   dlog_close();
   return(0);
 }

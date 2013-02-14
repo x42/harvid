@@ -49,8 +49,8 @@
 #endif
 
 /* log Levels */
-#define DLOG_CRIT        LOG_CRIT    ///< critical conditions
-#define DLOG_ERR         LOG_ERR     ///< error conditions
+#define DLOG_CRIT        LOG_CRIT    ///< critical conditions -- usually implies exit() or process termination
+#define DLOG_ERR         LOG_ERR     ///< error conditions -- recoverable errors
 #define DLOG_WARNING     LOG_WARNING ///< warning conditions
 #define DLOG_INFO        LOG_INFO    ///< informational
 #define DLOG_DEBUG       LOG_DEBUG   ///< debug-level messages

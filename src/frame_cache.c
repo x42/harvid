@@ -109,7 +109,7 @@ static videocacheline *getcl(videocacheline *cache, int cfg_cachesize) {
 
   /* all cache lines are in USE/locked */
 
-  dlog(DLOG_CRIT, "frame-cache, cache full all cache-lines in use\n");
+  dlog(DLOG_WARNING, "CACHE: cache full - all cache-lines in use.\n");
   return (NULL);
 }
 
@@ -195,7 +195,7 @@ static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, int w, int h
   int timeout=100;
   do {
     pthread_mutex_lock(&cc->lock);
-    rv=getcl(cc->vcache, cc->cfg_cachesize);
+    rv = getcl(cc->vcache, cc->cfg_cachesize);
     if (rv) {
       rv->flags|=CLF_USED;
     }
@@ -206,17 +206,18 @@ static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, int w, int h
   } while(--timeout > 0 && !rv);
 
   if (!rv) {
-    return (rv);
+    return NULL;
   }
 
-  realloccl_buf(rv, w, h, SPP); // FIXME ; call ff_get_buffersize()  - use dctrl_get_info(); dctrl_decode(..) wrapper API
+  realloccl_buf(rv, w, h, SPP); // FIXME ; call ff_get_buffersize() - use dctrl_get_info();
 
   // Fill cacheline with data - decode video
   if (dctrl_decode(dc, vid, frame, rv->b, w, h)) {
+    /* we don't cache decode-errors */
     rv->flags&=~CLF_VALID;
     rv->flags&=~CLF_USED;
-    dlog(DLOG_WARNING, "Cache : decode failed.\n");
-    return (rv); // XXX
+    dlog(DLOG_WARNING, "CACHE: decode failed.\n");
+    return (rv); // this is OK, a black frame will have been rendered
   }
 
   rv->id=vid;

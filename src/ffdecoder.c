@@ -21,6 +21,7 @@
 #include <stdlib.h>     /* calloc et al.*/
 #include <string.h>     /* memset */
 #include <pthread.h>
+#include <assert.h>
 
 #include "ffcompat.h"
 #include <libswscale/swscale.h>
@@ -122,7 +123,9 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
       memset(buf, 0, ff_getbuffersize(ff, NULL));
       break;
     default:
-      fprintf(stderr, "render_empty_frame() with unknown render format\n");
+      if (!want_quiet)
+	fprintf(stderr, "render_empty_frame() with unknown render format\n");
+      break;
   }
 }
 
@@ -169,8 +172,8 @@ static void ff_init_moviebuffer(void *ptr) {
 
   if (ff->buf_width == ff->out_width && ff->buf_height == ff->out_height) {
     return;
-  } else {
-    printf("ff_init_moviebuffer %dx%d vs %dx%d\n", ff->buf_width, ff->buf_height, ff->out_width, ff->out_height);
+  } else if (want_verbose) {
+    fprintf(stdout, "ff_init_moviebuffer %dx%d vs %dx%d\n", ff->buf_width, ff->buf_height, ff->out_width, ff->out_height);
   }
 
   if (ff->internal_buffer) free(ff->internal_buffer);
@@ -180,14 +183,10 @@ static void ff_init_moviebuffer(void *ptr) {
   ff->buf_width = ff->out_width;
   ff->buf_height = ff->out_height;
   if (!ff->buffer) {
-    fprintf(stderr, "out of memory\n");
+    fprintf(stderr, "out of memory\n"); // XXX
     exit(1);
   }
-  if (!ff->pFrameFMT) {
-    // XXX can this really happen?
-    fprintf(stderr, "could not initialize output frame/scaling.\n");
-    exit(1);
-  }
+  assert(ff->pFrameFMT);
   avpicture_fill((AVPicture *)ff->pFrameFMT, ff->buffer, ff->render_fmt, ff->out_width, ff->out_height);
 }
 
@@ -290,7 +289,8 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   /* Open video file */
   if(avformat_open_input(&ff->pFormatCtx, file_name, NULL, NULL) <0)
   {
-    fprintf( stderr, "Cannot open video file %s\n", file_name);
+    if (!want_quiet)
+      fprintf(stderr, "Cannot open video file %s\n", file_name);
     return (-1);
   }
 #if 1 /// XXX http is not neccesarily a live-stream!
@@ -306,7 +306,8 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   pthread_mutex_lock(&avcodec_lock);
   /* Retrieve stream information */
   if(avformat_find_stream_info(ff->pFormatCtx, NULL)<0) {
-    fprintf( stderr, "Cannot find stream information in file %s\n", file_name);
+    if (!want_quiet)
+      fprintf(stderr, "Cannot find stream information in file %s\n", file_name);
     avformat_close_input(&ff->pFormatCtx);
     pthread_mutex_unlock(&avcodec_lock);
     return (-1);
@@ -330,7 +331,8 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
     }
 
   if(ff->videoStream==-1) {
-    fprintf( stderr, "Cannot find a video stream in file %s\n", file_name);
+    if (!want_quiet)
+      fprintf(stderr, "Cannot find a video stream in file %s\n", file_name);
     avformat_close_input(&ff->pFormatCtx);
     return (-1);
   }
@@ -391,12 +393,13 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
 #endif
 
   if (want_verbose)
-    fprintf( stderr, "movie size:  %ix%i px\n", ff->movie_width, ff->movie_height);
+    fprintf(stdout, "movie size:  %ix%i px\n", ff->movie_width, ff->movie_height);
 
   // Find the decoder for the video stream
   pCodec=avcodec_find_decoder(ff->pCodecCtx->codec_id);
   if(pCodec==NULL) {
-    fprintf( stderr, "Cannot find a codec for file: %s\n", file_name);
+    if (!want_quiet)
+      fprintf( stderr, "Cannot find a codec for file: %s\n", file_name);
     avformat_close_input(&ff->pFormatCtx);
     return(-1);
   }
@@ -404,7 +407,8 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   // Open codec
   pthread_mutex_lock(&avcodec_lock);
   if(avcodec_open2(ff->pCodecCtx, pCodec, NULL)<0) {
-    fprintf( stderr, "Cannot open the codec for file %s\n", file_name);
+    if (!want_quiet)
+      fprintf(stderr, "Cannot open the codec for file %s\n", file_name);
     pthread_mutex_unlock(&avcodec_lock);
     avformat_close_input(&ff->pFormatCtx);
     return(-1);
@@ -412,14 +416,16 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   pthread_mutex_unlock(&avcodec_lock);
 
   if (!(ff->pFrame=avcodec_alloc_frame())) {
-    fprintf( stderr, "Cannot allocate video frame buffer\n");
+    if (!want_quiet)
+      fprintf(stderr, "Cannot allocate video frame buffer\n");
     avcodec_close(ff->pCodecCtx);
     avformat_close_input(&ff->pFormatCtx);
     return(-1);
   }
 
   if (!(ff->pFrameFMT=avcodec_alloc_frame())) {
-    fprintf( stderr, "Cannot allocate display frame buffer\n");
+    if (!want_quiet)
+      fprintf(stderr, "Cannot allocate display frame buffer\n");
     av_free(ff->pFrame);
     avcodec_close(ff->pCodecCtx);
     avformat_close_input(&ff->pFormatCtx);
@@ -433,26 +439,27 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
 }
 
 static void reset_video_head(ffst *ff, AVPacket *packet) {
-	int             frameFinished=0;
-fprintf(stderr, "DEBUG: resetting decoder - seek/playhead rewind.\n");
+  int frameFinished=0;
+  if (!want_quiet)
+    fprintf(stderr, "Resetting decoder - seek/playhead rewind.\n");
 #if LIBAVFORMAT_BUILD < 4617
-	av_seek_frame(ff->pFormatCtx, ff->videoStream, 0);
+  av_seek_frame(ff->pFormatCtx, ff->videoStream, 0);
 #else
-	av_seek_frame(ff->pFormatCtx, ff->videoStream, 0, AVSEEK_FLAG_BACKWARD);
+  av_seek_frame(ff->pFormatCtx, ff->videoStream, 0, AVSEEK_FLAG_BACKWARD);
 #endif
-	avcodec_flush_buffers(ff->pCodecCtx);
+  avcodec_flush_buffers(ff->pCodecCtx);
 
-	while (!frameFinished) {
-		av_read_frame(ff->pFormatCtx, packet);
-		if(packet->stream_index==ff->videoStream)
+  while (!frameFinished) {
+    av_read_frame(ff->pFormatCtx, packet);
+    if(packet->stream_index==ff->videoStream)
 #if LIBAVCODEC_VERSION_MAJOR < 52 || ( LIBAVCODEC_VERSION_MAJOR == 52 && LIBAVCODEC_VERSION_MINOR < 21)
-		avcodec_decode_video(ff->pCodecCtx, ff->pFrame, &frameFinished, packet->data, packet->size);
+    avcodec_decode_video(ff->pCodecCtx, ff->pFrame, &frameFinished, packet->data, packet->size);
 #else
-		avcodec_decode_video2(ff->pCodecCtx, ff->pFrame, &frameFinished, packet);
+    avcodec_decode_video2(ff->pCodecCtx, ff->pFrame, &frameFinished, packet);
 #endif
-		if(packet->data) av_free_packet(packet);
-	}
-	ff->avprev=0;
+    if(packet->data) av_free_packet(packet);
+  }
+  ff->avprev=0;
 }
 
 // TODO: set this high (>1000) if transport stopped and to a low value (<100) if transport is running.
@@ -472,8 +479,8 @@ static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t timestamp) {
   if (ff->want_ignstart)  // timestamps in the file start counting at ..->start_time
     timestamp+= (int64_t) rint(ff->framerate*((double)ff->pFormatCtx->start_time / (double)AV_TIME_BASE));
 
-  // TODO: assert  0 < timestamp + ts_offset - (..->start_time)   < length
-	
+  // TODO: assert  0 <= timestamp + ts_offset - (..->start_time)  < length
+
 #if LIBAVFORMAT_BUILD > 4629 // verify this version
   timestamp=av_rescale_q(timestamp,c1_Q,v_stream->time_base);
   timestamp=av_rescale_q(timestamp,c1_Q,v_stream->r_frame_rate); //< timestamp/=framerate;
@@ -510,19 +517,21 @@ static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t timestamp) {
 read_frame:
   nolivelock++;
   if(av_read_frame(ff->pFormatCtx, packet)<0) {
-    if (!want_quiet) printf("Reached movie end\n");
+    if (!want_quiet) {
+      fprintf(stderr, "Reached movie end\n");
+    }
     return (0);
   }
 #if LIBAVFORMAT_BUILD >=4616
   if (av_dup_packet(packet) < 0) {
-    printf("can not allocate packet\n");
+    if (!want_quiet) {
+      fprintf(stderr, "can not allocate packet\n");
+    }
     goto read_frame;
   }
 #endif
   if(packet->stream_index!=ff->videoStream) {
-//  fprintf(stderr, "Not a video frame\n");
     if (packet->data) av_free_packet(packet);
-// check livelock here ?!
     goto read_frame;
   }
   /* backwards compatible - no cont. seeking (seekmode ANY or KEY ; cmd-arg: -K, -k)
@@ -604,9 +613,6 @@ int ff_render(void *ptr, unsigned long frame,
     ff_init_moviebuffer(ff);
   }
 
-    // if (ff->avprev == timestamp) return;
-  //printf("Debug: ff-render %lu\n",frame);
-
   if (ff->pFrameFMT && ff->pFormatCtx && my_seek_frame(ff, &ff->packet, timestamp)) {
     while (1) { /* Decode video frame */
       frameFinished=0;	
@@ -617,22 +623,22 @@ int ff_render(void *ptr, unsigned long frame,
 	avcodec_decode_video2(ff->pCodecCtx, ff->pFrame, &frameFinished, &ff->packet);
 #endif
       if(frameFinished) { /* Convert the image from its native format to FMT */
-        ff->pSWSCtx = sws_getCachedContext(ff->pSWSCtx, ff->pCodecCtx->width, ff->pCodecCtx->height, ff->pCodecCtx->pix_fmt, ff->out_width, ff->out_height, ff->render_fmt, SWS_BICUBIC, NULL, NULL, NULL);
-        sws_scale(ff->pSWSCtx, (const uint8_t * const*) ff->pFrame->data, ff->pFrame->linesize, 0, ff->pCodecCtx->height, ff->pFrameFMT->data, ff->pFrameFMT->linesize);
+	ff->pSWSCtx = sws_getCachedContext(ff->pSWSCtx, ff->pCodecCtx->width, ff->pCodecCtx->height, ff->pCodecCtx->pix_fmt, ff->out_width, ff->out_height, ff->render_fmt, SWS_BICUBIC, NULL, NULL, NULL);
+	sws_scale(ff->pSWSCtx, (const uint8_t * const*) ff->pFrame->data, ff->pFrame->linesize, 0, ff->pCodecCtx->height, ff->pFrameFMT->data, ff->pFrameFMT->linesize);
 	av_free_packet(&ff->packet); /* XXX */
 	break;
       } else  {
-        //fprintf( stderr, "Frame not finished..\n");
 	if(ff->packet.data) av_free_packet(&ff->packet);
 	if(av_read_frame(ff->pFormatCtx, &ff->packet)<0) {
-	  fprintf( stderr, "read error!\n");
+	  if (!want_quiet) fprintf(stderr, "read error!\n");
 	  reset_video_head(ff, &ff->packet);
 	  render_empty_frame(ff, buf, w, h, xoff, ys);
 	  break;
 	}
 #if LIBAVFORMAT_BUILD >=4616
 	if (av_dup_packet(&ff->packet) < 0) {
-	  printf("can not allocate packet\n");
+	  if (!want_quiet)
+	    fprintf(stderr, "Cannot allocate packet\n");
 	  break;
 	}
 #endif
@@ -640,9 +646,13 @@ int ff_render(void *ptr, unsigned long frame,
     } /* end while !frame_finished */
   } else {
     if (ff->pFrameFMT && !want_quiet) fprintf( stderr, "frame seek unsucessful (frame: %lu).\n",frame);
-    render_empty_frame(ff, buf, w, h, xoff, ys);
   }
-  return frameFinished ? 0 : -1;
+
+  if (!frameFinished) {
+    render_empty_frame(ff, buf, w, h, xoff, ys);
+    return -1;
+  }
+  return 0;
 }
 
 void ff_get_info(void *ptr, VInfo *i) {
