@@ -74,24 +74,25 @@ static void usage (int status) {
   printf ("Usage: %s [OPTION] [document-root]\n", program_name);
   printf ("\n"
 "Options:\n"
-"  -h, --help                 display this help and exit\n"
-"  -V, --version              print version information and exit\n"
-"  -q, --quiet, --silent      inhibit usual output\n"
-"  -v, --verbose              print more information\n"
-"  -s, --syslog               send messages to syslog\n"
-"  -P <listenaddr>            IP address to listen on (default 0.0.0.0)\n"
-"  -p <num>, --port <num>     TCP port to listen on (default %i)\n"
-"  -D, --daemonize            fork into background and detach from tty\n"
 "  -c <path>, \n"
 "      --chroot <path>        change system root - jails server to this path\n"
-"  -l <path>,  \n"
-"      --logfile <path>       specify file for log messages\n"
-"  -u <name>,\n"
-"      --username <name>      server will act as this user\n"
+"  -C  <frames>               set initial frame-cache size (default: 128)\n"
+"  -D, --daemonize            fork into background and detach from tty\n"
 "  -g <name>,\n"
 "      --groupname <name>     assume this user-group\n"
-"  -C  <frames>               set initial frame-cache size (default: 128)\n"
+"  -h, --help                 display this help and exit\n"
+"  -l <path>,  \n"
+"      --logfile <path>       specify file for log messages\n"
+"  -p <num>, --port <num>     TCP port to listen on (default %i)\n"
+"  -P <listenaddr>            IP address to listen on (default 0.0.0.0)\n"
+"  -q, --quiet, --silent      inhibit usual output\n"
+"  -s, --syslog               send messages to syslog\n"
+"  -u <name>,\n"
+"      --username <name>      server will act as this user\n"
+"  -v, --verbose              print more information\n"
+"  -V, --version              print version information and exit\n"
 "  \n"
+"default document-root (if unspecified) is the system root: / or C:\\. \n"
 "if both syslog and logfile are given that last specified option will be used.\n"
 "\n"
 "Report bugs to <robin@gareus.org>.\n"
@@ -103,21 +104,22 @@ static void usage (int status) {
 
 static struct option const long_options[] =
 {
-  {"quiet", no_argument, 0, 'q'},
-  {"silent", no_argument, 0, 'q'},
-  {"verbose", no_argument, 0, 'v'},
-  {"help", no_argument, 0, 'h'},
-  {"port", required_argument, 0, 'p'},
-  {"listenip", required_argument, 0, 'P'},
+  {"admin", required_argument, 0, 'A'},
+  {"chroot", required_argument, 0, 'c'},
+  {"cache-size", required_argument, 0, 'C'},
   {"debug", required_argument, 0, 'd'},
   {"daemonize", no_argument, 0, 'D'},
-  {"chroot", required_argument, 0, 'c'},
+  {"groupname", required_argument, 0, 'g'},
+  {"help", no_argument, 0, 'h'},
   {"logfile", required_argument, 0, 'l'},
+  {"port", required_argument, 0, 'p'},
+  {"listenip", required_argument, 0, 'P'},
+  {"quiet", no_argument, 0, 'q'},
+  {"silent", no_argument, 0, 'q'},
   {"syslog", no_argument, 0, 's'},
   {"username", required_argument, 0, 'u'},
-  {"groupname", required_argument, 0, 'g'},
+  {"verbose", no_argument, 0, 'v'},
   {"version", no_argument, 0, 'V'},
-  {"cache-size", required_argument, 0, 'C'},
   {NULL, 0, NULL, 0}
 };
 
@@ -127,19 +129,20 @@ static struct option const long_options[] =
 static int decode_switches (int argc, char **argv) {
   int c;
   while ((c = getopt_long (argc, argv,
-         "q"	/* quiet or silent */
-         "v"	/* verbose */
-         "h"	/* help */
-         "p:"	/* port */
-         "P:"	/* IP */
+         "A:"	/* admin */
+         "c:"	/* chroot-dir */
+         "C:" 	/* initial cache size */
          "d:"	/* debug */
          "D"	/* daemonize */
-         "c:"	/* chroot-dir */
+         "g:"	/* setGroup */
+         "h"	/* help */
          "l:"	/* logfile */
+         "p:"	/* port */
+         "P:"	/* IP */
+         "q"	/* quiet or silent */
          "s"	/* syslog */
          "u:"	/* setUser */
-         "g:"	/* setGroup */
-         "C:" 	/* initial cache size */
+         "v"	/* verbose */
          "V",	/* version */
          long_options, (int *) 0)) != EOF)
   {
@@ -152,6 +155,14 @@ static int decode_switches (int argc, char **argv) {
       case 'v':		/* --verbose */
         want_verbose = 1;
         debug_level=DLOG_INFO;
+        break;
+      case 'A':		/* --admin */
+        if (strstr(optarg, "shutdown")) cfg_adminmask|=ADM_SHUTDOWN;
+        if (strstr(optarg, "purge_cache")) cfg_adminmask|=ADM_PURGECACHE;
+        if (strstr(optarg, "flush_cache")) cfg_adminmask|=ADM_FLUSHCACHE;
+        if (strstr(optarg, "!shutdown")) cfg_adminmask&=~ADM_SHUTDOWN;
+        if (strstr(optarg, "!purge_cache")) cfg_adminmask&=~ADM_PURGECACHE;
+        if (strstr(optarg, "!flush_cache")) cfg_adminmask&=~ADM_FLUSHCACHE;
         break;
       case 'd':		/* --debug */
         if (strstr(optarg, "SRV")) debug_section|=DEBUG_SRV;
