@@ -305,20 +305,20 @@ void ics_http_handler(
 		if (strncasecmp(path,  "/admin/flush_cache", 18) == 0 ) {
 			if (cfg_adminmask&ADM_FLUSHCACHE) {
 				hdl_clear_cache();
-				SEND200("ok");
+				SEND200(OK200MSG("cache flush"));
 			} else {
 				httperror(c->fd, 403, NULL, NULL);
 			}
 		}	else if (strncasecmp(path,  "/admin/purge_cache", 18) == 0 ) {
 			if (cfg_adminmask&ADM_PURGECACHE) {
 				hdl_purge_cache();
-				SEND200("ok");
+				SEND200(OK200MSG("cache purge"));
 			} else {
 				httperror(c->fd, 403, NULL, NULL);
 			}
 		}	else if (strncasecmp(path,  "/admin/shutdown", 15) == 0 ) {
 			if (cfg_adminmask&ADM_SHUTDOWN) {
-				SEND200("ok");
+				SEND200(OK200MSG("shutdown"));
 				c->d->run=0;
 			} else {
 				httperror(c->fd, 403, NULL, NULL);

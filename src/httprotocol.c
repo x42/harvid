@@ -119,13 +119,14 @@ void httperror(int fd , int s, const char *title, const char *str) {
   if (!title) title=t;
   off+=snprintf( hd+off, BUFSIZ-off, DOCTYPE HTMLOPEN);
   off+=snprintf( hd+off, BUFSIZ-off,"<title>Error %i %s</title></head>", s, title );
-  off+=snprintf( hd+off, BUFSIZ-off,"<body><h1>%s</h1><hr>", title);
+  off+=snprintf( hd+off, BUFSIZ-off,"<body><h1>%s</h1>", title);
 
   if (str && strlen(str)>0) {
-    off+=snprintf( hd+off, BUFSIZ-off,"<p>%s</p></body></html>\r\n", str);
+    off+=snprintf( hd+off, BUFSIZ-off,"<p>%s</p>\r\n", str);
   } else {
-    off+=snprintf( hd+off, BUFSIZ-off,"<p>%s</p></body></html>\r\n", "sorry.");
+    off+=snprintf( hd+off, BUFSIZ-off,"<p>%s</p>\r\n", "Sorry.");
   }
+  off+=snprintf( hd+off, BUFSIZ-off, ERRFOOTER);
   CSEND(fd, hd);
 }
 
