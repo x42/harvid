@@ -25,7 +25,8 @@
 #define DAEMON_LOG_SELF
 #include "daemon_log.h"
 
-int debug_level = DLOG_DEBUG;
+int debug_level = DLOG_INFO;
+int debug_section = 0;
 
 int use_syslog = 0; //internal
 FILE *my_logfile = NULL; //internal

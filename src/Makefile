@@ -22,7 +22,7 @@ ifeq ($(ARCH),mingw)
   PKG_CONFIG_PATH=$(WINEROOT)/lib/pkgconfig/
   ARCHINCLUDES=-I$(WINEROOT)/include -DHAVE_WINDOWS
   ARCHLIBES=-lwsock32 -lws2_32 -lpthreadGC2
-  LDFLAGS=-L$(WINEROOT)/lib/ -L${WINEROOT}/bin
+  LDFLAGS+=-L$(WINEROOT)/lib/ -L${WINEROOT}/bin
   UNAME=mingw
 else
   UNAME=$(shell uname)
@@ -52,16 +52,16 @@ ifeq ($(shell $(ECHO) "\#include <stdio.h>\n\#include <jpeglib.h>\nint main() { 
 endif
 
 
-CFLAGS+=$(ARCHINCLUDES) $(ARCHFLAGS)
-CFLAGS+=`pkg-config --cflags libavcodec libavformat libavutil libpng libswscale`
+FLAGS+=$(ARCHINCLUDES) $(ARCHFLAGS)
+FLAGS+=`pkg-config --cflags libavcodec libavformat libavutil libpng libswscale`
 
 LOADLIBES=$(ARCHLIBES)
 LOADLIBES+=`pkg-config --libs libavcodec libavformat libavutil libpng libswscale`
 LOADLIBES+=-ljpeg
 LOADLIBES+=-lz -lm
 
-CFLAGS+=-DICSD_RGB24
-CFLAGS+=-DICSVERSION="\"$(VERSION) [$(UNAME)]\""
+FLAGS+=-DICSD_RGB24
+FLAGS+=-DICSVERSION="\"$(VERSION) [$(UNAME)]\""
 
 all: harvid
 
@@ -73,7 +73,7 @@ HARVID_H = \
   ffcompat.h \
   enums.h \
   favicon.h \
-  ics_handler.h httprotocol.h \
+  ics_handler.h httprotocol.h htmlconst.h \
   image_format.h \
   timecode.h
 
@@ -91,7 +91,7 @@ logo.o: ../doc/harvid.jpg
 
 harvid: $(HARVID_SRC) $(HARVID_H) $(LOGODEP)
 	export PKG_CONFIG_PATH=$(PKG_CONFIG_PATH);\
-	$(CC) -o $(@) $(CFLAGS) $(HARVID_SRC) $(LOGODEP) $(LDFLAGS) $(LOADLIBES)
+	$(CC) -o $(@) $(CFLAGS) $(FLAGS) $(HARVID_SRC) $(LOGODEP) $(LDFLAGS) $(LOADLIBES)
 
 clean:
 	rm -f harvid logo.o cscope.* tags

@@ -96,7 +96,7 @@ static inline int my_open_movie(void **vd, char *fn) {
 #endif
 
   if (!ff_open_movie (*vd, fn, render_fmt)) {
-    dlog(DLOG_DEBUG, "DCTL: opened file: '%s'\n", fn);
+    debugmsg(DEBUG_DCTL, "DCTL: opened file: '%s'\n", fn);
   } else {
     dlog(DLOG_ERR, "DCTL: Cannot open file: '%s'\n", fn);
     ff_destroy(vd);
@@ -189,7 +189,7 @@ static JVOBJECT *testjvd(JVOBJECT *jvo, int id, int64_t frame) {
     }
   } /* end loop over all decoder objects */
 
-  dlog(LOG_DEBUG, "DCTL: found %d avail. from %d total decoder(s) for file-id:%d. [%s]\n",
+  debugmsg(DEBUG_DCTL, "DCTL: found %d avail. from %d total decoder(s) for file-id:%d. [%s]\n",
       avail, found, id, dec_open?"open":dec_closed?"closed":"N/A");
 
   if (dec_open) {
@@ -489,7 +489,7 @@ static void * dctrl_get_decoder(void *p, int id, int64_t frame) {
   BUSYADD(jvd)
 
 tryagain:
-  dlog(DLOG_DEBUG, "DCTL: get_decoder fileid=%i\n", id);
+  debugmsg(DEBUG_DCTL, "DCTL: get_decoder fileid=%i\n", id);
 
   JVOBJECT *jvo;
   int timeout = 40; // new_video_object() delays 5ms at a time.

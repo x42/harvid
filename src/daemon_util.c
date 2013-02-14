@@ -116,7 +116,7 @@ int drop_privileges(char *setgid_group, char *setuid_user) {
       return -4;
     }
   }
-  dlog(DLOG_DEBUG,"SYS: privs now: uid:%i gid:%i\n", getuid(), getgid());
+  dlog(DLOG_INFO,"SYS: privs now: uid:%i gid:%i\n", getuid(), getgid());
 #else
   dlog(DLOG_WARNING, "SYS: windows OS does not support privilege uid/gid changes.\n");
 #endif

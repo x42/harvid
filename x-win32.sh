@@ -14,7 +14,7 @@ NSISEXE=$HOME/.wine/drive_c/Program\ Files/NSIS/makensis.exe
 NSIDIR=/tmp/harvid-build-nsi/
 
 make clean
-make ARCH=mingw WINEROOT=${WINEROOT} || exit
+make ARCH=mingw WINEROOT=${WINEROOT} CFLAGS="-DNDEBUG -O2" || exit
 
 # NSI package
 

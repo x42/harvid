@@ -81,7 +81,7 @@ void parse_param(struct queryparserstate *qps, char *kvp) {
 	char *val = sep+1;
 	if (!val || strlen(val) < 1 || strlen(kvp) <1) return;
 
-	//dlog(DLOG_DEBUG, "QUERY '%s'->'%s'\n",kvp,val);
+	debugmsg(DEBUG_ICS, "QUERY '%s'->'%s'\n",kvp,val);
 
 	if (!strcmp (kvp, "frame")) {
 		qps->a->frame = atoi(val);
@@ -162,7 +162,7 @@ static int parse_http_query(CONN *c, char *query, httpheader *h, ics_request_arg
 
 		if (h) h->mtime = sb.st_mtime; // XXX - check  - only used with 'hdl_decode_frame' for now.
 
-		dlog(DLOG_DEBUG, "CON: serving '%s' f:%lu @%dx%d\n",a->file_name,a->frame,a->out_width,a->out_height);
+		debugmsg(DEBUG_ICS, "serving '%s' f:%"PRId64" @%dx%d\n",a->file_name, a->frame, a->out_width, a->out_height);
 	}
 	return qps.doit;
 }

@@ -104,7 +104,7 @@ static void setnonblock(int sock, unsigned long l) {
 #endif
     dlog(DLOG_WARNING, "SRV: unable to set (non)blocking mode: %s\n", strerror(errno));
   else
-    dlog(DLOG_DEBUG, "SRV: set fd:%d in %sblocking mode\n", sock, l ? "non-" : "");
+    debugmsg(DEBUG_SRV, "SRV: set fd:%d in %sblocking mode\n", sock, l ? "non-" : "");
 }
 
 static void server_sockaddr(ICI *d, struct sockaddr_in *addr) {
@@ -170,7 +170,7 @@ static void *socket_handler(void *cn) {
 
   c->buf_len=0;
   c->timeout_cnt=0;
-  dlog(DLOG_DEBUG, "SRV: socket-handler starting up for fd:%d\n", c->fd);
+  debugmsg(DEBUG_SRV, "SRV: socket-handler starting up for fd:%d\n", c->fd);
 
   while(c->run && c->d->run) { // keep-alive
 
@@ -204,7 +204,7 @@ static void *socket_handler(void *cn) {
     // preform socket read/write on c->fd
     // NOTE: set c->run=0; is preferred to return(!0) in protocol_handler;
     if (FD_ISSET(c->fd, &rd_set)) {
-        dlog(DLOG_DEBUG, "SRV: read..\n");
+        debugmsg(DEBUG_SRV, "SRV: read..\n");
       if (protocol_handler(c, c->d->userdata)) break;
     }
 #ifdef SOCKET_WRITE
@@ -213,10 +213,10 @@ static void *socket_handler(void *cn) {
       if (protocol_droid(c, c->d->userdata)) break;
     }
 #endif
-  dlog(DLOG_DEBUG, "SRV: loop:%d\n",c->fd);
+  debugmsg(DEBUG_SRV, "SRV: loop:%d\n",c->fd);
 
   }
-  dlog(DLOG_DEBUG, "SRV: protocol ended. closing connection fd:%d\n",c->fd);
+  debugmsg(DEBUG_SRV, "SRV: protocol ended. closing connection fd:%d\n",c->fd);
 #ifndef HAVE_WINDOWS
   close(c->fd);
 #else
@@ -228,7 +228,7 @@ static void *socket_handler(void *cn) {
   pthread_mutex_unlock(&c->d->lock);
 
   dlog(DLOG_INFO, "SRV: closed client connection (%u) from %s:%d.\n",c->fd, c->client_address, c->client_port);
-  dlog(DLOG_DEBUG, "SRV: now %i connections active\n",c->d->num_clients);
+  debugmsg(DEBUG_SRV, "SRV: now %i connections active\n",c->d->num_clients);
 
   if (c->client_address) free(c->client_address);
   free(c);
@@ -278,7 +278,7 @@ static int accept_connection(ICI *d, char **remotehost, unsigned short *rport) {
   int s;
   socklen_t addrlen=sizeof(addr);
 
-  //dlog(DLOG_DEBUG, "SRV: waiting for accept on server-fd:%d\n", d->fd);
+  debugmsg(DEBUG_SRV, "SRV: waiting for accept on server-fd:%d\n", d->fd);
 
   do {
     s=accept(d->fd, (struct sockaddr *)&addr, &addrlen);

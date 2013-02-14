@@ -18,7 +18,7 @@ FFSOURCE=$HOME/src/
 VERSION=$(git describe --tags HEAD || echo "X.X.X")
 
 make clean
-make
+make CFLAGS="-DNDEBUG -O2"
 
 test -f src/harvid || exit
 file src/harvid | grep "binary with 3 architectures" &> /dev/null || exit

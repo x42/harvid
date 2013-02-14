@@ -35,6 +35,7 @@
 #include "daemon_log.h"
 
 #include "httprotocol.h"
+#include "htmlconst.h"
 #include "ics_handler.h"
 
 #ifndef HAVE_WINDOWS
@@ -155,7 +156,7 @@ int http_tx(int fd, int s, httpheader *h, size_t len, const uint8_t *buf) {
 #else
       int rv = send(fd, (const char*) (buf+offset), (size_t) (len-offset),0);
 #endif
-      //dlog(DLOG_DEBUG, "  written (%u/%u) @%u on fd:%i\n", rv, len-offset, offset, fd);
+      debugmsg(DEBUG_HTTP, "  written (%u/%u) @%u on fd:%i\n", rv, len-offset, offset, fd);
       if (rv <0 ) {
         dlog(DLOG_WARNING,"HTTP: write to socket failed: %s\n", strerror(errno));
         break; // TODO: don't break on EAGAIN, ENOBUFS, ENOMEM or similar
@@ -312,10 +313,10 @@ static int compare_accept(char *line) {
   if ((tmp=strchr(line,';'))) *tmp='\0'; // ignore opt. parameters
   if (!strncmp(line,"image/",6)) {
     rv|=1;
-    //dlog(DLOG_DEBUG, "HTTP: accept image: %s\n",line);
+    debugmsg(DEBUG_HTTP, "HTTP: accept image: %s\n",line);
   } else if (!strcmp(line,"*/*")) {
     rv|=2;
-    //dlog(DLOG_DEBUG, "HTTP: accept all: %s\n",line);
+    debugmsg(DEBUG_HTTP, "HTTP: accept all: %s\n",line);
   }
   if (tmp) *tmp=';';
   return rv;
@@ -342,7 +343,7 @@ int protocol_handler(CONN *c, void *unused) {
   else if (!strncmp(c->buf, "shutdown", 8)) { c->d->run=0; return(0);}
 #endif
 
-  //dlog(DLOG_DEBUG, "HTTP: CON raw-input: '%s'\n",c->buf);
+  debugmsg(DEBUG_HTTP, "HTTP: CON raw-input: '%s'\n",c->buf);
 
   char *method_str;
   char *path, *protocol, *query;
@@ -382,13 +383,11 @@ int protocol_handler(CONN *c, void *unused) {
     while (header && (*header=='\r' || *header=='\n')) header++;
   }
 
-#if 0
-  dlog(DLOG_DEBUG, "HTTP: CON header-len: %i\n", strlen(header));
-  dlog(DLOG_DEBUG, "HTTP: CON header: ''%s''\n", header);
-#endif
+  debugmsg(DEBUG_HTTP, "HTTP: CON header-len: %i\n", strlen(header));
+  debugmsg(DEBUG_HTTP, "HTTP: CON header: ''%s''\n", header);
 
 
-  char *cookie=NULL, *host=NULL, *if_modified_since=NULL, *referer=NULL, *useragent=NULL, *accept=NULL;
+  char *cookie=NULL, *host=NULL, *referer=NULL, *useragent=NULL, *accept=NULL;
   char *contenttype=NULL; long int contentlength = 0;
   char *cp, *line;
 
@@ -419,14 +418,6 @@ int protocol_handler(CONN *c, void *unused) {
           c->run=0; return(0);
         }
       }
-      /*
-    else if ( strncasecmp( line, "If-Modified-Since:", 18 ) == 0 )
-      {
-        cp = &line[18];
-        cp += strspn( cp, " \t" );
-        if_modified_since = tdate_parse( cp );
-      }
-        */
     else if ( strncasecmp( line, "Referer:", 8 ) == 0 )
         {
         cp = &line[8];
@@ -451,14 +442,12 @@ int protocol_handler(CONN *c, void *unused) {
         cp += strspn( cp, " \t" );
         contentlength = atoll(cp);
         }
-#if 0
     else
-        dlog(DLOG_DEBUG, "HTTP: CON header not parsed: '%s'\n",line);
-#endif
+        debugmsg(DEBUG_HTTP, "HTTP: CON header not parsed: '%s'\n",line);
 
   }
-  dlog(DLOG_DEBUG, "HTTP: CON header co='%s' ho='%s' mo='%s' re='%s' ua='%s' ac='%s'\n",
-     cookie, host, if_modified_since, referer, useragent, accept);
+  debugmsg(DEBUG_HTTP, "HTTP: CON header co='%s' ho='%s' re='%s' ua='%s' ac='%s'\n",
+     cookie, host, referer, useragent, accept);
 
   /* process headers */
 
@@ -478,7 +467,7 @@ int protocol_handler(CONN *c, void *unused) {
     return(0);
   }
 
-  dlog(DLOG_DEBUG, "HTTP: CON Proto: '%s', method: '%s', path: '%s' query:'%s'\n", protocol, method_str, path, query);
+  debugmsg(DEBUG_CON, "HTTP: Proto: '%s', method: '%s', path: '%s' query:'%s'\n", protocol, method_str, path, query);
 
   /* pre-process request */
   if (!strcmp("POST",method_str)
@@ -487,8 +476,8 @@ int protocol_handler(CONN *c, void *unused) {
       && (num < BUFSIZ)
         ) {
       header[contentlength]='\0';
-      dlog(DLOG_DEBUG, "HTTP: CON translate POST->GET query - length data:%i cl:%i\n", strlen(header), contentlength);
-      dlog(DLOG_DEBUG, "HTTP: CON x-www-form-urlencoded:'%s'\n", header);
+      debugmsg(DEBUG_CON, "HTTP: translate POST->GET query - length data:%d cl:%ld\n", strlen(header), contentlength);
+      debugmsg(DEBUG_CON, "HTTP: x-www-form-urlencoded:'%s'\n", header);
       query=header;
       method_str="GET";
   }

@@ -46,6 +46,7 @@
 #endif
 
 extern int debug_level;
+extern int debug_section;
 
 char *program_name;
 int   want_quiet = 0;
@@ -108,6 +109,7 @@ static struct option const long_options[] =
   {"help", no_argument, 0, 'h'},
   {"port", required_argument, 0, 'p'},
   {"listenip", required_argument, 0, 'P'},
+  {"debug", required_argument, 0, 'd'},
   {"daemonize", no_argument, 0, 'D'},
   {"chroot", required_argument, 0, 'c'},
   {"logfile", required_argument, 0, 'l'},
@@ -130,6 +132,7 @@ static int decode_switches (int argc, char **argv) {
          "h"	/* help */
          "p:"	/* port */
          "P:"	/* IP */
+         "d:"	/* debug */
          "D"	/* daemonize */
          "c:"	/* chroot-dir */
          "l:"	/* logfile */
@@ -148,10 +151,17 @@ static int decode_switches (int argc, char **argv) {
         break;
       case 'v':		/* --verbose */
         want_verbose = 1;
-        if (debug_level==DLOG_INFO)
-          debug_level=DLOG_DEBUG;
-        else
-          debug_level=DLOG_INFO;
+        debug_level=DLOG_INFO;
+        break;
+      case 'd':		/* --debug */
+        if (strstr(optarg, "SRV")) debug_section|=DEBUG_SRV;
+        if (strstr(optarg, "HTTP")) debug_section|=DEBUG_HTTP;
+        if (strstr(optarg, "CON")) debug_section|=DEBUG_CON;
+        if (strstr(optarg, "DCTL")) debug_section|=DEBUG_DCTL;
+        if (strstr(optarg, "ICS")) debug_section|=DEBUG_ICS;
+#ifdef NDEBUG
+        printf(stderr, "harvid was built with NDEBUG. '-d' has no affect.\n");
+#endif
         break;
       case 'D':		/* --daemonize */
         cfg_daemonize = 1;
@@ -478,7 +488,7 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
   }
 
   if(olen > 0 && optr) {
-    dlog(DLOG_DEBUG, "VID: sending %li bytes to fd:%d.\n", olen, fd);
+    debugmsg(DEBUG_ICS, "VID: sending %li bytes to fd:%d.\n", olen, fd);
     switch (a->render_fmt) {
       case FMT_RAW:
         h->ctype = "image/raw";

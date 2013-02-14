@@ -53,11 +53,12 @@
 #define DLOG_ERR         LOG_ERR     ///< error conditions -- recoverable errors
 #define DLOG_WARNING     LOG_WARNING ///< warning conditions
 #define DLOG_INFO        LOG_INFO    ///< informational
-#define DLOG_DEBUG       LOG_DEBUG   ///< debug-level messages
 
+enum {DEBUG_SRV=1, DEBUG_HTTP=2, DEBUG_CON=4, DEBUG_DCTL=8, DEBUG_ICS=16};
 
 #ifndef DAEMON_LOG_SELF
 extern int debug_level; ///< global debug_level used by @ref dlog()
+extern int debug_section; ///< global debug_level used by @ref dlog()
 #endif
 
 /**
@@ -67,6 +68,12 @@ extern int debug_level; ///< global debug_level used by @ref dlog()
  * @param format same as printf(...)
  */
 void dlog(int level, const char *format, ...);
+
+#ifdef NDEBUG
+#define debugmsg(section, ...) {}
+#else
+#define debugmsg(section, ...) {if (debug_section&section) printf(__VA_ARGS__);}
+#endif
 
 /**
  * initialise dlog output.

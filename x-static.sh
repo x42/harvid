@@ -19,7 +19,8 @@ LIBF=$HOME/local/lib/
 export PKG_CONFIG_PATH=${LIBF}/pkgconfig
 
 mkdir -p tmp
-gcc -Wall -DHAVE_SWSCALE -DICSD_RGB24 -DICSVERSION=\"${VERSION}\" -g -O2  \
+gcc -DNDEBUG -DHAVE_SWSCALE -DICSD_RGB24 -DICSVERSION=\"${VERSION}\" \
+  -Wall -O2 \
   -o tmp/$OUTFN src/*.c \
 	`pkg-config --cflags libavcodec libavformat libavutil libpng libswscale` \
 	${CFLAGS} \
