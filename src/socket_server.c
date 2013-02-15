@@ -59,7 +59,7 @@
 
 /** called to spawn thread for an incoming connection */
 static int create_client( void *(*cli)(void *), void *arg) {
-  pthread_t thread; // TODO: register/remember threads/connections !? why?
+  pthread_t thread;
 #ifdef HAVE_PTHREAD_SIGMASK
   sigset_t newmask, oldmask;
 
@@ -252,7 +252,6 @@ static void start_child(ICI *d, int fd, char *rh, unsigned short rp) {
   c->cq = NULL;
 #endif
   c->userdata = NULL;
-  // TODO: register this connection so that a parent server (or CONN siblings) can interact.
 
   if(create_client(&socket_handler, c)) {
     if(fd>=0)
@@ -351,7 +350,7 @@ static void *main_loop (void *arg) {
     // select() returns 0 on timeout, -1 on error.
     if((select(d->fd+1, &rfds, NULL, NULL, &tv))<0) {
       dlog(DLOG_WARNING, "SRV: unable to select the socket: %s\n", strerror(errno));
-      if (errno!=EINTR) // TODO; timeout count ?!
+      if (errno!=EINTR)
         goto daemon_end;
       else
         continue;
@@ -391,8 +390,6 @@ static void *main_loop (void *arg) {
 
   if (d->num_clients > 0) {
     dlog(DLOG_WARNING, "SRV: Terminating with %d active connections.\n", d->num_clients);
-    // TODO: explicitly kill the threads?!
-    // after free(d)  `while(c->d->run)` may segfault..
   } else {
     dlog(DLOG_INFO, "SRV: Closed all connections.\n");
   }
@@ -411,7 +408,6 @@ daemon_end:
 // tcp server thread
 int start_tcp_server (unsigned int hostnl, unsigned short port, char *docroot, char *username, char *groupname, void *userdata) {
   ICI *d = calloc(1, sizeof(ICI));
-  // TODO: register this server so that a parent or sibling can interact.
   pthread_mutex_init(&d->lock,NULL);
   d->run=1;
   d->listenport=htons(port);

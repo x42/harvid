@@ -85,12 +85,13 @@ static inline int my_open_movie(void **vd, char *fn) {
     return -1;
   }
   ff_create(vd);
+/* samples per pixel  -- TODO use render_fmt */
 #ifdef VIBER
   #warning Hardcoded YUV420P / YV12
-  render_fmt = PIX_FMT_YUV420P; // TODO allow to set, override
+  render_fmt = PIX_FMT_YUV420P;
 #elif defined ICSD_RGB24
   #warning Hardcoded 24 bit RGB
-  render_fmt = PIX_FMT_RGB24; // TODO allow to set, override
+  render_fmt = PIX_FMT_RGB24;
 #else // mytest
   #warning Hardcoded 32 bit RGBA
   render_fmt = PIX_FMT_RGB32;
@@ -101,7 +102,7 @@ static inline int my_open_movie(void **vd, char *fn) {
   } else {
     dlog(DLOG_ERR, "DCTL: Cannot open file: '%s'\n", fn);
     ff_destroy(vd);
-    return(1); // TODO cleanup - destroy ff ..
+    return(1);
   }
   return(0);
 }
@@ -146,7 +147,7 @@ static JVOBJECT *testjvd(JVOBJECT *jvo, int id, int64_t frame) {
   JVOBJECT *dec_open = NULL;
   time_t lru_open = time(NULL) + 1;
   time_t lru_closed = time(NULL) + 1;
-  int64_t framediff = -1; // TODO prefer decoders w/ frame before but close to frame
+  int64_t framediff = -1;
   int found = 0, avail = 0;
 
   for (cptr = jvo; cptr; cptr = cptr->next) {

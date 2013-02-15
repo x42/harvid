@@ -499,8 +499,6 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
   uint8_t *bptr;
 
   vid = dctrl_get_id(dc, a->file_name);
-  // TODO check valid vid early on -> bail out here already
-
   jvi_init(&ji);
 
   // TODO set a->decode_fmt; -- overridden by my_open_movie(..)

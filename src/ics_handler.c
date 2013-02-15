@@ -56,9 +56,6 @@ extern int cfg_adminmask;
  */
 static int check_path(char *f) {
 	int len = strlen(f);
-	// TODO: f is an url_unescape()d value and may contain
-	// malicious non-ASCII chars.
-
 	/* check for possible 'escape docroot' trickery */
 	if ( f[0] == '/' || strcmp( f, ".." ) == 0 || strncmp( f, "../", 3 ) == 0
 			|| strstr( f, "/../" ) != (char*) 0

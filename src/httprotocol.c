@@ -138,20 +138,20 @@ int http_tx(int fd, int s, httpheader *h, size_t len, const uint8_t *buf) {
   send_http_header_fd(fd, s, h);
 
   // select
-  #define WRITE_TIMEOUT (50)
+  #define WRITE_TIMEOUT (50) // TODO make configurable
   int timeout = WRITE_TIMEOUT;
   size_t offset =0;
-  while (timeout>0) {
+  while (timeout > 0) {
     fd_set rd_set, wr_set;
     struct timeval tv;
 
-    tv.tv_sec=0;
-    tv.tv_usec=200000;
+    tv.tv_sec = 0;
+    tv.tv_usec = 200000;
     FD_ZERO(&rd_set);
     FD_ZERO(&wr_set);
     FD_SET(fd, &wr_set);
     int ready=select(fd+1, &rd_set, &wr_set, NULL, &tv);
-    if(ready<0) return (-1); // error
+    if(ready < 0) return (-1); // error
     if(!ready) timeout--;
     else {
 #ifndef HAVE_WINDOWS
@@ -160,7 +160,7 @@ int http_tx(int fd, int s, httpheader *h, size_t len, const uint8_t *buf) {
       int rv = send(fd, (const char*) (buf+offset), (size_t) (len-offset),0);
 #endif
       debugmsg(DEBUG_HTTP, "  written (%u/%u) @%u on fd:%i\n", rv, len-offset, offset, fd);
-      if (rv <0 ) {
+      if (rv < 0) {
         dlog(DLOG_WARNING,"HTTP: write to socket failed: %s\n", strerror(errno));
         break; // TODO: don't break on EAGAIN, ENOBUFS, ENOMEM or similar
       } else if (rv != len-offset) {
