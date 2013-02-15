@@ -45,6 +45,8 @@
 #define DEFAULT_PORT 1554
 #endif
 
+char *csv_escape(const char *string, int inlength, const char esc); //  defined in fileindex.c
+
 extern int debug_level;
 extern int debug_section;
 
@@ -298,7 +300,7 @@ char *hdl_homepage_html (CONN *c) {
   off+=snprintf(msg+off, HPSIZE-off, DOCTYPE HTMLOPEN);
   off+=snprintf(msg+off, HPSIZE-off, "<title>ICS</title></head>\n");
   off+=snprintf(msg+off, HPSIZE-off, HTMLBODY);
-  off+=snprintf(msg+off, HPSIZE-off, "<div style=\"width:400px; margin:0 auto;\">\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<div style=\"width:30em; margin:0 auto;\">\n");
   off+=snprintf(msg+off, HPSIZE-off, "<div style=\"float:left;\"><h2>Built-in handlers</h2>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<ul>");
   if (!cfg_noindex) {
@@ -348,9 +350,23 @@ static char *file_info_json (CONN *c, ics_request_args *a, VInfo *ji) {
 //off+=snprintf(im+off,256-off, "\"geometry\":[%i,%i],",ji->movie_width,ji->movie_height);
   off+=snprintf(im+off,256-off, "\"width\":%i",ji->movie_width);
   off+=snprintf(im+off,256-off, ",\"height\":%i",ji->movie_height);
-  off+=snprintf(im+off,256-off, ",\"framerate\":%.2f",timecode_rate_to_double(&ji->framerate));
+  off+=snprintf(im+off,256-off, ",\"aspect\":%.3f",ji->movie_aspect);
+  off+=snprintf(im+off,256-off, ",\"framerate\":%.3f",timecode_rate_to_double(&ji->framerate));
   off+=snprintf(im+off,256-off, ",\"duration\":%"PRId64 ,ji->frames);
   off+=snprintf(im+off,256-off, "}");
+  jvi_free(ji);
+  return (im);
+}
+
+static char *file_info_csv (CONN *c, ics_request_args *a, VInfo *ji) {
+  char *im = malloc(256 * sizeof(char));
+  int off =0;
+  off+=snprintf(im+off,256-off, "1"); // FORMAT VERSION
+  off+=snprintf(im+off,256-off, ",%i", ji->movie_width);
+  off+=snprintf(im+off,256-off, ",%i", ji->movie_height);
+  off+=snprintf(im+off,256-off, ",%f\n", ji->movie_aspect);
+  off+=snprintf(im+off,256-off, ",%.3f", timecode_rate_to_double(&ji->framerate));
+  off+=snprintf(im+off,256-off, ",%"PRId64, ji->frames);
   jvi_free(ji);
   return (im);
 }
@@ -367,6 +383,7 @@ static char *file_info_html (CONN *c, ics_request_args *a, VInfo *ji) {
   off+=snprintf(im+off, STASIZ-off, "<h2>ICS - Info</h2>\n\n");
   off+=snprintf(im+off, STASIZ-off, "<p>File: %s</p><ul>\n",a->file_name);
   off+=snprintf(im+off, STASIZ-off, "<li>Geometry: %ix%i</li>\n",ji->movie_width, ji->movie_height);
+  off+=snprintf(im+off, STASIZ-off, "<li>Aspect-Ratio: %.3f</li>\n",ji->movie_aspect);
   off+=snprintf(im+off, STASIZ-off, "<li>Framerate: %.2f</li>\n",timecode_rate_to_double(&ji->framerate));
   off+=snprintf(im+off, STASIZ-off, "<li>Duration: %s</li>\n",smpte);
   off+=snprintf(im+off, STASIZ-off, "<li>Duration: %.2f sec</li>\n",(double)ji->frames/timecode_rate_to_double(&ji->framerate));
@@ -408,7 +425,9 @@ char *hdl_file_info (CONN *c, ics_request_args *a) {
     case OUT_JSON:
       return file_info_json(c,a,&ji);
       break;
-    case OUT_CSV: // TODO
+    case OUT_CSV:
+      return file_info_csv(c,a,&ji);
+      break;
     default:
       break;
   }
@@ -416,8 +435,6 @@ char *hdl_file_info (CONN *c, ics_request_args *a) {
 }
 
 /////////////
-
-char *csv_escape(const char *string, int inlength, const char esc);
 
 #define SINFOSIZ (1024)
 char *hdl_server_info (CONN *c, ics_request_args *a) {
