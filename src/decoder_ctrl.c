@@ -42,6 +42,7 @@ typedef struct JVOBJECT {
   int id;  // this ID is linked to the filename
   time_t lru;
   int64_t frame; // last decoded frame
+  int fmt;
   pthread_mutex_t lock; // lock to modify flags;
   int flags;
   int infolock_refcnt;
@@ -78,24 +79,13 @@ static inline int my_decode(void *vd, unsigned long frame, uint8_t *b, int w, in
   return rv;
 }
 
-static inline int my_open_movie(void **vd, char *fn) {
-  int render_fmt;
+static inline int my_open_movie(void **vd, char *fn, int render_fmt) {
   if (!fn) {
     dlog(DLOG_ERR, "DCTL: trying to open file w/o filename.\n");
     return -1;
   }
   ff_create(vd);
-/* samples per pixel  -- TODO use render_fmt */
-#ifdef VIBER
-  #warning Hardcoded YUV420P / YV12
-  render_fmt = PIX_FMT_YUV420P;
-#elif defined ICSD_RGB24
-  #warning Hardcoded 24 bit RGB
-  render_fmt = PIX_FMT_RGB24;
-#else // mytest
-  #warning Hardcoded 32 bit RGBA
-  render_fmt = PIX_FMT_RGB32;
-#endif
+  assert (render_fmt == PIX_FMT_YUV420P || render_fmt == PIX_FMT_RGB24 || render_fmt == PIX_FMT_RGBA);
 
   if (!ff_open_movie (*vd, fn, render_fmt)) {
     debugmsg(DEBUG_DCTL, "DCTL: opened file: '%s'\n", fn);
@@ -124,7 +114,10 @@ static inline void my_get_info_canonical(void *vd, VInfo *i, int w, int h) {
 //
 
 static JVOBJECT *newjvo (JVOBJECT *jvo, pthread_mutex_t *appendlock) {
+  debugmsg(DEBUG_DCTL, "DCTL: newjvo() allocated new decoder object\n");
   JVOBJECT *n = calloc(1, sizeof(JVOBJECT));
+  n->fmt = PIX_FMT_NONE;
+  n->frame = -1;
   pthread_mutex_init(&n->lock, NULL);
   JVOBJECT *cptr = jvo;
   pthread_mutex_lock(appendlock);
@@ -141,7 +134,7 @@ static JVOBJECT *newjvo (JVOBJECT *jvo, pthread_mutex_t *appendlock) {
  * there is no guarantee that the returned object's state
  * had not changed meanwhile.
  */
-static JVOBJECT *testjvd(JVOBJECT *jvo, int id, int64_t frame) {
+static JVOBJECT *testjvd(JVOBJECT *jvo, int id, int fmt, int64_t frame) {
   JVOBJECT *cptr;
   JVOBJECT *dec_closed = NULL;
   JVOBJECT *dec_open = NULL;
@@ -152,6 +145,11 @@ static JVOBJECT *testjvd(JVOBJECT *jvo, int id, int64_t frame) {
 
   for (cptr = jvo; cptr; cptr = cptr->next) {
     if (!(cptr->flags&VOF_VALID) || cptr->id != id) {
+      continue;
+    }
+    if (fmt != PIX_FMT_NONE && cptr->fmt != fmt
+        && cptr->fmt != PIX_FMT_NONE
+        ) {
       continue;
     }
     found++;
@@ -281,6 +279,7 @@ static int clearjvo(JVD *jvd, int f, int id, int age, pthread_mutex_t *l) {
       my_destroy(&cptr->decoder);
       cptr->decoder=NULL;
       cptr->flags &= ~VOF_OPEN;
+      cptr->fmt = PIX_FMT_NONE;
     }
 
     if (f > 0) {
@@ -317,7 +316,7 @@ static int clearjvo(JVD *jvd, int f, int id, int age, pthread_mutex_t *l) {
 
 //get some unused allocated jvo or create one.
 static JVOBJECT *getjvo(JVD *jvd) {
-  int i = 0;
+  int cnt_total=0;
   JVOBJECT *dec_closed = NULL;
   JVOBJECT *dec_open = NULL;
   time_t lru = time(NULL) + 1;
@@ -336,7 +335,7 @@ static JVOBJECT *getjvo(JVD *jvd) {
       dec_open = cptr;
     }
     cptr = cptr->next;
-    i++;
+    cnt_total++;
   }
 
   if (dec_closed) {
@@ -344,13 +343,22 @@ static JVOBJECT *getjvo(JVD *jvd) {
   } else if (dec_open) {
     cptr = dec_open;
   }
+  debugmsg(DEBUG_DCTL, "DCTL: %d/%d decoders; avail: closed: %s open: %s\n",
+      cnt_total, jvd->max_objects, dec_closed?"Y":"N", dec_open?"Y":"N");
+
+  // TODO prefer to allocate a new decoder object IFF
+  // decoder for same file exists but with different format.
+  if (cnt_total < 4 // XXX
+      && cnt_total < jvd->max_objects)
+    return(newjvo(jvd->jvo, &jvd->lock_jvo));
 
   if (cptr && !pthread_mutex_trylock(&cptr->lock)) {
       if (!(cptr->flags&(VOF_USED|VOF_PENDING|VOF_INFO))) {
 
         if (cptr->flags&(VOF_OPEN)) {
           my_destroy(&cptr->decoder); // close it.
-          dec_open->decoder = NULL; // not really need..
+          cptr->decoder = NULL; // not really need..
+          cptr->fmt = PIX_FMT_NONE;
         }
 
         cptr->id = 0;
@@ -364,7 +372,7 @@ static JVOBJECT *getjvo(JVD *jvd) {
     pthread_mutex_unlock(&cptr->lock);
   }
 
-  if (i < jvd->max_objects)
+  if (cnt_total < jvd->max_objects)
     return(newjvo(jvd->jvo, &jvd->lock_jvo));
   return (NULL);
 }
@@ -490,6 +498,7 @@ static void release_id(JVD *jvd, int id) {
 
 static JVOBJECT *new_video_object(JVD *jvd, int id) {
   JVOBJECT *jvo;
+  debugmsg(DEBUG_DCTL, "new_video_object()\n");
   do {
     jvo = getjvo(jvd);
     if (!jvo) {
@@ -507,6 +516,7 @@ static JVOBJECT *new_video_object(JVD *jvd, int id) {
 
   jvo->id = id;
   jvo->frame = -1;
+  jvo->fmt = PIX_FMT_NONE; // XXX
   jvo->flags |= VOF_VALID;
   pthread_mutex_unlock(&jvo->lock);
   return(jvo);
@@ -541,7 +551,7 @@ static int release_video_object(JVD *jvd, char *fn) {
 
 
 // lookup or create new decoder for file ID
-static void * dctrl_get_decoder(void *p, int id, int64_t frame) {
+static void * dctrl_get_decoder(void *p, int id, int fmt, int64_t frame) {
   JVD *jvd = (JVD*)p;
   BUSYADD(jvd)
 
@@ -551,7 +561,7 @@ tryagain:
   JVOBJECT *jvo;
   int timeout = 40; // new_video_object() delays 5ms at a time.
   do {
-    jvo = testjvd(jvd->jvo, id, frame);
+    jvo = testjvd(jvd->jvo, id, fmt, frame);
     if (!jvo) jvo = new_video_object(jvd, id);
   } while (--timeout > 0 && !jvo);
 
@@ -570,14 +580,17 @@ tryagain:
   pthread_mutex_unlock(&jvo->lock);
 
   if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_INFO)) == (VOF_VALID)) {
-    if (!my_open_movie(&jvo->decoder, get_fn(jvd, jvo->id))) {
+    if (fmt == PIX_FMT_NONE) fmt = PIX_FMT_RGB24; // XXX
+    if (!my_open_movie(&jvo->decoder, get_fn(jvd, jvo->id), fmt)) {
       pthread_mutex_lock(&jvo->lock);
+      jvo->fmt = fmt;
       jvo->flags |= VOF_OPEN;
       jvo->flags &= ~VOF_PENDING;
       pthread_mutex_unlock(&jvo->lock);
     } else {
       pthread_mutex_lock(&jvo->lock);
       jvo->flags &= ~VOF_PENDING;
+      assert(jvo->fmt == PIX_FMT_NONE);
       pthread_mutex_unlock(&jvo->lock);
       release_id(jvd, jvo->id); // mark ID as invalid
       dlog(DLOG_ERR, "DCTL: opening of movie file failed.\n");
@@ -677,8 +690,8 @@ int dctrl_get_id(void *p, const char *fn) {
 }
 
 
-int dctrl_decode(void *p, int id, int64_t frame, uint8_t *b, int w, int h) {
-  void *dec = dctrl_get_decoder(p, id, frame);
+int dctrl_decode(void *p, int id, int64_t frame, uint8_t *b, int w, int h, int fmt) {
+  void *dec = dctrl_get_decoder(p, id, fmt, frame);
   if (!dec) {
     dlog(DLOG_WARNING, "DCTL: no decoder available.\n");
     return -1;
@@ -689,15 +702,15 @@ int dctrl_decode(void *p, int id, int64_t frame, uint8_t *b, int w, int h) {
 }
 
 int dctrl_get_info(void *p, int id, VInfo *i) {
-  JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, -1);
+  JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, PIX_FMT_NONE, -1);
   if (!jvo) return -1;
   my_get_info(jvo->decoder, i);
   dctrl_release_infolock(jvo);
   return(0);
 }
 
-int dctrl_get_info_scale(void *p, int id, VInfo *i, int w, int h) {
-  JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, -1);
+int dctrl_get_info_scale(void *p, int id, VInfo *i, int w, int h, int fmt) {
+  JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, fmt, -1);
   if (!jvo) return -1;
   my_get_info_canonical(jvo->decoder, i, w, h);
   dctrl_release_infolock(jvo);
@@ -752,14 +765,14 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
   off+=snprintf(m+off, n-off, "<h3>Decoder Objects:</h3>\n");
   off+=snprintf(m+off, n-off, "<p>busy: %d%s</p>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
   off+=snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
-  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th><th>LRU</th><th>decoder</th><th>frame#</th></tr>\n");
+  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th><th>LRU</th><th>decoder</th><th>fmt</th><th>frame#</th></tr>\n");
   off+=snprintf(m+off, n-off, "\n");
   while (cptr) {
     char *tmp = flags2txt(cptr->flags);
     char *fn = get_fn((JVD*)p, cptr->id);
     off+=snprintf(m+off, n-off,
-        "<tr><td>%i</td><td>%i</td><td>%s</td><td>%s</td><td>%"PRIlld"</td><td>%s</td><td>%"PRId64"</td></tr>\n",
-        i++, cptr->id, tmp, fn?fn:"-", (long long)cptr->lru, (cptr->decoder?LIBAVCODEC_IDENT:"null"), cptr->frame);
+        "<tr><td>%i</td><td>%i</td><td>%s</td><td>%s</td><td>%"PRIlld"</td><td>%s</td><td>%s</td><td>%"PRId64"</td></tr>\n",
+        i++, cptr->id, tmp, fn?fn:"-", (long long)cptr->lru, (cptr->decoder?LIBAVCODEC_IDENT:"null"), ff_fmt_to_text(cptr->fmt), cptr->frame);
     free(tmp);
     cptr = cptr->next;
   }

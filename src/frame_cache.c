@@ -26,6 +26,7 @@
 #include "decoder_ctrl.h"
 #include "daemon_log.h"
 #include "frame_cache.h"
+#include "ffcompat.h"
 #include "ffdecoder.h"
 
 #include <time.h>
@@ -40,6 +41,7 @@ typedef struct videocacheline {
   int flags;
   int w;
   int h;
+  int fmt; // render-format
   int refcnt; // CLF_LOCK
   uint8_t *b; //* data buffer pointer
 } videocacheline;
@@ -53,11 +55,10 @@ typedef struct videocacheline {
 #define CLF_VALID 16 //< cacheline is valid
 //#define CLF_READ 32 //< this cache has been hit at least once after decoding.
 
-#define SPP (4) // samples per pixel
-
 static videocacheline *newcl(videocacheline *cache) {
   videocacheline *cl = calloc(1, sizeof(videocacheline));
   cl->frame = -1;
+  cl->fmt = PIX_FMT_NONE;
   //append new line to cache
   videocacheline *cptr = cache;
   while (cptr && cptr->next) cptr=cptr->next;
@@ -97,7 +98,6 @@ static videocacheline *getcl(videocacheline *cache, int cfg_cachesize) {
     i++;
   }
 
-  /* TODO optimize; alloc in ulocked-cache. */
   if (i < cfg_cachesize)
     return(newcl(cache));
 
@@ -117,13 +117,14 @@ static videocacheline *getcl(videocacheline *cache, int cfg_cachesize) {
   return (NULL);
 }
 
-static videocacheline *testclwh(videocacheline *cache, int64_t frame, int w, int h, int id, int ignoremask) {
+static videocacheline *testclwh(videocacheline *cache, int64_t frame, int w, int h, int fmt, int id, int ignoremask) {
   videocacheline *cptr = cache;
   while (cptr) {
     if (cptr->flags&CLF_VALID && cptr->frame == frame
         && ((ignoremask&1)==1 || cptr->w == w)
         && ((ignoremask&2)==2 || cptr->h == h)
         && ((ignoremask&4)==4 || cptr->id == id)
+        && ((ignoremask&8)==8 || cptr->fmt == fmt)
        )
       return(cptr);
     cptr=cptr->next;
@@ -154,20 +155,18 @@ static void clearcache(videocacheline *cache, int f) {
   if (f) cache->next=NULL;
 }
 
-// TODO change API - (spp) -> use callback to calc. planar&packed data struct size.
-// clear VALID flag??
-static void realloccl_buf(videocacheline *cptr, int w, int h, int spp) {
+static void realloccl_buf(videocacheline *cptr, int w, int h, int fmt) {
   if (cptr->flags&CLF_ALLOC)
-    if (cptr->w==w && cptr->h==h)
-      return; // already allocated  // TODO: check SPP, render_fmt
+    if (cptr->w==w && cptr->h==h && cptr->fmt==fmt)
+      return; // already allocated
 
   if (cptr->flags&CLF_ALLOC) free(cptr->b);
   cptr->b=NULL;
-  cptr->b= calloc(w*h*spp,sizeof(uint8_t)); // TODO ask decoder about this
-//cptr->b= realloc(cptr->b,w*h*SPP*sizeof(uint8_t));
+  cptr->b= calloc(picture_bytesize(fmt, w, h), sizeof(uint8_t));
   cptr->flags|=CLF_ALLOC;
   cptr->w=w;
   cptr->h=h;
+  cptr->fmt=fmt;
 }
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-
@@ -175,8 +174,7 @@ static void realloccl_buf(videocacheline *cptr, int w, int h, int spp) {
 typedef struct {
   int cfg_cachesize;
   videocacheline *vcache;
-//int render_fmt;
-  pthread_mutex_t lock; // TODO - lock to modify vcache itself
+  pthread_mutex_t lock;
   int cache_hits;
   int cache_miss;
 } xjcd;
@@ -186,13 +184,12 @@ static void fc_initialize_cache (xjcd *cc) {
   cc->vcache = newcl(NULL);
   cc->cache_hits = 0;
   cc->cache_miss = 0;
-//cc->render_fmt = 0;  // TODO set cache's RENDER_FMT.
   pthread_mutex_init(&cc->lock, NULL);
 }
 
-static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, int w, int h, int vid) {
+static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, int w, int h, int fmt, int vid) {
   /* check if the requested frame is cached */
-  videocacheline *rv = testclwh(cc->vcache, frame, w, h, vid, 0);
+  videocacheline *rv = testclwh(cc->vcache, frame, w, h, fmt, vid, 0);
   if (rv) {
     pthread_mutex_lock(&cc->lock);
     if (rv->flags&CLF_VALID) {
@@ -226,10 +223,10 @@ static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, int w, int h
     return NULL;
   }
 
-  realloccl_buf(rv, w, h, SPP); // FIXME ; call ff_get_buffersize() - use dctrl_get_info();
+  realloccl_buf(rv, w, h, fmt);
 
   // Fill cacheline with data - decode video
-  if (dctrl_decode(dc, vid, frame, rv->b, w, h)) {
+  if (dctrl_decode(dc, vid, frame, rv->b, w, h, fmt)) {
     /* we don't cache decode-errors */
     pthread_mutex_lock(&cc->lock);
     rv->flags&=~CLF_VALID;
@@ -295,8 +292,8 @@ void vcache_destroy(void **p) {
   *p=NULL;
 }
 
-uint8_t *vcache_get_buffer(void *p, void *dc, int id, int64_t frame, int w, int h, void **cptr) {
-  videocacheline *cl = fc_readcl((xjcd*)p, dc, frame, w ,h, id);
+uint8_t *vcache_get_buffer(void *p, void *dc, int id, int64_t frame, int w, int h, int fmt, void **cptr) {
+  videocacheline *cl = fc_readcl((xjcd*)p, dc, frame, w ,h, fmt, id);
   if (!cl) {
     if (cptr) *cptr = NULL;
     return NULL;
@@ -363,13 +360,13 @@ size_t vcache_info_html(void *p, char *m, size_t n) {
   off+=snprintf(m+off, n-off, "<p>Size: max. %i entries.\n", ((xjcd*)p)->cfg_cachesize);
   off+=snprintf(m+off, n-off, "Hits: %d, Misses: %d</p>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
   off+=snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
-  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>W</th><th>H</th><th>Frame#</th><th>LRU</th><th>buffer</th></tr>\n");
+  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>W</th><th>H</th><th>Frame#</th><th>LRU</th><th>fmt</th><th>buffer</th></tr>\n");
   int i=0;
   while (cptr) {
     char *tmp = flags2txt(cptr->flags);
     off+=snprintf(m+off, n-off,
-        "<tr><td>%d</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%"PRId64"</td><td>%"PRIlld"</td><td>%s</td></tr>\n",
-	i, cptr->id, tmp, cptr->w, cptr->h, cptr->frame, (long long) cptr->lru,(cptr->b?"alloc":"null"));
+        "<tr><td>%d</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%"PRId64"</td><td>%"PRIlld"</td><td>%s</td><td>%s</td></tr>\n",
+	i, cptr->id, tmp, cptr->w, cptr->h, cptr->frame, (long long) cptr->lru, ff_fmt_to_text(cptr->fmt), (cptr->b?"alloc":"null"));
     free(tmp);
     i++;
     cptr=cptr->next;

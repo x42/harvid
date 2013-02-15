@@ -98,6 +98,7 @@ void parse_param(struct queryparserstate *qps, char *kvp) {
 			else if (!strcmp(val,"png") )  qps->a->render_fmt=FMT_PNG;
 			else if (!strcmp(val,"ppm") )  qps->a->render_fmt=FMT_PPM;
 			else if (!strcmp(val,"raw") )  qps->a->render_fmt=FMT_RAW;
+			else if (!strcmp(val,"yuv") ) {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_YUV420P;}
 			else if (!strcmp(val,"rgb") ) {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_RGB24;}
 			else if (!strcmp(val,"rgba")) {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_RGBA;}
 			else if (!strcmp(val,"html"))  qps->a->render_fmt=OUT_HTML;
@@ -121,7 +122,7 @@ static void parse_http_query_params(struct queryparserstate *qps, char *query) {
 static int parse_http_query(CONN *c, char *query, httpheader *h, ics_request_args *a) {
 	struct queryparserstate qps = {a, NULL, 0};
 
-	a->decode_fmt = PIX_FMT_RGB24; // TODO - this is yet unused
+	a->decode_fmt = PIX_FMT_RGB24;
 	a->render_fmt = FMT_PNG;
 	a->frame=0;
 	a->out_width = a->out_height = -1; // auto-set

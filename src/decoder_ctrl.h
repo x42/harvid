@@ -73,12 +73,12 @@ int dctrl_get_info(void *p, int id, VInfo *i);
  * @param i optional - if not NULL \ref dctrl_get_info is called to fill in the data
  * @return 0 on success, -1 otherwise
  */
-int dctrl_get_info_scale(void *p, int id, VInfo *i, int w, int h);
+int dctrl_get_info_scale(void *p, int id, VInfo *i, int w, int h, int fmt);
 
 /**
  * used by the frame-cache to decode a frame
  */
-int dctrl_decode(void *p, int vid, int64_t frame, uint8_t *b, int w, int h);
+int dctrl_decode(void *p, int vid, int64_t frame, uint8_t *b, int w, int h, int fmt);
 
 /**
  */

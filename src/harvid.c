@@ -504,14 +504,14 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
   // TODO set a->decode_fmt; -- overridden by my_open_movie(..)
 
   /* get canonical output width/height and corresponding buffersize */
-  if (dctrl_get_info_scale(dc, vid, &ji, a->out_width, a->out_height)) {
+  if (dctrl_get_info_scale(dc, vid, &ji, a->out_width, a->out_height, a->decode_fmt)) {
     dlog(DLOG_WARNING, "VID: no decoder available (overload or invalid file). n",fd);
     httperror(fd, 503, "Service Unavailable", "<p>No decoder is available. Either the server is overloaded or the file is invalid (no video track, unknown codec,..)</p>");
     return 0;
   }
 
   /* get frame from cache */
-  bptr = vcache_get_buffer(vc, dc, vid, a->frame, ji.out_width, ji.out_height, &cptr);
+  bptr = vcache_get_buffer(vc, dc, vid, a->frame, ji.out_width, ji.out_height, a->decode_fmt, &cptr);
 
   if (!bptr) {
     dlog(DLOG_ERR, "VID: error decoding video file for fd:%d\n",fd);

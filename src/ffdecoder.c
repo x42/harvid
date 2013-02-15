@@ -93,6 +93,10 @@ static const AVRational c1_Q = { 1, 1 };
 // Manage video file
 //--------------------------------------------
 
+int picture_bytesize(int render_fmt, int w, int h) {
+  return avpicture_get_size(render_fmt, w, h);
+}
+
 static int ff_getbuffersize(void *ptr, size_t *s) {
   ffst *ff=(ffst*)ptr;
   const int ps = avpicture_get_size(ff->render_fmt, ff->out_width, ff->out_height);
@@ -722,6 +726,21 @@ void ff_resize(void *ptr, int w, int h, uint8_t *buf, VInfo *i) {
   else
     ff_set_bufferptr(ptr,buf);
   if (i) ff_get_info(ptr,i);
+}
+
+const char * ff_fmt_to_text(int fmt) {
+  switch (fmt) {
+    case PIX_FMT_NONE:
+      return "-";
+    case PIX_FMT_RGB24:
+      return "RGB24";
+    case PIX_FMT_RGBA:
+      return "RGBA";
+    case PIX_FMT_YUV420P:
+      return "YUV420P";
+    default:
+      return "?";
+  }
 }
 
 /* vi:set ts=8 sts=2 sw=2: */
