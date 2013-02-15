@@ -35,9 +35,10 @@
 #include "vinfo.h"
 #include "enums.h"
 
-int cfg_jpeg_quality = 75;
+// TODO global config or per request setting
+#define JPEG_QUALITY 75
 
-static int write_jpeg(VInfo *ji, uint8_t *buffer, FILE *x) {
+static int write_jpeg(VInfo *ji, uint8_t *buffer, int quality, FILE *x) {
   uint8_t *line;
   int n, y=0, i, line_width;
 
@@ -58,7 +59,7 @@ static int write_jpeg(VInfo *ji, uint8_t *buffer, FILE *x) {
   cjpeg.in_color_space = JCS_RGB;
 
   jpeg_set_defaults (&cjpeg);
-  jpeg_set_quality (&cjpeg, cfg_jpeg_quality, TRUE);
+  jpeg_set_quality (&cjpeg, quality, TRUE);
   cjpeg.dct_method = JDCT_FASTEST;
 
   jpeg_stdio_dest (&cjpeg, x);
@@ -149,7 +150,7 @@ size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf) {
 
   switch (render_fmt) {
     case 1:
-      if (write_jpeg(ji, buf, x))
+      if (write_jpeg(ji, buf, JPEG_QUALITY, x))
         dlog(LOG_ERR, "IMF: Could not write jpeg\n");
       break;
     case 2:
@@ -199,7 +200,7 @@ void write_image(char *file_name, int render_fmt, VInfo *ji, uint8_t *buf) {
   if ( (x = open_outfile(file_name)) ) {
     switch (render_fmt) {
       case FMT_JPG:
-	if (write_jpeg(ji, buf, x))
+	if (write_jpeg(ji, buf, JPEG_QUALITY, x))
 	  dlog(LOG_ERR, "IMF: Could not write jpeg: %s\n", file_name);
 	break;
       case FMT_PNG:
