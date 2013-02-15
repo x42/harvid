@@ -329,6 +329,11 @@ static void *main_loop (void *arg) {
     dlog(DLOG_ERR, "SRV: incomplete username/groupname pair. not using suid.\n");
   }
 
+  if (access(d->docroot, R_OK)) {
+    dlog(DLOG_CRIT, "SRV: can not read document-root (permission denied)\n");
+    goto daemon_end;
+  }
+
   global_shutdown = 0;
 #ifdef CATCH_SIGNALS
   signal(SIGHUP, catchsig);

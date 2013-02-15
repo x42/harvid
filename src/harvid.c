@@ -235,6 +235,7 @@ void *vc = NULL; // video cache
 
 int main (int argc, char **argv) {
   program_name = argv[0];
+  struct stat sb;
   char *docroot = "/" ;
   debug_level=DLOG_WARNING;
 
@@ -246,10 +247,6 @@ int main (int argc, char **argv) {
 
   // TODO read rc file
 
-  /* verify configuration */
-
-  // TODO check if docroot exists
-
   if (cfg_daemonize && !cfg_logfile && !cfg_syslog) {
     dlog(DLOG_WARNING, "daemonizing without log file or syslog.\n");
   }
@@ -260,6 +257,11 @@ int main (int argc, char **argv) {
 
   if (cfg_chroot) {
     if (do_chroot(cfg_chroot)) goto errexit;
+  }
+
+  if (stat(docroot, &sb) || !S_ISDIR(sb.st_mode)) {
+    dlog(DLOG_CRIT, "document-root is not a directory\n");
+    goto errexit;
   }
 
   if (cfg_daemonize) {

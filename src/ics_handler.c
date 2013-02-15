@@ -147,7 +147,7 @@ static int parse_http_query(CONN *c, char *query, httpheader *h, ics_request_arg
 
 		/* test if file exists or send 404 */
 		struct stat sb;
-		if (stat(a->file_name, &sb) == -1) {
+		if (stat(a->file_name, &sb)) {
 			dlog(DLOG_WARNING, "CON: file not found: '%s'\n", a->file_name);
 			httperror(c->fd, 404, "Not Found", "file not found." );
 			return(-1);
@@ -274,11 +274,20 @@ void ics_http_handler(
 		SEND200(info);
 		free(info);
 	} else if (CTP("/index/")) { /* /index/  -> /file/index/ ?! */
+		struct stat sb;
 		char *dp = url_unescape(&(path[7]), 0, NULL);
+		char *abspath = malloc((strlen(c->d->docroot) + strlen(dp) + 2) * sizeof(char));
+		sprintf(abspath, "%s/%s",c->d->docroot, dp);
 		if (cfg_noindex) {
 			httperror(c->fd, 403, NULL, NULL);
 		} else if (!dp || check_path(dp)) {
 			httperror(c->fd, 400, "Bad Request", "Illegal filename." );
+		} else if (stat(abspath, &sb) || !S_ISDIR(sb.st_mode)) {
+			dlog(DLOG_WARNING, "CON: dir not found: '%s'\n", abspath);
+			httperror(c->fd, 404, "Not Found", "file not found." );
+		} else if (access(abspath, R_OK)) {
+			dlog(DLOG_WARNING, "CON: permission denied for dir: '%s'\n", abspath);
+			httperror(c->fd, 403, NULL, NULL);
 		} else {
 			ics_request_args a;
 			char base_url[1024];
@@ -298,6 +307,7 @@ void ics_http_handler(
 			}
 			CSEND(c->fd, msg);
 			free(dp);
+			free(abspath);
 			free(msg);
 		}
 		c->run=0;
