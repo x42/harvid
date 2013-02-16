@@ -20,14 +20,19 @@
 #include <stdint.h>     /* uint8_t */
 #include <stdlib.h>     /* calloc et al.*/
 #include <string.h>     /* memset */
+#include <unistd.h>
+#include <time.h>
+#include <math.h>
+#include <sys/time.h>
 #include <pthread.h>
 #include <assert.h>
+
+#include "vinfo.h"
+#include "ffdecoder.h"
 
 #include "ffcompat.h"
 #include <libswscale/swscale.h>
 
-#include "vinfo.h"
-#include "ffdecoder.h"
 
 /* xj5 seek modes */
 enum {  SEEK_ANY, ///< directly seek to givenvideo frame
@@ -73,12 +78,6 @@ typedef struct {
   AVFrame           *pFrameFMT;
   struct SwsContext *pSWSCtx;
 } ffst;
-
-#include <time.h>
-#include <math.h>
-#include <getopt.h>
-#include <sys/time.h>
-#include <unistd.h>
 
 /* Option flags and global variables */
 extern int want_quiet;
@@ -249,7 +248,7 @@ static void ff_get_framerate(void *ptr, TimecodeRate *fr) {
   }
 
   fr->drop=0;
-  if ((ff->framerate == 29.97) || (ff->framerate == 30000.0/1001.0))
+  if (floor(ff->framerate * 100.0) == 2997)
     fr->drop=1;
 }
 
@@ -671,8 +670,12 @@ void ff_get_info(void *ptr, VInfo *i) {
   i->movie_aspect = ff_get_aspectratio(ptr);
   i->out_width = ff->out_width;
   i->out_height = ff->out_height;
-  ff_getbuffersize(ptr, &i->buffersize);
+  if (ff->out_height > 0 && ff->out_width > 0)
+    ff_getbuffersize(ptr, &i->buffersize);
+  else
+    i->buffersize = 0;
   i->frames = ff->frames; // ff->duration * ff->framerate;
+
   //fl2ratio(&(i->framerate->num), &(i->framerate->den), ff->framerate);
   ff_get_framerate(ptr, &i->framerate);
 }
