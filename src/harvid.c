@@ -53,17 +53,17 @@ extern int debug_section;
 char *program_name;
 int   want_quiet = 0;
 int   want_verbose = 0;
-unsigned short  cfg_port = DEFAULT_PORT;
-unsigned int  cfg_host = 0; /* = htonl(INADDR_ANY) */
 int   cfg_daemonize = 0;
 int   cfg_syslog = 0;
-int   cfg_noindex = 0;
+int   cfg_noindex = 0; // TODO commandline arg to en/disable, flatindex
 int   cfg_adminmask = ADM_FLUSHCACHE;
 char *cfg_logfile = NULL;
 char *cfg_chroot = NULL;
 char *cfg_username = NULL;
 char *cfg_groupname = NULL;
 int   initial_cache_size = 128;
+unsigned short  cfg_port = DEFAULT_PORT;
+unsigned int    cfg_host = 0; /* = htonl(INADDR_ANY) */
 
 static void printversion (void) {
   printf ("harvid %s\n", ICSVERSION);
@@ -208,7 +208,7 @@ static int decode_switches (int argc, char **argv) {
         break;
       case 'p':		/* --port */
         {int pn = atoi(optarg);
-        if (pn>0 && pn < 65536)
+        if (pn > 0 && pn < 65536)
           cfg_port = (unsigned short) atoi(optarg);
         }
         break;
@@ -248,7 +248,7 @@ int main (int argc, char **argv) {
   program_name = argv[0];
   struct stat sb;
   char *docroot = "/" ;
-  debug_level=DLOG_WARNING;
+  debug_level = DLOG_WARNING;
 
   // TODO read rc file
 
@@ -316,7 +316,7 @@ errexit:
 #define HPSIZE 8192 // max size of homepage in bytes.
 char *hdl_homepage_html (CONN *c) {
   char *msg = malloc(HPSIZE * sizeof(char));
-  int off =0;
+  int off = 0;
   off+=snprintf(msg+off, HPSIZE-off, DOCTYPE HTMLOPEN);
   off+=snprintf(msg+off, HPSIZE-off, "<title>harvid</title></head>\n");
   off+=snprintf(msg+off, HPSIZE-off, HTMLBODY);
@@ -355,13 +355,13 @@ char *hdl_homepage_html (CONN *c) {
 #define STASIZ (262100)
 char *hdl_server_status_html (CONN *c) {
   char *sm = malloc(STASIZ * sizeof(char));
-  int off =0;
+  int off = 0;
   off+=snprintf(sm+off, STASIZ-off, DOCTYPE HTMLOPEN);
   off+=snprintf(sm+off, STASIZ-off, "<title>harvid status</title></head>\n");
   off+=snprintf(sm+off, STASIZ-off, HTMLBODY);
   off+=snprintf(sm+off, STASIZ-off, "<h2>harvid status</h2>\n");
   off+=snprintf(sm+off, STASIZ-off, "<p>status: ok, online.</p>\n");
-  off+=snprintf(sm+off, STASIZ-off, "<p>concurrent connections: current/max-seen/limit: %d/%d/%d</p>\n", c->d->num_clients,c->d->max_clients, MAXCONNECTIONS );
+  off+=snprintf(sm+off, STASIZ-off, "<p>concurrent connections: current/max-seen/limit: %d/%d/%d</p>\n", c->d->num_clients, c->d->max_clients, MAXCONNECTIONS);
   off+=dctrl_info_html(dc, sm+off, STASIZ-off);
   off+=vcache_info_html(vc, sm+off, STASIZ-off);
   off+=snprintf(sm+off, STASIZ-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
@@ -371,36 +371,36 @@ char *hdl_server_status_html (CONN *c) {
 
 static char *file_info_json (CONN *c, ics_request_args *a, VInfo *ji) {
   char *im = malloc(256 * sizeof(char));
-  int off =0;
-  off+=snprintf(im+off,256-off, "{");
-//off+=snprintf(im+off,256-off, "\"geometry\":[%i,%i],",ji->movie_width,ji->movie_height);
-  off+=snprintf(im+off,256-off, "\"width\":%i",ji->movie_width);
-  off+=snprintf(im+off,256-off, ",\"height\":%i",ji->movie_height);
-  off+=snprintf(im+off,256-off, ",\"aspect\":%.3f",ji->movie_aspect);
-  off+=snprintf(im+off,256-off, ",\"framerate\":%.3f",timecode_rate_to_double(&ji->framerate));
-  off+=snprintf(im+off,256-off, ",\"duration\":%"PRId64 ,ji->frames);
-  off+=snprintf(im+off,256-off, "}");
+  int off = 0;
+  off+=snprintf(im+off, 256-off, "{");
+//off+=snprintf(im+off, 256-off, "\"geometry\":[%i,%i],", ji->movie_width, ji->movie_height);
+  off+=snprintf(im+off, 256-off, "\"width\":%i", ji->movie_width);
+  off+=snprintf(im+off, 256-off, ",\"height\":%i", ji->movie_height);
+  off+=snprintf(im+off, 256-off, ",\"aspect\":%.3f", ji->movie_aspect);
+  off+=snprintf(im+off, 256-off, ",\"framerate\":%.3f", timecode_rate_to_double(&ji->framerate));
+  off+=snprintf(im+off, 256-off, ",\"duration\":%"PRId64, ji->frames);
+  off+=snprintf(im+off, 256-off, "}");
   jvi_free(ji);
   return (im);
 }
 
 static char *file_info_csv (CONN *c, ics_request_args *a, VInfo *ji) {
   char *im = malloc(256 * sizeof(char));
-  int off =0;
-  off+=snprintf(im+off,256-off, "1"); // FORMAT VERSION
-  off+=snprintf(im+off,256-off, ",%i", ji->movie_width);
-  off+=snprintf(im+off,256-off, ",%i", ji->movie_height);
-  off+=snprintf(im+off,256-off, ",%f\n", ji->movie_aspect);
-  off+=snprintf(im+off,256-off, ",%.3f", timecode_rate_to_double(&ji->framerate));
-  off+=snprintf(im+off,256-off, ",%"PRId64, ji->frames);
-  off+=snprintf(im+off,256-off, "\n");
+  int off = 0;
+  off+=snprintf(im+off, 256-off, "1"); // FORMAT VERSION
+  off+=snprintf(im+off, 256-off, ",%i", ji->movie_width);
+  off+=snprintf(im+off, 256-off, ",%i", ji->movie_height);
+  off+=snprintf(im+off, 256-off, ",%f\n", ji->movie_aspect);
+  off+=snprintf(im+off, 256-off, ",%.3f", timecode_rate_to_double(&ji->framerate));
+  off+=snprintf(im+off, 256-off, ",%"PRId64, ji->frames);
+  off+=snprintf(im+off, 256-off, "\n");
   jvi_free(ji);
   return (im);
 }
 
 static char *file_info_html (CONN *c, ics_request_args *a, VInfo *ji) {
   char *im = malloc(STASIZ * sizeof(char));
-  int off =0;
+  int off = 0;
   char smpte[14], *tmp;
   timecode_framenumber_to_string(smpte, &ji->framerate, ji->frames);
 
@@ -427,15 +427,15 @@ static char *file_info_html (CONN *c, ics_request_args *a, VInfo *ji) {
 
 static char *file_info_raw (CONN *c, ics_request_args *a, VInfo *ji) {
   char *im = malloc(STASIZ * sizeof(char));
-  int off =0;
+  int off = 0;
   char smpte[14];
   timecode_framenumber_to_string(smpte, &ji->framerate, ji->frames);
 
   off+=snprintf(im+off, STASIZ-off, "1\n"); // FORMAT VERSION
-  off+=snprintf(im+off, STASIZ-off, "%.3f\n",timecode_rate_to_double(&ji->framerate)); // fps
+  off+=snprintf(im+off, STASIZ-off, "%.3f\n", timecode_rate_to_double(&ji->framerate)); // fps
   off+=snprintf(im+off, STASIZ-off, "%"PRId64"\n", ji->frames); // duration
   off+=snprintf(im+off, STASIZ-off, "0.0\n"); // start-offset TODO
-  off+=snprintf(im+off, STASIZ-off, "%f\n",ji->movie_aspect);
+  off+=snprintf(im+off, STASIZ-off, "%f\n", ji->movie_aspect);
   jvi_free(ji);
   return (im);
 }
@@ -450,13 +450,13 @@ char *hdl_file_info (CONN *c, ics_request_args *a) {
   }
   switch (a->render_fmt) {
     case OUT_PLAIN:
-      return file_info_raw(c,a,&ji);
+      return file_info_raw(c, a, &ji);
     case OUT_JSON:
-      return file_info_json(c,a,&ji);
+      return file_info_json(c, a, &ji);
     case OUT_CSV:
-      return file_info_csv(c,a,&ji);
+      return file_info_csv(c, a, &ji);
     default:
-      return file_info_html(c,a,&ji);
+      return file_info_html(c, a, &ji);
   }
 }
 
@@ -465,44 +465,44 @@ char *hdl_file_info (CONN *c, ics_request_args *a) {
 #define SINFOSIZ (1024)
 char *hdl_server_info (CONN *c, ics_request_args *a) {
   char *info = malloc(SINFOSIZ * sizeof(char));
-  int off =0;
+  int off = 0;
   switch (a->render_fmt) {
     case OUT_PLAIN:
-      off+=snprintf(info+off,SINFOSIZ-off, "%s\n", c->d->docroot);
-      off+=snprintf(info+off,SINFOSIZ-off, "%s\n", c->d->local_addr);
-      off+=snprintf(info+off,SINFOSIZ-off, "%d\n", c->d->local_port);
-      off+=snprintf(info+off,SINFOSIZ-off, "%d\n", initial_cache_size);
+      off+=snprintf(info+off, SINFOSIZ-off, "%s\n", c->d->docroot);
+      off+=snprintf(info+off, SINFOSIZ-off, "%s\n", c->d->local_addr);
+      off+=snprintf(info+off, SINFOSIZ-off, "%d\n", c->d->local_port);
+      off+=snprintf(info+off, SINFOSIZ-off, "%d\n", initial_cache_size);
       break;
     case OUT_JSON:
       {
       char *tmp;
-      off+=snprintf(info+off,SINFOSIZ-off, "{");
+      off+=snprintf(info+off, SINFOSIZ-off, "{");
       tmp = str_escape(c->d->docroot, 0, '\\');
-      off+=snprintf(info+off,SINFOSIZ-off, "\"docroot\":\"%s\"", tmp); free(tmp);
-      off+=snprintf(info+off,SINFOSIZ-off, ",\"listenaddr\":\"%s\"", c->d->local_addr);
-      off+=snprintf(info+off,SINFOSIZ-off, ",\"listenport\":%d", c->d->local_port);
-      off+=snprintf(info+off,SINFOSIZ-off, ",\"cachesize\":%d", initial_cache_size);
-      off+=snprintf(info+off,SINFOSIZ-off, ",\"admintasks\":[\"/check\"%s%s%s]",
+      off+=snprintf(info+off, SINFOSIZ-off, "\"docroot\":\"%s\"", tmp); free(tmp);
+      off+=snprintf(info+off, SINFOSIZ-off, ",\"listenaddr\":\"%s\"", c->d->local_addr);
+      off+=snprintf(info+off, SINFOSIZ-off, ",\"listenport\":%d", c->d->local_port);
+      off+=snprintf(info+off, SINFOSIZ-off, ",\"cachesize\":%d", initial_cache_size);
+      off+=snprintf(info+off, SINFOSIZ-off, ",\"admintasks\":[\"/check\"%s%s%s]",
           (cfg_adminmask & ADM_FLUSHCACHE) ? ",\"/flush_cache\"" : "",
           (cfg_adminmask & ADM_PURGECACHE) ? ",\"/purge_cache\"" : "",
           (cfg_adminmask & ADM_SHUTDOWN)   ? ",\"/shutdown\"" : ""
           );
-      off+=snprintf(info+off,SINFOSIZ-off, "}");
+      off+=snprintf(info+off, SINFOSIZ-off, "}");
       }
       break;
     case OUT_CSV:
       {
       char *tmp = str_escape(c->d->docroot, 0, '"');
-      off+=snprintf(info+off,SINFOSIZ-off, "\"%s\"", tmp); free(tmp);
-      off+=snprintf(info+off,SINFOSIZ-off, ",%s", c->d->local_addr);
-      off+=snprintf(info+off,SINFOSIZ-off, ",%d", c->d->local_port);
-      off+=snprintf(info+off,SINFOSIZ-off, ",%d", initial_cache_size);
+      off+=snprintf(info+off, SINFOSIZ-off, "\"%s\"", tmp); free(tmp);
+      off+=snprintf(info+off, SINFOSIZ-off, ",%s", c->d->local_addr);
+      off+=snprintf(info+off, SINFOSIZ-off, ",%d", c->d->local_port);
+      off+=snprintf(info+off, SINFOSIZ-off, ",%d", initial_cache_size);
       off+=snprintf(info+off, SINFOSIZ-off, ",\"/check%s%s%s\"",
           (cfg_adminmask & ADM_FLUSHCACHE) ? " /flush_cache" : "",
           (cfg_adminmask & ADM_PURGECACHE) ? " /purge_cache" : "",
           (cfg_adminmask & ADM_SHUTDOWN)   ? " /shutdown" : ""
           );
-      off+=snprintf(info+off,SINFOSIZ-off, "\n");
+      off+=snprintf(info+off, SINFOSIZ-off, "\n");
       }
       break;
     default: // HTML
@@ -530,7 +530,7 @@ char *hdl_server_info (CONN *c, ics_request_args *a) {
           cfg_syslog ? "(syslog)" : (cfg_logfile ? cfg_logfile : "(stdout)"));
       off+=snprintf(info+off, SINFOSIZ-off, "<li>Loglevel: %s</li>\n", dlog_level_name(debug_level));
       off+=snprintf(info+off, SINFOSIZ-off, "<li>AVLog (stdout): %s</li>\n",
-          want_quiet ? "quiet" : want_verbose ? "verbose" :"error" );
+          want_quiet ? "quiet" : want_verbose ? "verbose" :"error");
 #endif
       off+=snprintf(info+off, SINFOSIZ-off, "</ul>\n</div>\n");
       off+=snprintf(info+off, SINFOSIZ-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
@@ -542,27 +542,27 @@ char *hdl_server_info (CONN *c, ics_request_args *a) {
 
 char *hdl_server_version (CONN *c, ics_request_args *a) {
   char *info = malloc(SINFOSIZ * sizeof(char));
-  int off =0;
+  int off = 0;
   switch (a->render_fmt) {
     case OUT_PLAIN:
-      off+=snprintf(info+off,SINFOSIZ-off, "%s\n", SERVERVERSION);
-      off+=snprintf(info+off,SINFOSIZ-off, "%s %s %s\n", LIBAVFORMAT_IDENT, LIBAVCODEC_IDENT, LIBAVUTIL_IDENT);
+      off+=snprintf(info+off, SINFOSIZ-off, "%s\n", SERVERVERSION);
+      off+=snprintf(info+off, SINFOSIZ-off, "%s %s %s\n", LIBAVFORMAT_IDENT, LIBAVCODEC_IDENT, LIBAVUTIL_IDENT);
       break;
     case OUT_JSON:
-      off+=snprintf(info+off,SINFOSIZ-off, "{");
-      off+=snprintf(info+off,SINFOSIZ-off, "\"version\":\"%s\"", ICSVERSION);
-      off+=snprintf(info+off,SINFOSIZ-off, ",\"os\":\"%s\"", ICSARCH);
+      off+=snprintf(info+off, SINFOSIZ-off, "{");
+      off+=snprintf(info+off, SINFOSIZ-off, "\"version\":\"%s\"", ICSVERSION);
+      off+=snprintf(info+off, SINFOSIZ-off, ",\"os\":\"%s\"", ICSARCH);
 #ifdef NDEBUG
-      off+=snprintf(info+off,SINFOSIZ-off, ",\"debug\":false");
+      off+=snprintf(info+off, SINFOSIZ-off, ",\"debug\":false");
 #else
-      off+=snprintf(info+off,SINFOSIZ-off, ",\"debug\":true");
+      off+=snprintf(info+off, SINFOSIZ-off, ",\"debug\":true");
 #endif
-      off+=snprintf(info+off,SINFOSIZ-off, ",\"ffmpeg\":[\"%s\",\"%s\",\"%s\"]",
+      off+=snprintf(info+off, SINFOSIZ-off, ",\"ffmpeg\":[\"%s\",\"%s\",\"%s\"]",
           LIBAVFORMAT_IDENT, LIBAVCODEC_IDENT, LIBAVUTIL_IDENT);
-      off+=snprintf(info+off,SINFOSIZ-off, "}");
+      off+=snprintf(info+off, SINFOSIZ-off, "}");
       break;
     case OUT_CSV:
-      off+=snprintf(info+off,SINFOSIZ-off, "\"%s\",\"%s\",\"%s\",\"%s\"\n",
+      off+=snprintf(info+off, SINFOSIZ-off, "\"%s\",\"%s\",\"%s\",\"%s\"\n",
           SERVERVERSION, LIBAVFORMAT_IDENT, LIBAVCODEC_IDENT, LIBAVUTIL_IDENT);
       break;
     default: // HTML
@@ -603,7 +603,7 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
 
   /* get canonical output width/height and corresponding buffersize */
   if (dctrl_get_info_scale(dc, vid, &ji, a->out_width, a->out_height, a->decode_fmt)) {
-    dlog(DLOG_WARNING, "VID: no decoder available (overload or invalid file). n",fd);
+    dlog(DLOG_WARNING, "VID: no decoder available (overload or invalid file). n", fd);
     httperror(fd, 503, "Service Unavailable", "<p>No decoder is available. Either the server is overloaded or the file is invalid (no video track, unknown codec,..)</p>");
     return 0;
   }
@@ -612,7 +612,7 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
   bptr = vcache_get_buffer(vc, dc, vid, a->frame, ji.out_width, ji.out_height, a->decode_fmt, &cptr);
 
   if (!bptr) {
-    dlog(DLOG_ERR, "VID: error decoding video file for fd:%d\n",fd);
+    dlog(DLOG_ERR, "VID: error decoding video file for fd:%d\n", fd);
     httperror(fd, 500, NULL, NULL);
     return 0;
   }
@@ -648,7 +648,7 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
     http_tx(fd, 200, h, olen, optr);
     if (a->render_fmt != FMT_RAW) free(optr); // free formatted image
   } else {
-    dlog(DLOG_ERR, "VID: error formatting image for fd:%d\n",fd);
+    dlog(DLOG_ERR, "VID: error formatting image for fd:%d\n", fd);
     httperror(fd, 500, NULL, NULL);
   }
   vcache_release_buffer(vc, cptr);
@@ -664,6 +664,5 @@ void hdl_purge_cache() {
   vcache_clear(vc);
   dctrl_cache_clear(dc, 2, -1);
 }
-
 
 // vim:sw=2 sts=2 ts=8 et:

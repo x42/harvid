@@ -32,7 +32,7 @@ static void timecode_sample_to_time (TimecodeTime * const t, TimecodeRate const 
   const int64_t fps_i = ceil(fps_d);
 
   if (r->drop) {
-    int64_t frameNumber = floor( (double)sample * fps_d / samplerate );
+    int64_t frameNumber = floor((double)sample * fps_d / samplerate);
 
     /* there are 17982 frames in 10 min @ 29.97df */
     const int64_t D = frameNumber / 17982;
@@ -63,7 +63,7 @@ static void timecode_sample_to_time (TimecodeTime * const t, TimecodeRate const 
     double sample_d = sample % frames_per_hour;
 
     timecode_frames_left_exact = sample_d / frames_per_timecode_frame;
-    timecode_frames_fraction = timecode_frames_left_exact - floor( timecode_frames_left_exact );
+    timecode_frames_fraction = timecode_frames_left_exact - floor(timecode_frames_left_exact);
 
     t->subframe = (int32_t) rint(timecode_frames_fraction * r->subframes);
 

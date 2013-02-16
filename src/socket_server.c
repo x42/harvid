@@ -58,7 +58,7 @@
 //#define VERBOSE_SHUTDOWN 1
 
 /** called to spawn thread for an incoming connection */
-static int create_client( void *(*cli)(void *), void *arg) {
+static int create_client(void *(*cli)(void *), void *arg) {
   pthread_t thread;
 #ifdef HAVE_PTHREAD_SIGMASK
   sigset_t newmask, oldmask;
@@ -109,19 +109,19 @@ static void setnonblock(int sock, unsigned long l) {
 
 static void server_sockaddr(ICI *d, struct sockaddr_in *addr) {
   memset(addr, 0, sizeof(addr));
-  addr->sin_family=AF_INET;
-  addr->sin_addr.s_addr=d->listenaddr;
-  addr->sin_port=d->listenport;
+  addr->sin_family = AF_INET;
+  addr->sin_addr.s_addr = d->listenaddr;
+  addr->sin_port = d->listenport;
 
-  d->local_addr=strdup(inet_ntoa(addr->sin_addr));
-  d->local_port=ntohs(d->listenport);
+  d->local_addr = strdup(inet_ntoa(addr->sin_addr));
+  d->local_port = ntohs(d->listenport);
 }
 
 
 /** called once to init server */
 static int create_server_socket(void) {
-  int s,val=1;
-  if((s=socket(AF_INET, SOCK_STREAM, 0))<0) {
+  int s, val = 1;
+  if((s = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     dlog(DLOG_CRIT, "SRV: unable to create local socket: %s\n", strerror(errno));
     return -1;
   }
@@ -159,7 +159,7 @@ static int global_shutdown = 0;
 void catchsig (int sig) {
   //signal(SIGHUP, catchsig); /* reset signal */
   //signal(SIGINT, catchsig);
-  dlog(DLOG_INFO,"SRV: caught signal, shutting down\n");
+  dlog(DLOG_INFO, "SRV: caught signal, shutting down\n");
   global_shutdown = 1;
 }
 #endif
@@ -168,8 +168,8 @@ void catchsig (int sig) {
 static void *socket_handler(void *cn) {
   CONN *c = (CONN*) cn;
 
-  c->buf_len=0;
-  c->timeout_cnt=0;
+  c->buf_len = 0;
+  c->timeout_cnt = 0;
   debugmsg(DEBUG_SRV, "SRV: socket-handler starting up for fd:%d\n", c->fd);
 
   while(c->run && c->d->run) { // keep-alive
@@ -177,8 +177,8 @@ static void *socket_handler(void *cn) {
     fd_set rd_set, wr_set;
     struct timeval tv;
 
-    tv.tv_sec=SLEEP_STEP;
-    tv.tv_usec=0;
+    tv.tv_sec = SLEEP_STEP;
+    tv.tv_usec = 0;
     FD_ZERO(&rd_set);
     FD_ZERO(&wr_set);
 
@@ -187,9 +187,9 @@ static void *socket_handler(void *cn) {
     if (c->cq != NULL) FD_SET(c->fd, &wr_set);
 #endif
 
-    int ready=select(c->fd+1, &rd_set, &wr_set, NULL, &tv);
+    int ready = select(c->fd+1, &rd_set, &wr_set, NULL, &tv);
     if(ready<0) {
-      dlog(DLOG_WARNING, "SRV: connection select error: %s\n",strerror(errno));
+      dlog(DLOG_WARNING, "SRV: connection select error: %s\n", strerror(errno));
       break;
     }
     if(!ready) { /* Timeout */
@@ -202,7 +202,7 @@ static void *socket_handler(void *cn) {
     }
 
     // preform socket read/write on c->fd
-    // NOTE: set c->run=0; is preferred to return(!0) in protocol_handler;
+    // NOTE: set c->run = 0; is preferred to return(!0) in protocol_handler;
     if (FD_ISSET(c->fd, &rd_set)) {
         debugmsg(DEBUG_SRV, "SRV: read..\n");
       if (protocol_handler(c, c->d->userdata)) break;
@@ -213,10 +213,10 @@ static void *socket_handler(void *cn) {
       if (protocol_droid(c, c->d->userdata)) break;
     }
 #endif
-  debugmsg(DEBUG_SRV, "SRV: loop:%d\n",c->fd);
+  debugmsg(DEBUG_SRV, "SRV: loop:%d\n", c->fd);
 
   }
-  debugmsg(DEBUG_SRV, "SRV: protocol ended. closing connection fd:%d\n",c->fd);
+  debugmsg(DEBUG_SRV, "SRV: protocol ended. closing connection fd:%d\n", c->fd);
 #ifndef HAVE_WINDOWS
   close(c->fd);
 #else
@@ -227,8 +227,8 @@ static void *socket_handler(void *cn) {
   c->d->num_clients--;
   pthread_mutex_unlock(&c->d->lock);
 
-  dlog(DLOG_INFO, "SRV: closed client connection (%u) from %s:%d.\n",c->fd, c->client_address, c->client_port);
-  debugmsg(DEBUG_SRV, "SRV: now %i connections active\n",c->d->num_clients);
+  dlog(DLOG_INFO, "SRV: closed client connection (%u) from %s:%d.\n", c->fd, c->client_address, c->client_port);
+  debugmsg(DEBUG_SRV, "SRV: now %i connections active\n", c->d->num_clients);
 
   if (c->client_address) free(c->client_address);
   free(c);
@@ -242,19 +242,19 @@ static void start_child(ICI *d, int fd, char *rh, unsigned short rp) {
   if (d->num_clients > d->max_clients) d->max_clients = d->num_clients;
   pthread_mutex_unlock(&d->lock);
 
-  CONN *c = calloc(1,sizeof(CONN));
-  c->run=1;
-  c->fd=fd;
-  c->d=d;
-  c->client_address=strdup(rh);
-  c->client_port=rp;
+  CONN *c = calloc(1, sizeof(CONN));
+  c->run = 1;
+  c->fd = fd;
+  c->d = d;
+  c->client_address = strdup(rh);
+  c->client_port = rp;
 #ifdef SOCKET_WRITE
   c->cq = NULL;
 #endif
   c->userdata = NULL;
 
   if(create_client(&socket_handler, c)) {
-    if(fd>=0)
+    if(fd >= 0)
 #ifndef HAVE_WINDOWS
       close(fd);
 #else
@@ -265,29 +265,29 @@ static void start_child(ICI *d, int fd, char *rh, unsigned short rp) {
     d->num_clients--;
     pthread_mutex_unlock(&d->lock);
     free(c);
-    dlog(DLOG_WARNING, "SRV: Connection terminated: now %i connections active\n",d->num_clients);
+    dlog(DLOG_WARNING, "SRV: Connection terminated: now %i connections active\n", d->num_clients);
     return;
   }
-  dlog(DLOG_INFO, "SRV: Connection started: now %i connections active\n",d->num_clients);
+  dlog(DLOG_INFO, "SRV: Connection started: now %i connections active\n", d->num_clients);
 }
 
 /** handshake - accept incoming connection  */
 static int accept_connection(ICI *d, char **remotehost, unsigned short *rport) {
   struct sockaddr_in addr;
   int s;
-  socklen_t addrlen=sizeof(addr);
+  socklen_t addrlen = sizeof(addr);
 
   debugmsg(DEBUG_SRV, "SRV: waiting for accept on server-fd:%d\n", d->fd);
 
   do {
-    s=accept(d->fd, (struct sockaddr *)&addr, &addrlen);
-  } while(s<0 && errno==EINTR);
+    s = accept(d->fd, (struct sockaddr *)&addr, &addrlen);
+  } while(s < 0 && errno == EINTR);
 
   *remotehost = inet_ntoa(addr.sin_addr);
   *rport = ntohs(addr.sin_port);
 
   if(s<0) {
-    dlog(DLOG_WARNING, "SRV: socket accept error: %s\n",strerror(errno));
+    dlog(DLOG_WARNING, "SRV: socket accept error: %s\n", strerror(errno));
     return (-1);
   }
   dlog(DLOG_INFO, "SRV: Connection accepted %s:%d\n", *remotehost, *rport);
@@ -300,12 +300,12 @@ static int accept_connection(ICI *d, char **remotehost, unsigned short *rport) {
 #else
     closesocket(s);
 #endif
-    dlog(DLOG_WARNING,"SRV: refused client. max number of connections (%i) readed.\n", MAXCONNECTIONS);
+    dlog(DLOG_WARNING, "SRV: refused client. max number of connections (%i) readed.\n", MAXCONNECTIONS);
     return (-1);
   }
 
   // check if we should use SO_KEEPALIVE here
-  //int val =1; setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, &val,  sizeof(int));
+  //int val = 1; setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, &val,  sizeof(int));
   // or set non-blocking i/o ...
   //setnonblock(s, 1);
   return(s);
@@ -319,8 +319,8 @@ static void *main_loop (void *arg) {
 #endif
 
   if ((d->fd = create_server_socket()) < 0) { goto daemon_end; }
-  server_sockaddr(d,&addr);
-  if(server_bind(d,addr)) { goto daemon_end; }
+  server_sockaddr(d, &addr);
+  if(server_bind(d, addr)) { goto daemon_end; }
 
   if (d->username && d->groupname) {
     if (drop_privileges(d->username, d->groupname)) { goto daemon_end; }
@@ -350,18 +350,18 @@ static void *main_loop (void *arg) {
     // select() returns 0 on timeout, -1 on error.
     if((select(d->fd+1, &rfds, NULL, NULL, &tv))<0) {
       dlog(DLOG_WARNING, "SRV: unable to select the socket: %s\n", strerror(errno));
-      if (errno!=EINTR)
+      if (errno != EINTR)
         goto daemon_end;
       else
         continue;
     }
 
-    char *rh=NULL;
-    unsigned short rp=0;
-    int s=-1;
+    char *rh = NULL;
+    unsigned short rp = 0;
+    int s = -1;
     if(FD_ISSET(d->fd, &rfds))
-      s=accept_connection(d,&rh,&rp);
-    if (s>=0) start_child(d,s,rh,rp);
+      s = accept_connection(d, &rh, &rp);
+    if (s >= 0) start_child(d, s, rh, rp);
   }
 
 #ifdef CATCH_SIGNALS
@@ -380,7 +380,7 @@ static void *main_loop (void *arg) {
 #endif
   while (d->num_clients> 0 && --timeout > 0) {
 #ifdef VERBOSE_SHUTDOWN
-    if (timeout%3 == 0) printf("SRV: shutdown timeout (%i)    \r",timeout); fflush(stdout);
+    if (timeout%3 == 0) printf("SRV: shutdown timeout (%i)    \r", timeout); fflush(stdout);
 #endif
     mymsleep(1000);
   }
@@ -398,7 +398,7 @@ daemon_end:
   close(d->fd);
   dlog(DLOG_CRIT, "SRV: server shut down.\n");
 
-  d->run=0;
+  d->run = 0;
   if (d->local_addr) free(d->local_addr);
   pthread_mutex_destroy(&d->lock);
   free(d);
@@ -408,14 +408,14 @@ daemon_end:
 // tcp server thread
 int start_tcp_server (unsigned int hostnl, unsigned short port, char *docroot, char *username, char *groupname, void *userdata) {
   ICI *d = calloc(1, sizeof(ICI));
-  pthread_mutex_init(&d->lock,NULL);
-  d->run=1;
-  d->listenport=htons(port);
-  d->listenaddr=hostnl;
-  d->username=username;
-  d->groupname=groupname;
-  d->docroot=docroot;
-  d->userdata=userdata;
+  pthread_mutex_init(&d->lock, NULL);
+  d->run = 1;
+  d->listenport = htons(port);
+  d->listenaddr = hostnl;
+  d->username   = username;
+  d->groupname  = groupname;
+  d->docroot    = docroot;
+  d->userdata   = userdata;
   main_loop(d);
   return(0);
 }

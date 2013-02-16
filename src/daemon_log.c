@@ -36,17 +36,17 @@ void dlog(int level, const char *format, ...) {
   va_list arglist;
   char text[LOGLEN], timestamped[LOGLEN];
   FILE *out = stderr;
-  int dotimestamp=0;
+  int dotimestamp = 0;
 
-  if(level>debug_level) return;
+  if(level > debug_level) return;
 
   va_start(arglist, format);
   vsnprintf(text, LOGLEN, format, arglist);
   va_end(arglist);
-  text[LOGLEN -1] =0;
+  text[LOGLEN -1] = 0;
 
-  if (level > 7 ) { level=7; }
-  if (level < 0 ) { level=0; }
+  if (level > 7) { level = 7; }
+  if (level < 0) { level = 0; }
 #ifndef HAVE_WINDOWS
   if(use_syslog) {
     syslog(level, "%s", text);
@@ -54,19 +54,19 @@ void dlog(int level, const char *format, ...) {
   } else
 #endif
   if (my_logfile) {
-    out=my_logfile;
-    dotimestamp=1;
+    out = my_logfile;
+    dotimestamp = 1;
   } else if (level > DLOG_WARNING) {
-    out=stdout;
+    out = stdout;
   }
 
   if(dotimestamp) {
     struct tm *timeptr;
     time_t now;
-    now=time(NULL);
-    now=mktime(gmtime(&now));
-    now+=mktime(localtime(&now)) - mktime(gmtime(&now)); // localtime
-    timeptr=localtime(&now);
+    now = time(NULL);
+    now = mktime(gmtime(&now));
+    now += mktime(localtime(&now)) - mktime(gmtime(&now)); // localtime
+    timeptr = localtime(&now);
 
     snprintf(timestamped, LOGLEN,
       "%04d.%02d.%02d %02d:%02d:%02d LOG%d[%lu]: %s",
@@ -74,11 +74,9 @@ void dlog(int level, const char *format, ...) {
       timeptr->tm_hour, timeptr->tm_min, timeptr->tm_sec,
       level, (unsigned long) getpid(), text);
   } else {
-    snprintf(timestamped, LOGLEN,"%s",text);
+    snprintf(timestamped, LOGLEN, "%s", text);
   }
-  timestamped[LOGLEN -1] =0;
-
-  //if (out==stdout || out==stderr) fprintf(out, "\r");
+  timestamped[LOGLEN -1] = 0;
 
   fprintf(out, "%s", timestamped);
   fflush(out); // may kill performance
@@ -89,24 +87,24 @@ void dlog_open(char *log_file) {
 
 #ifndef HAVE_WINDOWS
   if (!log_file) {
-    openlog("ics", LOG_CONS | LOG_NDELAY | LOG_PID, 0?LOG_DAEMON:LOG_USER);
-    use_syslog =1;
+    openlog("harvid", LOG_CONS | LOG_NDELAY | LOG_PID, 0 ? LOG_DAEMON : LOG_USER);
+    use_syslog = 1;
     return;
   }
 #endif
 
-  if ((fd=open(log_file, O_CREAT|O_WRONLY|O_APPEND, 0640))) {
+  if ((fd = open(log_file, O_CREAT|O_WRONLY|O_APPEND, 0640))) {
 #ifndef HAVE_WINDOWS
     fcntl(fd, F_SETFD, FD_CLOEXEC);
 #endif
-    my_logfile=fdopen(fd, "a");
+    my_logfile = fdopen(fd, "a");
     if (my_logfile) return;
   }
   dlog(DLOG_ERR, "Unable to open log file: '%s'\n", log_file);
 }
 
 void dlog_close(void) {
-    if(my_logfile) { fclose(my_logfile); my_logfile=NULL; return; }
+    if(my_logfile) { fclose(my_logfile); my_logfile = NULL; return; }
 #ifndef HAVE_WINDOWS
     if(use_syslog) closelog();
 #endif

@@ -31,7 +31,7 @@ int daemonize (void) {
 #ifndef HAVE_WINDOWS
   switch(fork()) {
   case -1:    /* error */
-    dlog(DLOG_CRIT,"SYS: fork() failed!\n");
+    dlog(DLOG_CRIT, "SYS: fork() failed!\n");
     return -1;
   case  0:    /* child */
   #ifdef NOSETSID
@@ -40,21 +40,9 @@ int daemonize (void) {
     setsid();
   #endif
     chdir("/") ;
-  #if 0
-  if ((nulldev_fd = open(DEV_NULL, O_RDWR, 0)) != -1) {
-    int i ;
-    for (i = 0; i < 3; i++) {
-      if (isatty(i)) {
-        dup2(nulldev_fd, i) ;
-      }
-    }
-    close(nulldev_fd) ;
-  }
-  #else
-    fclose( stdin );
-    fclose( stdout );
-    fclose( stderr );
-  #endif
+    fclose(stdin);
+    fclose(stdout);
+    fclose(stderr);
     break;
   default:    /* parent */
     exit(0);
@@ -68,7 +56,7 @@ int daemonize (void) {
 /* chroot and set process user and group(s) id */
 int drop_privileges(char *setgid_group, char *setuid_user) {
 #ifndef HAVE_WINDOWS
-  int uid=0, gid=0;
+  int uid = 0, gid = 0;
   struct group *gr;
   struct passwd *pw;
 
@@ -79,22 +67,22 @@ int drop_privileges(char *setgid_group, char *setuid_user) {
 
   /* Get the integer values */
   if(setgid_group) {
-    gr=getgrnam(setgid_group);
+    gr = getgrnam(setgid_group);
     if(gr)
-      gid=gr->gr_gid;
+      gid = gr->gr_gid;
     else if(atoi(setgid_group)) /* numerical? */
-      gid=atoi(setgid_group);
+      gid = atoi(setgid_group);
     else {
       dlog(DLOG_CRIT, "SYS: failed to get GID for group %s\n", setgid_group);
       return -1;
     }
   }
   if(setuid_user) {
-    pw=getpwnam(setuid_user);
+    pw = getpwnam(setuid_user);
     if(pw)
-      uid=pw->pw_uid;
+      uid = pw->pw_uid;
     else if(atoi(setuid_user)) /* numerical? */
-      uid=atoi(setuid_user);
+      uid = atoi(setuid_user);
     else {
       dlog(DLOG_CRIT, "SYS: failed to get UID for user %s\n", setuid_user);
       return -2;
@@ -116,7 +104,7 @@ int drop_privileges(char *setgid_group, char *setuid_user) {
       return -4;
     }
   }
-  dlog(DLOG_INFO,"SYS: privs now: uid:%i gid:%i\n", getuid(), getgid());
+  dlog(DLOG_INFO, "SYS: privs now: uid:%i gid:%i\n", getuid(), getgid());
 #else
   dlog(DLOG_WARNING, "SYS: windows OS does not support privilege uid/gid changes.\n");
 #endif
@@ -134,7 +122,7 @@ int do_chroot (char *chroot_dir) {
       dlog(DLOG_CRIT, "SYS: Failed to chdir after chroot\n");
       return -2;
     }
-    dlog(DLOG_INFO, "SYS: chroot()ed to '%s'\n",chroot_dir);
+    dlog(DLOG_INFO, "SYS: chroot()ed to '%s'\n", chroot_dir);
   }
 #else
   dlog(DLOG_WARNING, "SYS: windows OS does not support chroot() operation.\n");

@@ -37,12 +37,12 @@ extern int cfg_adminmask;
 #define CTP(CMPPATH) \
         (  strncasecmp(protocol,  "HTTP/", 5) == 0 \
         && strncasecmp(path, CMPPATH, strlen(CMPPATH)) == 0 \
-        && strcasecmp (method_str, "GET") == 0 )
+        && strcasecmp (method_str, "GET") == 0)
 
 #ifndef HAVE_WINDOWS
 #define CSEND(FD,STATUS) write(FD, STATUS, strlen(STATUS))
 #else
-#define CSEND(FD,STATUS) send(FD, STATUS, strlen(STATUS),0)
+#define CSEND(FD,STATUS) send(FD, STATUS, strlen(STATUS), 0)
 #endif
 
 #define SEND200(MSG) \
@@ -54,7 +54,7 @@ extern int cfg_adminmask;
   { \
     httpheader h; \
     memset(&h, 0, sizeof(httpheader)); \
-    h.ctype=CT; \
+    h.ctype = CT; \
     send_http_status_fd(c->fd, 200); \
     send_http_header_fd(c->fd, 200, &h); \
     CSEND(c->fd, MSG); \
@@ -63,7 +63,7 @@ extern int cfg_adminmask;
 #define CONTENT_TYPE_SWITCH(fmt) \
    (fmt) == OUT_PLAIN ? "text/plain" : \
   ((fmt) == OUT_JSON  ? "application/json" : \
-  ((fmt) == OUT_CSV   ? "text/csv" : "text/html; charset=UTF-8" ))
+  ((fmt) == OUT_CSV   ? "text/csv" : "text/html; charset=UTF-8"))
 
 /**
  * check for invalid or potentially malicious path.
@@ -75,9 +75,9 @@ static int check_path(char *f) {
   if (len == 0) return 0;
   /* check for possible 'escape docroot' trickery */
   if (   f[0] == '/'
-      || strcmp( f, ".." ) == 0 || strncmp( f, "../", 3 ) == 0
-      || strstr( f, "/../" ) != (char*) 0
-      || strcmp( &(f[len-3]), "/.." ) == 0 ) return -1;
+      || strcmp(f, "..") == 0 || strncmp( f, "../", 3) == 0
+      || strstr(f, "/../") != (char*) 0
+      || strcmp(&(f[len-3]), "/..") == 0) return -1;
   return 0;
 }
 
@@ -91,12 +91,12 @@ struct queryparserstate {
 
 void parse_param(struct queryparserstate *qps, char *kvp) {
   char *sep;
-  if (!(sep=strchr(kvp,'='))) return;
-  *sep='\0';
+  if (!(sep = strchr(kvp, '='))) return;
+  *sep = '\0';
   char *val = sep+1;
   if (!val || strlen(val) < 1 || strlen(kvp) <1) return;
 
-  debugmsg(DEBUG_ICS, "QUERY '%s'->'%s'\n",kvp,val);
+  debugmsg(DEBUG_ICS, "QUERY '%s'->'%s'\n", kvp, val);
 
   if (!strcmp (kvp, "frame")) {
     qps->a->frame = atoi(val);
@@ -109,36 +109,36 @@ void parse_param(struct queryparserstate *qps, char *kvp) {
     qps->fn = url_unescape(val, 0, NULL);
     qps->doit |= 2;
   } else if (!strcmp (kvp, "flatindex")) {
-    qps->a->idx_option|=OPT_FLAT;
+    qps->a->idx_option |= OPT_FLAT;
   } else if (!strcmp (kvp, "format")) {
-         if (!strcmp(val,"jpg") )     qps->a->render_fmt=FMT_JPG;
-    else if (!strcmp(val,"jpeg"))     qps->a->render_fmt=FMT_JPG;
-    else if (!strcmp(val,"png") )     qps->a->render_fmt=FMT_PNG;
-    else if (!strcmp(val,"ppm") )     qps->a->render_fmt=FMT_PPM;
-    else if (!strcmp(val,"yuv") )    {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_YUV420P;}
-    else if (!strcmp(val,"yuv420") ) {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_YUV420P;}
-    else if (!strcmp(val,"yuv440") ) {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_YUV440P;}
-    else if (!strcmp(val,"yuv422") ) {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_YUYV422;}
-    else if (!strcmp(val,"rgb") )    {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_RGB24;}
-    else if (!strcmp(val,"rgb") )    {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_BGR24;}
-    else if (!strcmp(val,"rgba"))    {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_RGBA;}
-    else if (!strcmp(val,"argb"))    {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_ARGB;}
-    else if (!strcmp(val,"bgra"))    {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_BGRA;}
+         if (!strcmp(val, "jpg"))     qps->a->render_fmt = FMT_JPG;
+    else if (!strcmp(val, "jpeg"))    qps->a->render_fmt = FMT_JPG;
+    else if (!strcmp(val, "png"))     qps->a->render_fmt = FMT_PNG;
+    else if (!strcmp(val, "ppm"))     qps->a->render_fmt = FMT_PPM;
+    else if (!strcmp(val, "yuv"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUV420P;}
+    else if (!strcmp(val, "yuv420")) {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUV420P;}
+    else if (!strcmp(val, "yuv440")) {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUV440P;}
+    else if (!strcmp(val, "yuv422")) {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUYV422;}
+    else if (!strcmp(val, "rgb"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_RGB24;}
+    else if (!strcmp(val, "rgb"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_BGR24;}
+    else if (!strcmp(val, "rgba"))   {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_RGBA;}
+    else if (!strcmp(val, "argb"))   {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_ARGB;}
+    else if (!strcmp(val, "bgra"))   {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_BGRA;}
     /* info, version, rc,... format */
-    else if (!strcmp(val,"html"))     qps->a->render_fmt=OUT_HTML;
-    else if (!strcmp(val,"xhtml"))    qps->a->render_fmt=OUT_HTML;
-    else if (!strcmp(val,"json"))     qps->a->render_fmt=OUT_JSON;
-    else if (!strcmp(val,"csv"))     {qps->a->render_fmt=OUT_CSV; qps->a->idx_option|=OPT_CSV;}
-    else if (!strcmp(val,"plain"))    qps->a->render_fmt=OUT_PLAIN;
+    else if (!strcmp(val, "html"))    qps->a->render_fmt = OUT_HTML;
+    else if (!strcmp(val, "xhtml"))   qps->a->render_fmt = OUT_HTML;
+    else if (!strcmp(val, "json"))    qps->a->render_fmt = OUT_JSON;
+    else if (!strcmp(val, "csv"))    {qps->a->render_fmt = OUT_CSV; qps->a->idx_option |= OPT_CSV;}
+    else if (!strcmp(val, "plain"))   qps->a->render_fmt = OUT_PLAIN;
   }
 }
 
 static void parse_http_query_params(struct queryparserstate *qps, char *query) {
   char *t, *s = query;
-  while(s && (t=strpbrk(s,"&?"))) {
-    *t='\0';
+  while(s && (t = strpbrk(s, "&?"))) {
+    *t = '\0';
     parse_param(qps, s);
-    s=t+1;
+    s = t+1;
   }
   if (s) parse_param(qps, s);
 }
@@ -148,14 +148,14 @@ static int parse_http_query(CONN *c, char *query, httpheader *h, ics_request_arg
 
   a->decode_fmt = PIX_FMT_RGB24;
   a->render_fmt = FMT_PNG;
-  a->frame=0;
+  a->frame = 0;
   a->out_width = a->out_height = -1; // auto-set
 
   parse_http_query_params(&qps, query);
 
   /* check for illegal paths */
   if (!qps.fn || check_path(qps.fn)) {
-    httperror(c->fd, 404, "File not found.", "File not found." );
+    httperror(c->fd, 404, "File not found.", "File not found.");
     return(-1);
   }
 
@@ -163,7 +163,7 @@ static int parse_http_query(CONN *c, char *query, httpheader *h, ics_request_arg
   if (qps.doit&3) {
     if (qps.fn) {
       a->file_name = malloc(1+strlen(c->d->docroot)+strlen(qps.fn)*sizeof(char));
-      sprintf(a->file_name,"%s%s",c->d->docroot, qps.fn);
+      sprintf(a->file_name, "%s%s", c->d->docroot, qps.fn);
       a->file_qurl = qps.fn;
     }
 
@@ -171,7 +171,7 @@ static int parse_http_query(CONN *c, char *query, httpheader *h, ics_request_arg
     struct stat sb;
     if (stat(a->file_name, &sb)) {
       dlog(DLOG_WARNING, "CON: file not found: '%s'\n", a->file_name);
-      httperror(c->fd, 404, "Not Found", "file not found." );
+      httperror(c->fd, 404, "Not Found", "file not found.");
       return(-1);
     }
 
@@ -184,7 +184,7 @@ static int parse_http_query(CONN *c, char *query, httpheader *h, ics_request_arg
 
     if (h) h->mtime = sb.st_mtime;
 
-    debugmsg(DEBUG_ICS, "serving '%s' f:%"PRId64" @%dx%d\n",a->file_name, a->frame, a->out_width, a->out_height);
+    debugmsg(DEBUG_ICS, "serving '%s' f:%"PRId64" @%dx%d\n", a->file_name, a->frame, a->out_width, a->out_height);
   }
   return qps.doit;
 }
@@ -252,22 +252,22 @@ void ics_http_handler(
     char *status = hdl_server_status_html(c);
     SEND200(status);
     free(status);
-    c->run=0;
+    c->run = 0;
   } else if (CTP("/favicon.ico")) {
     #include "favicon.h"
     httpheader h;
     memset(&h, 0, sizeof(httpheader));
-    h.ctype="image/x-icon";
-    h.length=sizeof(favicon_data);
+    h.ctype = "image/x-icon";
+    h.length = sizeof(favicon_data);
     http_tx(c->fd, 200, &h, sizeof(favicon_data), favicon_data);
-    c->run=0;
+    c->run = 0;
   } else if (CTP("/logo.jpg")) {
     httpheader h;
     memset(&h, 0, sizeof(httpheader));
-    h.ctype="image/jpeg";
-    h.length= LDLEN(doc_harvid_jpg);
+    h.ctype = "image/jpeg";
+    h.length = LDLEN(doc_harvid_jpg);
     http_tx(c->fd, 200, &h, h.length, LDVAR(doc_harvid_jpg));
-    c->run=0;
+    c->run = 0;
   } else if (CTP("/info")) { /* /info -> /file/info !! */
     ics_request_args a;
     memset(&a, 0, sizeof(ics_request_args));
@@ -287,7 +287,7 @@ void ics_http_handler(
     }
     if (a.file_name) free(a.file_name);
     if (a.file_qurl) free(a.file_qurl);
-    c->run=0;
+    c->run = 0;
   } else if (CTP("/rc")) {
     ics_request_args a;
     struct queryparserstate qps = {&a, NULL, 0};
@@ -297,7 +297,7 @@ void ics_http_handler(
     SEND200CT(info, CONTENT_TYPE_SWITCH(a.render_fmt));
     free(info);
     free(qps.fn);
-    c->run=0;
+    c->run = 0;
   } else if (CTP("/version")) {
     ics_request_args a;
     struct queryparserstate qps = {&a, NULL, 0};
@@ -307,19 +307,19 @@ void ics_http_handler(
     SEND200CT(info, CONTENT_TYPE_SWITCH(a.render_fmt));
     free(info);
     free(qps.fn);
-    c->run=0;
+    c->run = 0;
   } else if (CTP("/index/")) { /* /index/  -> /file/index/ ?! */
     struct stat sb;
     char *dp = url_unescape(&(path[7]), 0, NULL);
     char *abspath = malloc((strlen(c->d->docroot) + strlen(dp) + 2) * sizeof(char));
-    sprintf(abspath, "%s/%s",c->d->docroot, dp);
+    sprintf(abspath, "%s/%s", c->d->docroot, dp);
     if (cfg_noindex) {
       httperror(c->fd, 403, NULL, NULL);
     } else if (!dp || check_path(dp)) {
-      httperror(c->fd, 400, "Bad Request", "Illegal filename." );
+      httperror(c->fd, 400, "Bad Request", "Illegal filename.");
     } else if (stat(abspath, &sb) || !S_ISDIR(sb.st_mode)) {
       dlog(DLOG_WARNING, "CON: dir not found: '%s'\n", abspath);
-      httperror(c->fd, 404, "Not Found", "file not found." );
+      httperror(c->fd, 404, "Not Found", "file not found.");
     } else if (access(abspath, R_OK)) {
       dlog(DLOG_WARNING, "CON: permission denied for dir: '%s'\n", abspath);
       httperror(c->fd, 403, NULL, NULL);
@@ -329,7 +329,7 @@ void ics_http_handler(
       struct queryparserstate qps = {&a, NULL, 0};
       memset(&a, 0, sizeof(ics_request_args));
       parse_http_query_params(&qps, query);
-      snprintf(base_url,1024, "http://%s%s", host, path);
+      snprintf(base_url, 1024, "http://%s%s", host, path);
       char *msg = hdl_index_dir(c->d->docroot, base_url, dp, a.idx_option);
       SEND200CT(msg, (a.idx_option & OPT_CSV) ? "text/csv" : "text/html; charset=UTF-8");
       free(dp);
@@ -337,43 +337,43 @@ void ics_http_handler(
       free(msg);
       free(qps.fn);
     }
-    c->run=0;
+    c->run = 0;
   } else if (CTP("/admin")) { /* /admin/ */
-    if (strncasecmp(path,  "/admin/check", 12) == 0 ) {
+    if (strncasecmp(path,  "/admin/check", 12) == 0) {
       SEND200("ok\n");
-    } else if (strncasecmp(path,  "/admin/flush_cache", 18) == 0 ) {
+    } else if (strncasecmp(path,  "/admin/flush_cache", 18) == 0) {
       if (cfg_adminmask&ADM_FLUSHCACHE) {
         hdl_clear_cache();
         SEND200(OK200MSG("cache flushed\n"));
       } else {
         httperror(c->fd, 403, NULL, NULL);
       }
-    } else if (strncasecmp(path,  "/admin/purge_cache", 18) == 0 ) {
+    } else if (strncasecmp(path,  "/admin/purge_cache", 18) == 0) {
       if (cfg_adminmask&ADM_PURGECACHE) {
         hdl_purge_cache();
         SEND200(OK200MSG("cache purged\n"));
       } else {
         httperror(c->fd, 403, NULL, NULL);
       }
-    } else if (strncasecmp(path,  "/admin/shutdown", 15) == 0 ) {
+    } else if (strncasecmp(path,  "/admin/shutdown", 15) == 0) {
       if (cfg_adminmask&ADM_SHUTDOWN) {
         SEND200(OK200MSG("shutdown queued\n"));
-        c->d->run=0;
+        c->d->run = 0;
       } else {
         httperror(c->fd, 403, NULL, NULL);
       }
     } else {
-      httperror(c->fd, 400, "Bad Request", "Nonexistant admin command." );
+      httperror(c->fd, 400, "Bad Request", "Nonexistant admin command.");
     }
-    c->run=0;
-  } else if (CTP("/") && !strcmp(path, "/") && strlen(query)==0) { /* HOMEPAGE */
+    c->run = 0;
+  } else if (CTP("/") && !strcmp(path, "/") && strlen(query) == 0) { /* HOMEPAGE */
     char *msg = hdl_homepage_html(c);
     SEND200(msg);
     free(msg);
-    c->run=0;
+    c->run = 0;
   }
-  else if (  (strncasecmp(protocol,  "HTTP/", 5) == 0 ) /* /?file= -> /file/frame?.. !! */
-           &&(strcasecmp (method_str, "GET") == 0 )
+  else if (  (strncasecmp(protocol,  "HTTP/", 5) == 0) /* /?file= -> /file/frame?.. !! */
+           &&(strcasecmp (method_str, "GET") == 0)
            )
   {
     ics_request_args a;
@@ -383,19 +383,19 @@ void ics_http_handler(
     int rv = parse_http_query(c, query, &h, &a);
     if (rv < 0) {
       ;
-    } else if (rv==3) {
+    } else if (rv == 3) {
       hdl_decode_frame(c->fd, &h, &a);
     } else {
       httperror(c->fd, 400, "Bad Request", "<p>Insufficient parse query parameters.</p>");
     }
     if (a.file_name) free(a.file_name);
     if (a.file_qurl) free(a.file_qurl);
-    c->run=0;
+    c->run = 0;
   }
   else
   {
-    httperror(c->fd,500, "", "server does not know what to make of this.\n");
-    c->run=0;
+    httperror(c->fd, 500, "", "server does not know what to make of this.\n");
+    c->run = 0;
   }
 }
 

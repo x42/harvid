@@ -21,11 +21,11 @@
 #include "vinfo.h"
 
 void jvi_init (VInfo *ji) {
-  memset (ji,0,sizeof(VInfo));
-  memset(&ji->framerate,0, sizeof(TimecodeRate));
-  ji->framerate.num=25;
-  ji->framerate.den=1;
-  ji->out_width=ji->out_height=-1;
+  memset (ji, 0, sizeof(VInfo));
+  memset(&ji->framerate, 0, sizeof(TimecodeRate));
+  ji->framerate.num = 25;
+  ji->framerate.den = 1;
+  ji->out_width = ji->out_height = -1;
 }
 
 void jvi_free (VInfo *i) {

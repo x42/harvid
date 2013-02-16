@@ -29,21 +29,22 @@
 #include "daemon_log.h"
 
 
-/// Video Object Flags
-#define VOF_USED 1 //< decoder is currently in use - decoder locked
-#define VOF_OPEN 2 //< decoder is idle - decoder is a valid pointer for the file/ID
-#define VOF_VALID 4 //<  ID and filename are valid (ID may be in use by cache)
-#define VOF_PENDING 8 //< decoder is just opening a file (my_open_movie)
-#define VOF_INFO 16 //< decoder is currently in use for info (size/fps) lookup only
+/* Video Object Flags */
+#define VOF_USED 1    ///< decoder is currently in use - decoder locked
+#define VOF_OPEN 2    ///< decoder is idle - decoder is a valid pointer for the file/ID
+#define VOF_VALID 4   ///< ID and filename are valid (ID may be in use by cache)
+#define VOF_PENDING 8 ///< decoder is just opening a file (my_open_movie)
+#define VOF_INFO 16   ///< decoder is currently in use for info (size/fps) lookup only
 
 typedef struct JVOBJECT {
   struct JVOBJECT *next;
-  void *decoder;
-  int id;  // this ID is linked to the filename
-  time_t lru;
-  int64_t frame; // last decoded frame
-  int fmt;
-  pthread_mutex_t lock; // lock to modify flags;
+  void *decoder;        // opaque ffdecoder
+  int id;               // file ID from VidMap
+  int64_t frame;        // decoded frame-number
+  int fmt;              // pixel format
+  time_t lru;           // least recently used time
+  //int hitcount        //  -- unused; least-frequently used idea
+  pthread_mutex_t lock; // lock to modify flags and refcnt
   int flags;
   int infolock_refcnt;
 } JVOBJECT;
@@ -325,7 +326,7 @@ static int clearjvo(JVD *jvd, int f, int id, int age, pthread_mutex_t *l) {
 
 //get some unused allocated jvo or create one.
 static JVOBJECT *getjvo(JVD *jvd) {
-  int cnt_total=0;
+  int cnt_total = 0;
   JVOBJECT *dec_closed = NULL;
   JVOBJECT *dec_open = NULL;
   time_t lru = time(NULL) + 1;
@@ -414,7 +415,7 @@ static VidMap *newvid(VidMap *vml, int max_size) {
     vlru->lru = 0;
     vlru->id = 0;
     free(vlru->fn);
-    vlru->fn=NULL;
+    vlru->fn = NULL;
     return vlru;
   }
 }
@@ -425,7 +426,7 @@ static void clearvid(VidMap *vml, pthread_mutex_t *vmllock) {
   while (vptr) {
     VidMap *vnext = vptr->next;
     free(vptr->fn);
-    vptr->next=NULL;
+    vptr->next = NULL;
     free(vptr);
     vptr = vnext;
   }
@@ -453,7 +454,7 @@ static int get_id(JVD *jvd, const char *fn) {
         pthread_mutex_unlock(&jvd->lock_vml);
         continue;
       }
-      vm->lru=time(NULL);
+      vm->lru = time(NULL);
       pthread_mutex_unlock(&jvd->lock_vml);
       return vm->id;
     }
@@ -469,7 +470,7 @@ static int get_id(JVD *jvd, const char *fn) {
       vm = newvid(jvd->vml, jvd->cache_size);
       vm->id = jvd->monotonic++;
       vm->fn = strdup(fn);
-      vm->lru=time(NULL);
+      vm->lru = time(NULL);
       pthread_mutex_unlock(&jvd->lock_vml);
       return vm->id;
     } else {
@@ -498,10 +499,10 @@ static void release_id(JVD *jvd, int id) {
   pthread_mutex_lock(&jvd->lock_vml);
   VidMap *vm = searchvidmap(jvd->vml, 2, id, NULL);
   if (vm) {
-    vm->lru=0;
+    vm->lru = 0;
     vm->id = 0;
     free(vm->fn);
-    vm->fn=NULL;
+    vm->fn = NULL;
   }
   pthread_mutex_unlock(&jvd->lock_vml);
 }
@@ -741,30 +742,30 @@ static char *flags2txt(int f) {
   char *rv = NULL;
   size_t off = 0;
 
-  if (f==0) {
+  if (f == 0) {
     rv = (char*) realloc(rv, (off+2) * sizeof(char));
-    off+=sprintf(rv+off, "-");
+    off += sprintf(rv+off, "-");
     return rv;
   }
   if (f&VOF_USED) {
     rv = (char*) realloc(rv, (off+6) * sizeof(char));
-    off+=sprintf(rv+off, "used ");
+    off += sprintf(rv+off, "used ");
   }
   if (f&VOF_OPEN) {
     rv = (char*) realloc(rv, (off+6) * sizeof(char));
-    off+=sprintf(rv+off, "open ");
+    off += sprintf(rv+off, "open ");
   }
   if (f&VOF_VALID) {
     rv = (char*) realloc(rv, (off+7) * sizeof(char));
-    off+=sprintf(rv+off, "hasID ");
+    off += sprintf(rv+off, "hasID ");
   }
   if (f&VOF_PENDING) {
     rv = (char*) realloc(rv, (off+9) * sizeof(char));
-    off+=sprintf(rv+off, "pending ");
+    off += sprintf(rv+off, "pending ");
   }
   if (f&VOF_INFO) {
     rv = (char*) realloc(rv, (off+9) * sizeof(char));
-    off+=sprintf(rv+off, "info ");
+    off += sprintf(rv+off, "info ");
   }
   return rv;
 }
@@ -775,33 +776,33 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
   int i = 0;
   size_t off = 0;
 
-  off+=snprintf(m+off, n-off, "<h3>File Mapping:</h3>\n");
-  off+=snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
-  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Filename</th><th>LRU</th></tr>\n");
-  off+=snprintf(m+off, n-off, "\n");
+  off += snprintf(m+off, n-off, "<h3>File Mapping:</h3>\n");
+  off += snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
+  off += snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Filename</th><th>LRU</th></tr>\n");
+  off += snprintf(m+off, n-off, "\n");
   while (vptr) {
-      off+=snprintf(m+off, n-off, "<tr><td>%i</td><td>%i</td><td>%s</td><td>%"PRIlld"</td></tr>\n",
+      off += snprintf(m+off, n-off, "<tr><td>%i</td><td>%i</td><td>%s</td><td>%"PRIlld"</td></tr>\n",
           i++, vptr->id, vptr->fn?vptr->fn:"(null)", (long long)vptr->lru);
     vptr = vptr->next;
   }
-  off+=snprintf(m+off, n-off, "</table>\n");
+  off += snprintf(m+off, n-off, "</table>\n");
 
-  i=0;
-  off+=snprintf(m+off, n-off, "<h3>Decoder Objects:</h3>\n");
-  off+=snprintf(m+off, n-off, "<p>busy: %d%s</p>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
-  off+=snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
-  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th>"/* "<th>Decoder</th>"*/"<th>PixFmt</th><th>Frame#</th><th>LRU</th></tr>\n");
-  off+=snprintf(m+off, n-off, "\n");
+  i = 0;
+  off += snprintf(m+off, n-off, "<h3>Decoder Objects:</h3>\n");
+  off += snprintf(m+off, n-off, "<p>busy: %d%s</p>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
+  off += snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
+  off += snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th>"/* "<th>Decoder</th>"*/"<th>PixFmt</th><th>Frame#</th><th>LRU</th></tr>\n");
+  off += snprintf(m+off, n-off, "\n");
   while (cptr) {
     char *tmp = flags2txt(cptr->flags);
     char *fn = get_fn((JVD*)p, cptr->id);
-    off+=snprintf(m+off, n-off,
+    off += snprintf(m+off, n-off,
         "<tr><td>%i</td><td>%i</td><td>%s</td><td>%s</td>"/*"<td>%s</td>"*/"<td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
         i++, cptr->id, tmp, fn?fn:"-", /* (cptr->decoder?LIBAVCODEC_IDENT:"null"), */ff_fmt_to_text(cptr->fmt), cptr->frame, (long long)cptr->lru);
     free(tmp);
     cptr = cptr->next;
   }
-  off+=snprintf(m+off, n-off, "</table>\n");
+  off += snprintf(m+off, n-off, "</table>\n");
   return(off);
 }
 

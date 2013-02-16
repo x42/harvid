@@ -40,21 +40,21 @@
 
 static int write_jpeg(VInfo *ji, uint8_t *buffer, int quality, FILE *x) {
   uint8_t *line;
-  int n, y=0, i, line_width;
+  int n, y = 0, i, line_width;
 
   struct jpeg_compress_struct cjpeg;
   struct jpeg_error_mgr jerr;
   JSAMPROW row_ptr[1];
 
-  line=malloc(ji->out_width * 3);
+  line = malloc(ji->out_width * 3);
   if (!line) {
     dlog(DLOG_CRIT, "IMF: OUT OF MEMORY, Exiting...\n");
     exit(1);
   }
   cjpeg.err = jpeg_std_error(&jerr);
   jpeg_create_compress (&cjpeg);
-  cjpeg.image_width = ji->out_width;
-  cjpeg.image_height= ji->out_height;
+  cjpeg.image_width  = ji->out_width;
+  cjpeg.image_height = ji->out_height;
   cjpeg.input_components = 3;
   cjpeg.in_color_space = JCS_RGB;
 
@@ -64,18 +64,18 @@ static int write_jpeg(VInfo *ji, uint8_t *buffer, int quality, FILE *x) {
 
   jpeg_stdio_dest (&cjpeg, x);
   jpeg_start_compress (&cjpeg, TRUE);
-  row_ptr[0]=line;
-  line_width=ji->out_width * 3;
-  n=0;
+  row_ptr[0] = line;
+  line_width = ji->out_width * 3;
+  n = 0;
 
   for (y = 0; y < ji->out_height; y++)
     {
-      for (i = 0; i< line_width; i+=3)
+      for (i = 0; i< line_width; i += 3)
 	{
 	  line[i]   = buffer[n];
 	  line[i+1] = buffer[n+1];
 	  line[i+2] = buffer[n+2];
-	  n+=3;
+	  n += 3;
 	}
       jpeg_write_scanlines (&cjpeg, row_ptr, 1);
     }
@@ -121,14 +121,14 @@ static int write_png(VInfo *ji, uint8_t *image, FILE *x) {
 
 static int write_ppm(VInfo *ji, uint8_t *image, FILE *x) {
 
-  fprintf(x,"P6\n%d %d\n255\n",ji->out_width,ji->out_height);
-  fwrite(image,ji->out_height,3*ji->out_width,x);
+  fprintf(x, "P6\n%d %d\n255\n", ji->out_width, ji->out_height);
+  fwrite(image, ji->out_height, 3*ji->out_width, x);
 
   return(0);
 }
 
 static FILE *open_outfile(char *filename) {
-  if (!strcmp(filename,"-")) return stdout;
+  if (!strcmp(filename, "-")) return stdout;
   return fopen(filename, "w+");
 }
 
@@ -185,7 +185,7 @@ size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf) {
   }
   fflush(x);
   *out = (uint8_t*) malloc(rsize*sizeof(uint8_t));
-  if (fread(*out, sizeof(char), rsize, x) !=rsize) {
+  if (fread(*out, sizeof(char), rsize, x) != rsize) {
     dlog(LOG_WARNING, "IMF: short read. - possibly incomplete image\n");
   }
   fclose(x);
@@ -197,7 +197,7 @@ size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf) {
 
 void write_image(char *file_name, int render_fmt, VInfo *ji, uint8_t *buf) {
   FILE *x;
-  if ( (x = open_outfile(file_name)) ) {
+  if ((x = open_outfile(file_name))) {
     switch (render_fmt) {
       case FMT_JPG:
 	if (write_jpeg(ji, buf, JPEG_QUALITY, x))
@@ -215,7 +215,7 @@ void write_image(char *file_name, int render_fmt, VInfo *ji, uint8_t *buf) {
 	dlog(LOG_ERR, "IMF: Unknown outformat %d\n", render_fmt);
 	break;
     }
-    if (strcmp(file_name,"-")) fclose(x);
+    if (strcmp(file_name, "-")) fclose(x);
     dlog(LOG_INFO, "IMF: Outputfile %s closed\n", file_name);
   }
   else

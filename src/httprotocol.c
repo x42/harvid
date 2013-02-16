@@ -49,7 +49,7 @@
 const char * send_http_status_fd (int fd, int status) {
   char http_head[128];
   const char *title;
-  switch ( status ) {
+  switch (status) {
     case 200: title = "OK"; break;
   //case 302: title = "Found"; break;
   //case 304: title = "Not Modified"; break;
@@ -62,9 +62,9 @@ const char * send_http_status_fd (int fd, int status) {
     case 500: title = "Internal Server Error"; break;
     case 501: title = "Not Implemented"; break;
     case 503: title = "Service Temporarily Unavailable"; break;
-    default:  title = "Internal Server Error"; status=500; break;
+    default:  title = "Internal Server Error"; status = 500; break;
   }
-  snprintf(http_head, sizeof(http_head), "%s %d %s\015\012",PROTOCOL, status, title );
+  snprintf(http_head, sizeof(http_head), "%s %d %s\015\012", PROTOCOL, status, title);
   CSEND(fd, http_head);
   return title;
 }
@@ -73,74 +73,73 @@ const char * send_http_status_fd (int fd, int status) {
 
 void send_http_header_fd(int fd , int s, httpheader *h) {
   char hd[HTHSIZE];
-  int off=0;
-
+  int off = 0;
   time_t now;
   char timebuf[100];
 
   now = time(NULL);
   strftime(timebuf, sizeof(timebuf), RFC1123FMT, gmtime(&now));
-  off+=snprintf(hd+off, HTHSIZE-off,"Date: %s\n", timebuf);
-  off+=snprintf(hd+off, HTHSIZE-off,"Server: %s\r\n", SERVERVERSION);
+  off += snprintf(hd+off, HTHSIZE-off, "Date: %s\n", timebuf);
+  off += snprintf(hd+off, HTHSIZE-off, "Server: %s\r\n", SERVERVERSION);
 
   if (h && h->ctype)
-    off+=snprintf(hd+off, HTHSIZE-off,"Content-type: %s\r\n", h->ctype);
+    off += snprintf(hd+off, HTHSIZE-off, "Content-type: %s\r\n", h->ctype);
   else
-    off+=snprintf(hd+off, HTHSIZE-off,"Content-type: text/html; charset=UTF-8\r\n");
+    off += snprintf(hd+off, HTHSIZE-off, "Content-type: text/html; charset=UTF-8\r\n");
   if (h && h->encoding)
-    off+=snprintf(hd+off, HTHSIZE-off,"Content-Encoding: %s\r\n", h->encoding);
+    off += snprintf(hd+off, HTHSIZE-off, "Content-Encoding: %s\r\n", h->encoding);
   if (h && h->extra)
-    off+=snprintf(hd+off, HTHSIZE-off,"%s\r\n", h->extra);
+    off += snprintf(hd+off, HTHSIZE-off, "%s\r\n", h->extra);
   if (h && h->length > 0)
 #ifdef HAVE_WINDOWS
-    off+=snprintf(hd+off, HTHSIZE-off,"Content-Length:%lu\r\n", (unsigned long) h->length);
+    off += snprintf(hd+off, HTHSIZE-off, "Content-Length:%lu\r\n", (unsigned long) h->length);
 #else
-    off+=snprintf(hd+off, HTHSIZE-off,"Content-Length:%zd\r\n", h->length);
+    off += snprintf(hd+off, HTHSIZE-off, "Content-Length:%zd\r\n", h->length);
 #endif
   if (h && h->retryafter)
-    off+=snprintf(hd+off, HTHSIZE-off,"Retry-After:%s\r\n", h->retryafter);
+    off += snprintf(hd+off, HTHSIZE-off, "Retry-After:%s\r\n", h->retryafter);
   else if (s == 503)
-    off+=snprintf(hd+off, HTHSIZE-off,"Retry-After:5\r\n");
+    off += snprintf(hd+off, HTHSIZE-off, "Retry-After:5\r\n");
   if (h && h->mtime) {
     strftime(timebuf, sizeof(timebuf), RFC1123FMT, gmtime(&h->mtime));
-    off+=snprintf(hd+off, HTHSIZE-off,"Last-Modified: %s\r\n",timebuf);
+    off += snprintf(hd+off, HTHSIZE-off, "Last-Modified: %s\r\n", timebuf);
   }
 
-  off+=snprintf( hd+off, HTHSIZE-off,"Connection: close\r\n" );
-  off+=snprintf( hd+off, HTHSIZE-off,"\r\n" );
+  off += snprintf(hd+off, HTHSIZE-off, "Connection: close\r\n");
+  off += snprintf(hd+off, HTHSIZE-off, "\r\n");
   CSEND(fd, hd);
 }
 
 void httperror(int fd , int s, const char *title, const char *str) {
   char hd[HTHSIZE];
-  int off=0;
+  int off = 0;
 
   const char *t = send_http_status_fd(fd, s);
   send_http_header_fd(fd, s, NULL);
 
-  if (!title) title=t;
-  off+=snprintf( hd+off, HTHSIZE-off, DOCTYPE HTMLOPEN);
-  off+=snprintf( hd+off, HTHSIZE-off,"<title>Error %i %s</title></head>", s, title );
-  off+=snprintf( hd+off, HTHSIZE-off,"<body><h1>%s</h1>", title);
+  if (!title) title = t;
+  off += snprintf(hd+off, HTHSIZE-off, DOCTYPE HTMLOPEN);
+  off += snprintf(hd+off, HTHSIZE-off, "<title>Error %i %s</title></head>", s, title);
+  off += snprintf(hd+off, HTHSIZE-off, "<body><h1>%s</h1>", title);
 
   if (str && strlen(str)>0) {
-    off+=snprintf( hd+off, HTHSIZE-off,"<p>%s</p>\r\n", str);
+    off += snprintf(hd+off, HTHSIZE-off, "<p>%s</p>\r\n", str);
   } else {
-    off+=snprintf( hd+off, HTHSIZE-off,"<p>%s</p>\r\n", "Sorry.");
+    off += snprintf(hd+off, HTHSIZE-off, "<p>%s</p>\r\n", "Sorry.");
   }
-  off+=snprintf( hd+off, HTHSIZE-off, ERRFOOTER);
+  off += snprintf(hd+off, HTHSIZE-off, ERRFOOTER);
   CSEND(fd, hd);
 }
 
 int http_tx(int fd, int s, httpheader *h, size_t len, const uint8_t *buf) {
-  h->length=len;
+  h->length = len;
   send_http_status_fd(fd, s);
   send_http_header_fd(fd, s, h);
 
   // select
   #define WRITE_TIMEOUT (50) // TODO make configurable
   int timeout = WRITE_TIMEOUT;
-  size_t offset =0;
+  size_t offset = 0;
   while (timeout > 0) {
     fd_set rd_set, wr_set;
     struct timeval tv;
@@ -150,34 +149,34 @@ int http_tx(int fd, int s, httpheader *h, size_t len, const uint8_t *buf) {
     FD_ZERO(&rd_set);
     FD_ZERO(&wr_set);
     FD_SET(fd, &wr_set);
-    int ready=select(fd+1, &rd_set, &wr_set, NULL, &tv);
+    int ready = select(fd+1, &rd_set, &wr_set, NULL, &tv);
     if(ready < 0) return (-1); // error
     if(!ready) timeout--;
     else {
 #ifndef HAVE_WINDOWS
       int rv = write(fd, buf+offset, len-offset);
 #else
-      int rv = send(fd, (const char*) (buf+offset), (size_t) (len-offset),0);
+      int rv = send(fd, (const char*) (buf+offset), (size_t) (len-offset), 0);
 #endif
       debugmsg(DEBUG_HTTP, "  written (%u/%u) @%u on fd:%i\n", rv, len-offset, offset, fd);
       if (rv < 0) {
-        dlog(DLOG_WARNING,"HTTP: write to socket failed: %s\n", strerror(errno));
+        dlog(DLOG_WARNING, "HTTP: write to socket failed: %s\n", strerror(errno));
         break; // TODO: don't break on EAGAIN, ENOBUFS, ENOMEM or similar
       } else if (rv != len-offset) {
          dlog(DLOG_WARNING, "HTTP: short-write (%u/%u) @%u on fd:%i\n", rv, len-offset, offset, fd);
-         timeout=WRITE_TIMEOUT;
-         offset+=rv;
+         timeout = WRITE_TIMEOUT;
+         offset += rv;
       } else {
-         offset+=rv;
+         offset += rv;
         break;
       }
     }
   }
   if (!timeout)
-    dlog(DLOG_ERR, "HTTP: write timeout fd:%i\n",fd);
+    dlog(DLOG_ERR, "HTTP: write timeout fd:%i\n", fd);
 
   if (offset != len) {
-    dlog(DLOG_WARNING, "HTTP: write to fd:%d failed at (%u/%u) = %.2f%%\n",fd, offset, len, (float)offset*100.0/(float)len);
+    dlog(DLOG_WARNING, "HTTP: write to fd:%d failed at (%u/%u) = %.2f%%\n", fd, offset, len, (float)offset*100.0/(float)len);
     return (1);
   }
   return (0);
@@ -191,7 +190,7 @@ char *url_escape(const char *string, int inlength) {
   char *testing_ptr = NULL;
   unsigned char in; /* we need to treat the characters unsigned */
   size_t newlen = alloc;
-  int strindex=0;
+  int strindex = 0;
   size_t length;
 
   ns = malloc(alloc);
@@ -214,7 +213,7 @@ char *url_escape(const char *string, int inlength) {
     case 'K': case 'L': case 'M': case 'N': case 'O':
     case 'P': case 'Q': case 'R': case 'S': case 'T':
     case 'U': case 'V': case 'W': case 'X': case 'Y': case 'Z':
-      ns[strindex++]=in;
+      ns[strindex++] = in;
       break;
     default:
       newlen += 2; /* the size grows with two, since this'll become a %XX */
@@ -222,7 +221,7 @@ char *url_escape(const char *string, int inlength) {
         alloc *= 2;
         testing_ptr = realloc(ns, alloc);
         if(!testing_ptr) {
-          free( ns );
+          free(ns);
           return NULL;
         }
         else {
@@ -230,12 +229,12 @@ char *url_escape(const char *string, int inlength) {
         }
       }
       snprintf(&ns[strindex], 4, "%%%02X", in);
-      strindex+=3;
+      strindex += 3;
       break;
     }
     string++;
   }
-  ns[strindex]=0; /* terminate it */
+  ns[strindex] = 0; /* terminate it */
   return ns;
 }
 
@@ -248,10 +247,10 @@ char *url_unescape(const char *string, int length, int *olen) {
   int alloc = (length?length:(int)strlen(string))+1;
   char *ns = malloc(alloc);
   unsigned char in;
-  int strindex=0;
+  int strindex = 0;
   long hex;
 
-  if( !ns ) return NULL;
+  if(!ns) return NULL;
 
   while(--alloc > 0) {
     in = *string;
@@ -267,14 +266,14 @@ char *url_unescape(const char *string, int length, int *olen) {
 
       in = (unsigned char)hex; /* this long is never bigger than 255 anyway */
 
-      string+=2;
-      alloc-=2;
+      string += 2;
+      alloc -= 2;
     }
 
     ns[strindex++] = in;
     string++;
   }
-  ns[strindex]=0; /* terminate it */
+  ns[strindex] = 0; /* terminate it */
 
     /* store output size */
   if(olen) *olen = strindex;
@@ -304,24 +303,24 @@ static char *get_next_line(char **str) {
   char *xx = strpbrk(t, "\n\r");
   if (!xx) return (NULL);
   *xx++ = '\0';
-  while (xx && (*xx=='\r' || *xx=='\n')) xx++;
-  *str=xx;
+  while (xx && (*xx == '\r' || *xx == '\n')) xx++;
+  *str = xx;
   return t;
 }
 
 /* check accept  for image/png[;..] */
 static int compare_accept(char *line) {
-  int rv=0;
+  int rv = 0;
   char *tmp;
-  if ((tmp=strchr(line,';'))) *tmp='\0'; // ignore opt. parameters
-  if (!strncmp(line,"image/",6)) {
-    rv|=1;
-    debugmsg(DEBUG_HTTP, "HTTP: accept image: %s\n",line);
-  } else if (!strcmp(line,"*/*")) {
-    rv|=2;
-    debugmsg(DEBUG_HTTP, "HTTP: accept all: %s\n",line);
+  if ((tmp = strchr(line, ';'))) *tmp = '\0'; // ignore opt. parameters
+  if (!strncmp(line, "image/", 6)) {
+    rv |= 1;
+    debugmsg(DEBUG_HTTP, "HTTP: accept image: %s\n", line);
+  } else if (!strcmp(line, "*/*")) {
+    rv |= 2;
+    debugmsg(DEBUG_HTTP, "HTTP: accept all: %s\n", line);
   }
-  if (tmp) *tmp=';';
+  if (tmp) *tmp = ';';
   return rv;
 }
 
@@ -332,121 +331,121 @@ static int compare_accept(char *line) {
  */
 int protocol_handler(CONN *c, void *unused) {
 #ifndef HAVE_WINDOWS
-  int num=read(c->fd, c->buf, BUFSIZ);
+  int num = read(c->fd, c->buf, BUFSIZ);
 #else
-  int num=recv(c->fd, c->buf, BUFSIZ, 0);
+  int num = recv(c->fd, c->buf, BUFSIZ, 0);
 #endif
   if (num < 0 && (errno == EINTR || errno == EAGAIN)) return(0);
-  if (num < 0 ) return(-1);
-  if (num == 0 ) return(-1); // end of input
-  c->buf[num]='\0';
+  if (num < 0) return(-1);
+  if (num == 0) return(-1); // end of input
+  c->buf[num] = '\0';
 
 #if 0 // non HTTP commands - security issue
-  if (!strncmp(c->buf, "quit", 4)) {c->run=0; return(0);}
-  else if (!strncmp(c->buf, "shutdown", 8)) { c->d->run=0; return(0);}
+  if (!strncmp(c->buf, "quit", 4)) {c->run = 0; return(0);}
+  else if (!strncmp(c->buf, "shutdown", 8)) { c->d->run = 0; return(0);}
 #endif
 
-  debugmsg(DEBUG_HTTP, "HTTP: CON raw-input: '%s'\n",c->buf);
+  debugmsg(DEBUG_HTTP, "HTTP: CON raw-input: '%s'\n", c->buf);
 
   char *method_str;
   char *path, *protocol, *query;
 
   /* Parse the first line of the request. */
   method_str = c->buf;
-  if ( method_str == (char*) 0 ) {
-    httperror(c->fd, 400, "Bad Request", "Can't parse request method." ); c->run=0; return(0);
+  if (method_str == (char*) 0) {
+    httperror(c->fd, 400, "Bad Request", "Can't parse request method."); c->run = 0; return(0);
   }
-  path = strpbrk( method_str, " \t\012\015" );
-  if ( path == (char*) 0 ) {
-    httperror(c->fd, 400, "Bad Request", "Can't parse request path." ); c->run=0; return(0);
+  path = strpbrk(method_str, " \t\012\015");
+  if (path == (char*) 0) {
+    httperror(c->fd, 400, "Bad Request", "Can't parse request path."); c->run = 0; return(0);
   }
   *path++ = '\0';
-  path += strspn( path, " \t\012\015" );
-  protocol = strpbrk( path, " \t\012\015" );
-  if ( protocol == (char*) 0 ) {
-    httperror(c->fd, 400, "Bad Request", "Can't parse request protocol." ); c->run=0; return(0);
+  path += strspn(path, " \t\012\015");
+  protocol = strpbrk(path, " \t\012\015");
+  if (protocol == (char*) 0) {
+    httperror(c->fd, 400, "Bad Request", "Can't parse request protocol."); c->run = 0; return(0);
   }
   *protocol++ = '\0';
-  protocol += strspn( protocol, " \t\012\015" );
+  protocol += strspn(protocol, " \t\012\015");
 
-  query = strchr( path, '?' );
-  if ( query == (char*) 0 )
+  query = strchr(path, '?');
+  if (query == (char*) 0)
     query = "";
   else
   *query++ = '\0';
 
-  char *header = strpbrk(protocol, "\n\r \t\012\015" );
-  if (!header && strncmp(protocol,"HTTP/0.9", 8)) {
-    httperror(c->fd, 400, "Bad Request", "Can't parse request header." );
-    c->run=0; return(0);
+  char *header = strpbrk(protocol, "\n\r \t\012\015");
+  if (!header && strncmp(protocol, "HTTP/0.9", 8)) {
+    httperror(c->fd, 400, "Bad Request", "Can't parse request header.");
+    c->run = 0; return(0);
   } else if (!header)
     header = "";
   else {
     *header++ = '\0';
-    while (header && (*header=='\r' || *header=='\n')) header++;
+    while (header && (*header == '\r' || *header == '\n')) header++;
   }
 
   debugmsg(DEBUG_HTTP, "HTTP: CON header-len: %i\n", strlen(header));
   debugmsg(DEBUG_HTTP, "HTTP: CON header: ''%s''\n", header);
 
 
-  char *cookie=NULL, *host=NULL, *referer=NULL, *useragent=NULL, *accept=NULL;
-  char *contenttype=NULL; long int contentlength = 0;
+  char *cookie = NULL, *host = NULL, *referer = NULL, *useragent = NULL;
+  char *contenttype = NULL, *accept = NULL; long int contentlength = 0;
   char *cp, *line;
 
   /* Parse the rest of the request headers. */
-  while ( (line=get_next_line(&header)) )
+  while ((line = get_next_line(&header)))
   {
-    if ( line[0] == '\0' )
+    if (line[0] == '\0')
         break;
-    else if ( strncasecmp( line, "Accept:", 7 ) == 0 )
+    else if (strncasecmp(line, "Accept:", 7) == 0)
         {
         cp = &line[7];
-        cp += strspn( cp, " \t" );
+        cp += strspn(cp, " \t");
         accept = cp;
         }
-    else if ( strncasecmp( line, "Cookie:", 7 ) == 0 )
+    else if (strncasecmp(line, "Cookie:", 7) == 0)
         {
         cp = &line[7];
-        cp += strspn( cp, " \t" );
+        cp += strspn(cp, " \t");
         cookie = cp;
         }
-    else if ( strncasecmp( line, "Host:", 5 ) == 0 )
+    else if (strncasecmp(line, "Host:", 5) == 0)
       {
         cp = &line[5];
-        cp += strspn( cp, " \t" );
+        cp += strspn(cp, " \t");
         host = cp;
-        if ( strchr( host, '/' ) != (char*) 0 || host[0] == '.' ) {
-          httperror(c->fd, 400, "Bad Request", "Can't parse request." );
-          c->run=0; return(0);
+        if (strchr(host, '/') != (char*) 0 || host[0] == '.') {
+          httperror(c->fd, 400, "Bad Request", "Can't parse request.");
+          c->run = 0; return(0);
         }
       }
-    else if ( strncasecmp( line, "Referer:", 8 ) == 0 )
+    else if (strncasecmp(line, "Referer:", 8) == 0)
         {
         cp = &line[8];
-        cp += strspn( cp, " \t" );
+        cp += strspn(cp, " \t");
         referer = cp;
         }
-    else if ( strncasecmp( line, "User-Agent:", 11 ) == 0 )
+    else if (strncasecmp(line, "User-Agent:", 11) == 0)
         {
         cp = &line[11];
-        cp += strspn( cp, " \t" );
+        cp += strspn(cp, " \t");
         useragent = cp;
         }
-    else if ( strncasecmp( line, "Content-Type:", 13 ) == 0 )
+    else if (strncasecmp(line, "Content-Type:", 13) == 0)
         {
         cp = &line[13];
-        cp += strspn( cp, " \t" );
+        cp += strspn(cp, " \t");
         contenttype = cp;
         }
-    else if ( strncasecmp( line, "Content-Length:", 15 ) == 0 )
+    else if (strncasecmp(line, "Content-Length:", 15) == 0)
         {
         cp = &line[15];
-        cp += strspn( cp, " \t" );
+        cp += strspn(cp, " \t");
         contentlength = atoll(cp);
         }
     else
-        debugmsg(DEBUG_HTTP, "HTTP: CON header not parsed: '%s'\n",line);
+        debugmsg(DEBUG_HTTP, "HTTP: CON header not parsed: '%s'\n", line);
 
   }
   debugmsg(DEBUG_HTTP, "HTTP: CON header co='%s' ho='%s' re='%s' ua='%s' ac='%s'\n",
@@ -455,34 +454,34 @@ int protocol_handler(CONN *c, void *unused) {
   /* process headers */
 
   int ac = accept?0:-1;
-  line=accept;
-  while (line && (cp=strchr(line, ','))) {
-    *cp='\0';
-    ac|=compare_accept(line);
-    line=cp+1;
+  line = accept;
+  while (line && (cp = strchr(line, ','))) {
+    *cp = '\0';
+    ac |= compare_accept(line);
+    line = cp+1;
   }
   if (line)
-    ac|=compare_accept(line);
+    ac |= compare_accept(line);
 
-  if (ac==0) {
-    httperror(c->fd,415, "", "Your client does not accept any files that this server can produce.\n");
-    c->run=0;
+  if (ac == 0) {
+    httperror(c->fd, 415, "", "Your client does not accept any files that this server can produce.\n");
+    c->run = 0;
     return(0);
   }
 
   debugmsg(DEBUG_CON, "HTTP: Proto: '%s', method: '%s', path: '%s' query:'%s'\n", protocol, method_str, path, query);
 
   /* pre-process request */
-  if (!strcmp("POST",method_str)
+  if (!strcmp("POST", method_str)
       && (contenttype && !strcmp(contenttype, "application/x-www-form-urlencoded"))
       && (contentlength > 0 && contentlength <= strlen(header) /* - (header-c->buf) */ /* -num */)
       && (num < BUFSIZ)
-        ) {
-      header[contentlength]='\0';
+      ) {
+      header[contentlength] = '\0';
       debugmsg(DEBUG_CON, "HTTP: translate POST->GET query - length data:%d cl:%ld\n", strlen(header), contentlength);
       debugmsg(DEBUG_CON, "HTTP: x-www-form-urlencoded:'%s'\n", header);
-      query=header;
-      method_str="GET";
+      query = header;
+      method_str = "GET";
   }
 
   /* process request */
