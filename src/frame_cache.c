@@ -104,8 +104,8 @@ static videocacheline *getcl(videocacheline *cache, int cfg_cachesize) {
   cptr = over; /* replace LRU */
   if (cptr && !(cptr->flags&(CLF_USED|CLF_LOCK))) {
     cptr->lru = 0; cptr->frame = -1;
-    cptr->fmt = PIX_FMT_NONE;
-    cptr->w = cptr->h = 0;
+    /* retain w, h  and fmt - we can keep ALLOC
+     * -> call realloccl_buf() after this fn. */
     cptr->flags &= (CLF_ALLOC);
     assert(cptr->refcnt == 0);
     return (cptr);
@@ -160,7 +160,7 @@ static void realloccl_buf(videocacheline *cptr, int w, int h, int fmt) {
     if (cptr->w == w && cptr->h == h && cptr->fmt == fmt)
       return; // already allocated
 
-  if (cptr->flags&CLF_ALLOC) free(cptr->b);
+  free(cptr->b);
   cptr->b = NULL;
   cptr->b = calloc(picture_bytesize(fmt, w, h), sizeof(uint8_t));
   cptr->flags |= CLF_ALLOC;
@@ -214,9 +214,9 @@ static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, int w, int h
     rv = NULL;
   }
 
-  /* too bad, now we need to allocate a cacheline and then decode the video.. */
-
-  int timeout=100;
+  /* too bad, now we need to allocate a new or free an used
+   * cacheline and then decode the video... */
+  int timeout = 250; /* 1 second to get a buffer */
   do {
     pthread_mutex_lock(&cc->lock);
     rv = getcl(cc->vcache, cc->cfg_cachesize);
