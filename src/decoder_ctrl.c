@@ -272,6 +272,7 @@ static int clearjvo(JVD *jvd, int f, int id, int age, pthread_mutex_t *l) {
 	continue;
       }
       if (f < 4) {
+	dlog(DLOG_WARNING, "DTCL: waiting for decoder to be unlocked.\n");
         do {
           pthread_mutex_unlock(&cptr->lock);
           mymsleep(5);
@@ -281,7 +282,7 @@ static int clearjvo(JVD *jvd, int f, int id, int age, pthread_mutex_t *l) {
         /* we really should not do this */
         dlog(DLOG_ERR, "DCTL: request to free an active decoder.\n");
         cptr->flags &= ~(VOF_USED|VOF_PENDING|VOF_INFO);
-        cptr->infolock_refcnt = 0; // XXX will trigger assert() on dctrl_release_infolock()
+        cptr->infolock_refcnt = 0; // XXX may trigger assert() in dctrl_release_infolock()
       }
     }
 
