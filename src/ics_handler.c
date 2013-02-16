@@ -69,7 +69,10 @@ extern int cfg_adminmask;
  * check for invalid or potentially malicious path.
  */
 static int check_path(char *f) {
-	int len = strlen(f);
+	int len;
+	if (!f) return -1;
+	len = strlen(f);
+	if (len == 0) return 0;
 	/* check for possible 'escape docroot' trickery */
 	if ( f[0] == '/' || strcmp( f, ".." ) == 0 || strncmp( f, "../", 3 ) == 0
 			|| strstr( f, "/../" ) != (char*) 0
