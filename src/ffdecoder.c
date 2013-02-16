@@ -214,6 +214,10 @@ int ff_close_movie(void *ptr) {
   ff->current_file=NULL;
 
   if (!ff->pFrameFMT) return(-1);
+  if (ff->out_width < 0 || ff->out_height < 0) {
+    ff->out_width = ff->movie_width;
+    ff->out_height = ff->movie_height;
+  }
   ff_set_bufferptr(ff, ff->internal_buffer); // restore allocated movie-buffer..
   if (ff->internal_buffer) free(ff->internal_buffer); // done in pFrameFMT?
   if (ff->pFrameFMT) av_free(ff->pFrameFMT);
