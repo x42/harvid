@@ -321,7 +321,9 @@ static JVOBJECT *getjvo(JVD *jvd) {
   JVOBJECT *dec_open = NULL;
   time_t lru = time(NULL) + 1;
   JVOBJECT *cptr = jvd->jvo;
-  clearjvo(jvd, 1, -1, 600, &jvd->lock_jvo); // garbage collect
+#if 1 // garbage collect, close decoders not used since > 10 mins
+  clearjvo(jvd, 1, -1, 600, &jvd->lock_jvo);
+#endif
   while (cptr) {
     if ((cptr->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_PENDING|VOF_INFO)) == 0) {
       return (cptr);

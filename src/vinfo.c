@@ -31,3 +31,5 @@ void jvi_init (VInfo *ji) {
 void jvi_free (VInfo *i) {
   ;
 }
+
+// vim:sw=2 sts=2 ts=8 et:

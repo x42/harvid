@@ -38,9 +38,9 @@ typedef struct {
 } ics_request_args;
 
 void ics_http_handler(
-		CONN *c,
-		char *host, char *protocol,
-		char *path, char *method_str,
-		char *query, char *cookie
-		);
+  CONN *c,
+  char *host, char *protocol,
+  char *path, char *method_str,
+  char *query, char *cookie
+  );
 #endif

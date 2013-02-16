@@ -108,15 +108,15 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
     case PIX_FMT_UYVY422:
       {
 	int i;
-	for (i=0;i<w*h*2;i+=2) {
-	 buf[i]=0x80;
-	 buf[i+1]=0x00;
+	for (i=0; i < w*h*2; i+=2) {
+	 buf[i] = 0x80;
+	 buf[i+1] = 0x00;
 	}
       }
       break;
     case PIX_FMT_YUV420P:
       {
-	size_t Ylen  = w * h;
+	size_t Ylen = w * h;
 	memset(buf,0,Ylen);
 	memset(buf+Ylen,0x80,Ylen/2);
       }
@@ -150,15 +150,15 @@ static void ff_caononicalize_size2(void *ptr, int *w, int *h) {
   float aspect_ratio = ff_get_aspectratio(ptr);
   if (!w || !h) return;
 
-  if ((*h) <0  && (*w) >0) (*h) = (int) floorf((float)(*w)/aspect_ratio);
-  else if ((*h) >0  && (*w) <0) (*w) = (int) floorf((float)(*h)*aspect_ratio);
+  if ((*h) < 0  && (*w) > 0) (*h) = (int) floorf((float)(*w)/aspect_ratio);
+  else if ((*h) > 0  && (*w) < 0) (*w) = (int) floorf((float)(*h)*aspect_ratio);
 
   #ifdef SCALE_UP
-  if ((*w)  <0 ) (*w)  = (int) floorf((float)ff->pCodecCtx->height * aspect_ratio);
-  if ((*h) <0 ) (*h) = ff->pCodecCtx->height;
+  if ((*w) < 0) (*w) = (int) floorf((float)ff->pCodecCtx->height * aspect_ratio);
+  if ((*h) < 0) (*h) = ff->pCodecCtx->height;
   #else
-  if ((*w)  <0 ) (*w) = ff->pCodecCtx->width ;
-  if ((*h) <0 )  (*h)  = (int) floorf((float)ff->pCodecCtx->width / aspect_ratio);
+  if ((*w) < 0) (*w) = ff->pCodecCtx->width ;
+  if ((*h) < 0) (*h)  = (int) floorf((float)ff->pCodecCtx->width / aspect_ratio);
   #endif
 }
 
@@ -625,7 +625,7 @@ int ff_render(void *ptr, unsigned long frame,
 
   if (ff->pFrameFMT && ff->pFormatCtx && my_seek_frame(ff, &ff->packet, timestamp)) {
     while (1) { /* Decode video frame */
-      frameFinished=0;	
+      frameFinished=0;
       if(ff->packet.stream_index==ff->videoStream)
 #if LIBAVCODEC_VERSION_MAJOR < 52 || ( LIBAVCODEC_VERSION_MAJOR == 52 && LIBAVCODEC_VERSION_MINOR < 21)
 	avcodec_decode_video(ff->pCodecCtx, ff->pFrame, &frameFinished, ff->packet.data, ff->packet.size);

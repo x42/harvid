@@ -187,7 +187,7 @@ int parse_dir (const char *root, const char *burl, const char *path, int opt, ch
 #endif
 
     snprintf(rn, MAX_PATH, "%s/%s", dn, dd->d_name);
-    if(stat(rn,&fs)==0) {
+    if(stat(rn,&fs)==0) { // XXX lstat vs stat
       char fn[MAX_PATH]; // relative to this *root.
       snprintf(fn, MAX_PATH, "%s%s%s", path, SL_SEP(path), dd->d_name);
       if (S_ISDIR(fs.st_mode)) {
