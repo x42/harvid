@@ -199,7 +199,10 @@ void ff_initialize (void) {
   av_register_all();
   avcodec_register_all();
   pthread_mutex_init(&avcodec_lock, NULL);
-  if(!want_verbose) av_log_set_level(AV_LOG_QUIET);
+
+  if(want_quiet) av_log_set_level(AV_LOG_QUIET);
+  else if (want_verbose) av_log_set_level(AV_LOG_VERBOSE);
+  else av_log_set_level(AV_LOG_ERROR);
 }
 
 void ff_cleanup (void) {
@@ -629,7 +632,7 @@ int ff_render(void *ptr, unsigned long frame,
       if(frameFinished) { /* Convert the image from its native format to FMT */
 	ff->pSWSCtx = sws_getCachedContext(ff->pSWSCtx, ff->pCodecCtx->width, ff->pCodecCtx->height, ff->pCodecCtx->pix_fmt, ff->out_width, ff->out_height, ff->render_fmt, SWS_BICUBIC, NULL, NULL, NULL);
 	sws_scale(ff->pSWSCtx, (const uint8_t * const*) ff->pFrame->data, ff->pFrame->linesize, 0, ff->pCodecCtx->height, ff->pFrameFMT->data, ff->pFrameFMT->linesize);
-	av_free_packet(&ff->packet); /* XXX */
+	av_free_packet(&ff->packet);
 	break;
       } else  {
 	if(ff->packet.data) av_free_packet(&ff->packet);

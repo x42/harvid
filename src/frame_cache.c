@@ -78,7 +78,8 @@ static int freecl(videocacheline *cptr) {
     free(cptr->b); cptr->b=0;
   }
   assert(cptr->refcnt==0);
-  cptr->lru=0; cptr->frame=-1; cptr->flags=0;
+  cptr->lru=0; cptr->frame=-1;
+  cptr->flags=0; cptr->fmt=PIX_FMT_NONE;
   return (0);
 }
 
@@ -106,6 +107,8 @@ static videocacheline *getcl(videocacheline *cache, int cfg_cachesize) {
     //printf("LRU %d - %lu (frame:%i)\n",i,cptr->lru,cptr->frame);
     // if same w,h - we can keep ALLOC -> call realloccl_buf() after this fn.
     cptr->lru=0; cptr->frame=-1;
+    cptr->fmt=PIX_FMT_NONE;
+    cptr->w = cptr->h = 0;
     cptr->flags&=(CLF_ALLOC);
     assert(cptr->refcnt==0);
     return (cptr);
@@ -360,13 +363,13 @@ size_t vcache_info_html(void *p, char *m, size_t n) {
   off+=snprintf(m+off, n-off, "<p>Size: max. %i entries.\n", ((xjcd*)p)->cfg_cachesize);
   off+=snprintf(m+off, n-off, "Hits: %d, Misses: %d</p>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
   off+=snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
-  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>W</th><th>H</th><th>Frame#</th><th>LRU</th><th>fmt</th><th>buffer</th></tr>\n");
+  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>W</th><th>H</th><th>Buffer</th><th>Frame#</th><th>LRU</th></tr>\n");
   int i=0;
   while (cptr) {
     char *tmp = flags2txt(cptr->flags);
     off+=snprintf(m+off, n-off,
-        "<tr><td>%d</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%"PRId64"</td><td>%"PRIlld"</td><td>%s</td><td>%s</td></tr>\n",
-	i, cptr->id, tmp, cptr->w, cptr->h, cptr->frame, (long long) cptr->lru, ff_fmt_to_text(cptr->fmt), (cptr->b?"alloc":"null"));
+        "<tr><td>%d</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
+	i, cptr->id, tmp, cptr->w, cptr->h, (cptr->b?ff_fmt_to_text(cptr->fmt):"null"), cptr->frame, (long long) cptr->lru);
     free(tmp);
     i++;
     cptr=cptr->next;

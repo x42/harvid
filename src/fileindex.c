@@ -42,7 +42,7 @@
 
 char *url_escape(const char *string, int inlength); // from httprotocol.c
 
-char *csv_escape(const char *string, int inlength, const char esc) {
+char *str_escape(const char *string, int inlength, const char esc) {
   char *ns;
   size_t i,o,a;
   const char *t = string;
@@ -107,7 +107,7 @@ static int print_csv (int what, const char *burl, const char *path, const char *
       char *u1, *u2, *c1;
       u1=url_escape(path, 0);
       u2=url_escape(name, 0);
-      c1=csv_escape(name, 0, '"');
+      c1=str_escape(name, 0, '"');
       off+=snprintf(m+off, n-off,
        "F,\"%s\",\"%s%s%s\",\"%s\"\n", burl, u1, SL_SEP(path), u2, c1);
       free(u1); free(u2); free(c1);
@@ -117,7 +117,7 @@ static int print_csv (int what, const char *burl, const char *path, const char *
       {
       char *u2, *c1;
       u2=url_escape(name, 0);
-      c1=csv_escape(name, 0, '"');
+      c1=str_escape(name, 0, '"');
       off+=snprintf(m+off, n-off,
        "D,\"%s%s%s\",\"%s\"\n", burl, SL_SEP(path), u2, c1);
       free(u2); free(c1);

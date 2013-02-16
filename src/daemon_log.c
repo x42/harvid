@@ -112,4 +112,21 @@ void dlog_close(void) {
 #endif
 }
 
+const char *dlog_level_name(int lvl) {
+  switch (lvl) {
+    case DLOG_EMERG:
+      return "quiet";
+    case DLOG_CRIT:
+      return "critical";
+    case DLOG_ERR:
+      return "error";
+    case DLOG_WARNING:
+      return "warning";
+    case DLOG_INFO:
+      return "info";
+    default:
+      return "-";
+  }
+}
+
 // vim:sw=2 sts=2 ts=8 et:

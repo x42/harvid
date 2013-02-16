@@ -50,6 +50,20 @@ extern int cfg_adminmask;
 	send_http_header_fd(c->fd, 200, NULL); \
 	CSEND(c->fd, MSG);
 
+#define SEND200CT(MSG,CT) \
+	{ \
+	httpheader h; \
+	memset(&h, 0, sizeof(httpheader)); \
+	h.ctype=CT; \
+	send_http_status_fd(c->fd, 200); \
+	send_http_header_fd(c->fd, 200, &h); \
+	CSEND(c->fd, MSG); \
+	}
+
+#define CONTENT_TYPE_SWITCH(fmt) \
+	 (fmt) == OUT_PLAIN ? "text/plain" : \
+  ((fmt) == OUT_JSON  ? "application/json" : \
+  ((fmt) == OUT_CSV   ? "text/csv" : "text/html; charset=UTF-8" ))
 
 /**
  * check for invalid or potentially malicious path.
@@ -158,7 +172,7 @@ static int parse_http_query(CONN *c, char *query, httpheader *h, ics_request_arg
 			return(-1);
 		}
 
-		if (h) h->mtime = sb.st_mtime; // XXX - check  - only used with 'hdl_decode_frame' for now.
+		if (h) h->mtime = sb.st_mtime;
 
 		debugmsg(DEBUG_ICS, "serving '%s' f:%"PRId64" @%dx%d\n",a->file_name, a->frame, a->out_width, a->out_height);
 	}
@@ -174,6 +188,7 @@ char *hdl_homepage_html (CONN *c);
 char *hdl_server_status_html (CONN *c);
 char *hdl_file_info (CONN *c, ics_request_args *a);
 char *hdl_server_info (CONN *c, ics_request_args *a);
+char *hdl_server_version (CONN *c, ics_request_args *a);
 void  hdl_clear_cache();
 void  hdl_purge_cache();
 
@@ -253,7 +268,7 @@ void ics_http_handler(
 		} else if (rv&2) {
 			char *info = hdl_file_info(c,&a);
 			if (info) {
-				SEND200(info);
+				SEND200CT(info, CONTENT_TYPE_SWITCH(a.render_fmt));
 				free(info);
 			} else {
 				httperror(c->fd, 503, "Service Unavailable", "<p>Server is overloaded (no decoder available).</p>");
@@ -269,8 +284,18 @@ void ics_http_handler(
 		memset(&a, 0, sizeof(ics_request_args));
 		parse_http_query_params(&qps, query);
 		char *info = hdl_server_info(c, &a);
-		SEND200(info);
+		SEND200CT(info, CONTENT_TYPE_SWITCH(a.render_fmt));
 		free(info);
+		c->run=0;
+	} else if (CTP("/version")) {
+		ics_request_args a;
+		struct queryparserstate qps = {&a, NULL, 0};
+		memset(&a, 0, sizeof(ics_request_args));
+		parse_http_query_params(&qps, query);
+		char *info = hdl_server_version(c, &a);
+		SEND200CT(info, CONTENT_TYPE_SWITCH(a.render_fmt));
+		free(info);
+		c->run=0;
 	} else if (CTP("/index/")) { /* /index/  -> /file/index/ ?! */
 		struct stat sb;
 		char *dp = url_unescape(&(path[7]), 0, NULL);
@@ -294,39 +319,32 @@ void ics_http_handler(
 			parse_http_query_params(&qps, query);
 			snprintf(base_url,1024, "http://%s%s", host, path);
 			char *msg = hdl_index_dir(c->d->docroot, base_url, dp, a.idx_option);
-			send_http_status_fd(c->fd, 200);
-			if (a.idx_option & OPT_CSV) {
-				httpheader h;
-				memset(&h, 0, sizeof(httpheader));
-				h.ctype="text/csv";
-				send_http_header_fd(c->fd, 200, &h);
-			} else {
-				send_http_header_fd(c->fd, 200, NULL);
-			}
-			CSEND(c->fd, msg);
+			SEND200CT(msg, (a.idx_option & OPT_CSV) ? "text/csv" : "text/html; charset=UTF-8");
 			free(dp);
 			free(abspath);
 			free(msg);
 		}
 		c->run=0;
 	} else if (CTP("/admin")) { /* /admin/ */
-		if (strncasecmp(path,  "/admin/flush_cache", 18) == 0 ) {
+		if (strncasecmp(path,  "/admin/check", 12) == 0 ) {
+			SEND200("ok\n");
+		} else if (strncasecmp(path,  "/admin/flush_cache", 18) == 0 ) {
 			if (cfg_adminmask&ADM_FLUSHCACHE) {
 				hdl_clear_cache();
-				SEND200(OK200MSG("cache flush"));
+				SEND200(OK200MSG("cache flushed\n"));
 			} else {
 				httperror(c->fd, 403, NULL, NULL);
 			}
 		}	else if (strncasecmp(path,  "/admin/purge_cache", 18) == 0 ) {
 			if (cfg_adminmask&ADM_PURGECACHE) {
 				hdl_purge_cache();
-				SEND200(OK200MSG("cache purge"));
+				SEND200(OK200MSG("cache purged\n"));
 			} else {
 				httperror(c->fd, 403, NULL, NULL);
 			}
 		}	else if (strncasecmp(path,  "/admin/shutdown", 15) == 0 ) {
 			if (cfg_adminmask&ADM_SHUTDOWN) {
-				SEND200(OK200MSG("shutdown"));
+				SEND200(OK200MSG("shutdown queued\n"));
 				c->d->run=0;
 			} else {
 				httperror(c->fd, 403, NULL, NULL);
@@ -349,7 +367,7 @@ void ics_http_handler(
 		httpheader h;
 		memset(&a, 0, sizeof(ics_request_args));
 		memset(&h, 0, sizeof(httpheader));
-		int rv = parse_http_query(c, query, NULL, &a);
+		int rv = parse_http_query(c, query, &h, &a);
 		if (rv < 0) {
 			;
 		} else if (rv==3) {

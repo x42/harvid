@@ -41,14 +41,15 @@
 #include <windows.h>
 #include <winsock.h>
 
-#define LOG_CRIT 0
-#define LOG_ERR 1
-#define LOG_WARNING 2
-#define LOG_INFO 3
-#define LOG_DEBUG 4
+#define LOG_EMERG 2
+#define LOG_CRIT 2
+#define LOG_ERR 3
+#define LOG_WARNING 4
+#define LOG_INFO 6
 #endif
 
 /* log Levels */
+#define DLOG_EMERG       LOG_EMERG    ///< quiet (system is unusable)
 #define DLOG_CRIT        LOG_CRIT    ///< critical conditions -- usually implies exit() or process termination
 #define DLOG_ERR         LOG_ERR     ///< error conditions -- recoverable errors
 #define DLOG_WARNING     LOG_WARNING ///< warning conditions
@@ -90,5 +91,7 @@ void dlog_open(char *log_file);
  * were opened. After closing the log, dlog() will write to stdout/stderr.
  */
 void dlog_close(void);
+
+const char *dlog_level_name(int lvl);
 
 #endif

@@ -277,7 +277,7 @@ static int clearjvo(JVD *jvd, int f, int id, int age, pthread_mutex_t *l) {
 
     if (cptr->flags&VOF_OPEN) {
       my_destroy(&cptr->decoder);
-      cptr->decoder=NULL;
+      cptr->decoder = NULL;
       cptr->flags &= ~VOF_OPEN;
       cptr->fmt = PIX_FMT_NONE;
     }
@@ -348,7 +348,7 @@ static JVOBJECT *getjvo(JVD *jvd) {
 
   // TODO prefer to allocate a new decoder object IFF
   // decoder for same file exists but with different format.
-  if (cnt_total < 4 // XXX
+  if (cnt_total < 4
       && cnt_total < jvd->max_objects)
     return(newjvo(jvd->jvo, &jvd->lock_jvo));
 
@@ -516,7 +516,7 @@ static JVOBJECT *new_video_object(JVD *jvd, int id) {
 
   jvo->id = id;
   jvo->frame = -1;
-  jvo->fmt = PIX_FMT_NONE; // XXX
+  jvo->fmt = PIX_FMT_NONE;
   jvo->flags |= VOF_VALID;
   pthread_mutex_unlock(&jvo->lock);
   return(jvo);
@@ -580,7 +580,7 @@ tryagain:
   pthread_mutex_unlock(&jvo->lock);
 
   if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_INFO)) == (VOF_VALID)) {
-    if (fmt == PIX_FMT_NONE) fmt = PIX_FMT_RGB24; // XXX
+    if (fmt == PIX_FMT_NONE) fmt = PIX_FMT_RGB24; // TODO global default
     if (!my_open_movie(&jvo->decoder, get_fn(jvd, jvo->id), fmt)) {
       pthread_mutex_lock(&jvo->lock);
       jvo->fmt = fmt;
@@ -591,6 +591,7 @@ tryagain:
       pthread_mutex_lock(&jvo->lock);
       jvo->flags &= ~VOF_PENDING;
       assert(jvo->fmt == PIX_FMT_NONE);
+      assert(!jvo->decoder);
       pthread_mutex_unlock(&jvo->lock);
       release_id(jvd, jvo->id); // mark ID as invalid
       dlog(DLOG_ERR, "DCTL: opening of movie file failed.\n");
@@ -762,23 +763,7 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
   VidMap *vptr = ((JVD*)p)->vml;
   int i = 0;
   size_t off = 0;
-  off+=snprintf(m+off, n-off, "<h3>Decoder Objects:</h3>\n");
-  off+=snprintf(m+off, n-off, "<p>busy: %d%s</p>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
-  off+=snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
-  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th><th>LRU</th><th>decoder</th><th>fmt</th><th>frame#</th></tr>\n");
-  off+=snprintf(m+off, n-off, "\n");
-  while (cptr) {
-    char *tmp = flags2txt(cptr->flags);
-    char *fn = get_fn((JVD*)p, cptr->id);
-    off+=snprintf(m+off, n-off,
-        "<tr><td>%i</td><td>%i</td><td>%s</td><td>%s</td><td>%"PRIlld"</td><td>%s</td><td>%s</td><td>%"PRId64"</td></tr>\n",
-        i++, cptr->id, tmp, fn?fn:"-", (long long)cptr->lru, (cptr->decoder?LIBAVCODEC_IDENT:"null"), ff_fmt_to_text(cptr->fmt), cptr->frame);
-    free(tmp);
-    cptr = cptr->next;
-  }
-  off+=snprintf(m+off, n-off, "</table>\n");
 
-  i=0;
   off+=snprintf(m+off, n-off, "<h3>File Mapping:</h3>\n");
   off+=snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
   off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Filename</th><th>LRU</th></tr>\n");
@@ -788,9 +773,24 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
           i++, vptr->id, vptr->fn?vptr->fn:"(null)", (long long)vptr->lru);
     vptr = vptr->next;
   }
-
   off+=snprintf(m+off, n-off, "</table>\n");
 
+  i=0;
+  off+=snprintf(m+off, n-off, "<h3>Decoder Objects:</h3>\n");
+  off+=snprintf(m+off, n-off, "<p>busy: %d%s</p>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
+  off+=snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
+  off+=snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th>"/* "<th>Decoder</th>"*/"<th>PixFmt</th><th>Frame#</th><th>LRU</th></tr>\n");
+  off+=snprintf(m+off, n-off, "\n");
+  while (cptr) {
+    char *tmp = flags2txt(cptr->flags);
+    char *fn = get_fn((JVD*)p, cptr->id);
+    off+=snprintf(m+off, n-off,
+        "<tr><td>%i</td><td>%i</td><td>%s</td><td>%s</td>"/*"<td>%s</td>"*/"<td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
+        i++, cptr->id, tmp, fn?fn:"-", /* (cptr->decoder?LIBAVCODEC_IDENT:"null"), */ff_fmt_to_text(cptr->fmt), cptr->frame, (long long)cptr->lru);
+    free(tmp);
+    cptr = cptr->next;
+  }
+  off+=snprintf(m+off, n-off, "</table>\n");
   return(off);
 }
 

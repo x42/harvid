@@ -5,15 +5,20 @@
 #define SERVERVERSION "harvid " ICSVERSION " ["ICSARCH" debug]"
 #endif
 
-#define HTMLBODY \
-	"<body style=\"width:900px; margin:0 auto;\">"\
-	"<div style=\"text-align:center;\"><a href=\"/\"><img alt=\"Harvid\" src=\"/logo.jpg\"/></a></div>\n"
+#define HTMLBODYPERC(P) \
+	"<body style=\"width:900px; margin:120px auto 0 auto;\">" \
+	"<div style=\"position:fixed; height:100px; width:100%"P"; top:0; left:0; background:#000; text-align:center;\"><a href=\"/\"><img alt=\"Harvid\" src=\"/logo.jpg\"/></a></div>\n"
+
+#define HTMLBODY HTMLBODYPERC("%")
+
+#define CENTERDIV \
+	"<div style=\"width:30em; margin:0 auto;\">\n"
 
 #define HTMLFOOTER \
 	"<hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION" at %s:%i</div>"
 
 #define ERRFOOTER \
-	"<hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION"</div>"
+	"<hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION"</div>\n</body></html>"
 
 #define OK200MSG(TXT) \
-	HTMLBODY "<p>OK. " TXT " command successful</p>" ERRFOOTER
+	DOCTYPE HTMLOPEN "<title>harvid admin</title></head>" HTMLBODYPERC("") "<p>OK. " TXT " command successful</p>" ERRFOOTER
