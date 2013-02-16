@@ -163,9 +163,9 @@ static int parse_http_query(CONN *c, char *query, httpheader *h, ics_request_arg
   if (qps.doit&3) {
     if (qps.fn) {
       a->file_name = malloc(1+strlen(c->d->docroot)+strlen(qps.fn)*sizeof(char));
-      sprintf(a->file_name,"%s%s",c->d->docroot,qps.fn);
+      sprintf(a->file_name,"%s%s",c->d->docroot, qps.fn);
+      a->file_qurl = qps.fn;
     }
-    free(qps.fn);
 
     /* test if file exists or send 404 */
     struct stat sb;
@@ -275,7 +275,7 @@ void ics_http_handler(
     if (rv < 0) {
       ;
     } else if (rv&2) {
-      char *info = hdl_file_info(c,&a);
+      char *info = hdl_file_info(c, &a);
       if (info) {
         SEND200CT(info, CONTENT_TYPE_SWITCH(a.render_fmt));
         free(info);
@@ -286,6 +286,7 @@ void ics_http_handler(
       httperror(c->fd, 400, "Bad Request", "<p>Insufficient parse query parameters.</p>");
     }
     if (a.file_name) free(a.file_name);
+    if (a.file_qurl) free(a.file_qurl);
     c->run=0;
   } else if (CTP("/rc")) {
     ics_request_args a;
@@ -295,6 +296,7 @@ void ics_http_handler(
     char *info = hdl_server_info(c, &a);
     SEND200CT(info, CONTENT_TYPE_SWITCH(a.render_fmt));
     free(info);
+    free(qps.fn);
     c->run=0;
   } else if (CTP("/version")) {
     ics_request_args a;
@@ -304,6 +306,7 @@ void ics_http_handler(
     char *info = hdl_server_version(c, &a);
     SEND200CT(info, CONTENT_TYPE_SWITCH(a.render_fmt));
     free(info);
+    free(qps.fn);
     c->run=0;
   } else if (CTP("/index/")) { /* /index/  -> /file/index/ ?! */
     struct stat sb;
@@ -332,6 +335,7 @@ void ics_http_handler(
       free(dp);
       free(abspath);
       free(msg);
+      free(qps.fn);
     }
     c->run=0;
   } else if (CTP("/admin")) { /* /admin/ */
@@ -385,6 +389,7 @@ void ics_http_handler(
       httperror(c->fd, 400, "Bad Request", "<p>Insufficient parse query parameters.</p>");
     }
     if (a.file_name) free(a.file_name);
+    if (a.file_qurl) free(a.file_qurl);
     c->run=0;
   }
   else

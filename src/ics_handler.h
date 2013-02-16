@@ -29,6 +29,7 @@
  */
 typedef struct {
   char *file_name;
+  char *file_qurl;
   int64_t frame;
   int decode_fmt;
   int render_fmt;

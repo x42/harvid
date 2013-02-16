@@ -340,8 +340,13 @@ char *hdl_homepage_html (CONN *c) {
   if (cfg_adminmask&ADM_SHUTDOWN)
     off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"admin/shutdown\">Server Shutdown</a></li>\n");
   if (cfg_adminmask)
-    off+=snprintf(msg+off, HPSIZE-off, "<ul>\n</div>\n");
-  off+=snprintf(msg+off, HPSIZE-off, "</div><div style=\"clear:both;\"</div>\n");
+    off+=snprintf(msg+off, HPSIZE-off, "</ul>\n</div>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<div style=\"clear:both;\"></div><hr/>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p>Available query parameters: frame, w, h, file, format.</p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p>Supported image output formats: jpg, jpeg, png, ppm, yuv, yuv420, yuv440, yuv422, rgb, rgb, rgba, argb, bgra.</p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p>Supported info output formats: html, xhtml, json, csv, plain.</p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p style=\"text-align:center\"><a href=\"https://github.com/x42/harvid\">harvid @ GitHub</a></p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "</div>\n");
   off+=snprintf(msg+off, HPSIZE-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
   off+=snprintf(msg+off, HPSIZE-off, "\n</body>\n</html>");
   return msg;
@@ -396,20 +401,22 @@ static char *file_info_csv (CONN *c, ics_request_args *a, VInfo *ji) {
 static char *file_info_html (CONN *c, ics_request_args *a, VInfo *ji) {
   char *im = malloc(STASIZ * sizeof(char));
   int off =0;
-  char smpte[14];
+  char smpte[14], *tmp;
   timecode_framenumber_to_string(smpte, &ji->framerate, ji->frames);
 
   off+=snprintf(im+off, STASIZ-off, DOCTYPE HTMLOPEN);
   off+=snprintf(im+off, STASIZ-off, "<title>harvid file info</title></head>\n");
   off+=snprintf(im+off, STASIZ-off, HTMLBODY);
   off+=snprintf(im+off, STASIZ-off, CENTERDIV);
-  off+=snprintf(im+off, STASIZ-off, "<h2>harvid info</h2>\n\n");
-  off+=snprintf(im+off, STASIZ-off, "<p>File: %s</p><ul>\n",a->file_name);
-  off+=snprintf(im+off, STASIZ-off, "<li>Geometry: %ix%i</li>\n",ji->movie_width, ji->movie_height);
-  off+=snprintf(im+off, STASIZ-off, "<li>Aspect-Ratio: %.3f</li>\n",ji->movie_aspect);
-  off+=snprintf(im+off, STASIZ-off, "<li>Framerate: %.2f</li>\n",timecode_rate_to_double(&ji->framerate));
-  off+=snprintf(im+off, STASIZ-off, "<li>Duration: %s</li>\n",smpte);
-  off+=snprintf(im+off, STASIZ-off, "<li>Duration: %.2f sec</li>\n",(double)ji->frames/timecode_rate_to_double(&ji->framerate));
+  off+=snprintf(im+off, STASIZ-off, "<h2>File info</h2>\n\n");
+  tmp = url_escape(a->file_qurl, 0);
+  off+=snprintf(im+off, STASIZ-off, "<p>File: <a href=\"/?frame=0&amp;file=%s\">%s</a></p><ul>\n",
+      tmp, a->file_qurl); free(tmp);
+  off+=snprintf(im+off, STASIZ-off, "<li>Geometry: %ix%i</li>\n", ji->movie_width, ji->movie_height);
+  off+=snprintf(im+off, STASIZ-off, "<li>Aspect-Ratio: %.3f</li>\n", ji->movie_aspect);
+  off+=snprintf(im+off, STASIZ-off, "<li>Framerate: %.2f</li>\n", timecode_rate_to_double(&ji->framerate));
+  off+=snprintf(im+off, STASIZ-off, "<li>Duration: %s</li>\n", smpte);
+  off+=snprintf(im+off, STASIZ-off, "<li>Duration: %.2f sec</li>\n", (double)ji->frames/timecode_rate_to_double(&ji->framerate));
   off+=snprintf(im+off, STASIZ-off, "<li>Duration: %"PRId64" frames</li>\n", ji->frames);
   off+=snprintf(im+off, STASIZ-off, "</ul>\n</div>\n");
   off+=snprintf(im+off, STASIZ-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);

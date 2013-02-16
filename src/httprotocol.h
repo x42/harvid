@@ -35,6 +35,8 @@
 #define PROTOCOL "HTTP/1.0" ///< HTTP protocol version for replies
 #define RFC1123FMT "%a, %d %b %Y %H:%M:%S GMT" ///< time format used in HTTP header
 
+#define SL_SEP(string) (strlen(string)>0?(string[strlen(string)-1]=='/')?"":"/":"")
+
 #ifndef uint8_t
 #define uint8_t unsigned char
 #endif

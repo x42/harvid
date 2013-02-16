@@ -38,8 +38,6 @@
 # endif
 #endif
 
-#define SL_SEP(string) (strlen(string)>0?(string[strlen(string)-1]=='/')?"":"/":"")
-
 char *url_escape(const char *string, int inlength); // from httprotocol.c
 
 char *str_escape(const char *string, int inlength, const char esc) {
@@ -70,10 +68,10 @@ static int print_html (int what, const char *burl, const char *path, const char 
     case 1:
       {
       char *u1,*u2;
-      u1=url_escape(path,0);
-      u2=url_escape(name,0);
+      u1=url_escape(path, 0);
+      u2=url_escape(name, 0);
       off+=snprintf(m+off, n-off,
-       "[<b>F</b>] <a href=\"%s?frame=100&amp;file=%s%s%s\">%s</a>",
+       "[<b>F</b>] <a href=\"%s?frame=0&amp;file=%s%s%s\">%s</a>",
         burl, u1, SL_SEP(path), u2, name);
       off+=snprintf(m+off, n-off,
        " [<a href=\"%sinfo?file=%s%s&amp;format=html\">info</a>]",
@@ -86,7 +84,7 @@ static int print_html (int what, const char *burl, const char *path, const char 
       break;
     case 0:
       {
-      char *u2 = url_escape(name,0);
+      char *u2 = url_escape(name, 0);
       off+=snprintf(m+off, n-off,
        "[D]<a href=\"%s%s%s/\">%s</a><br/>\n",
         burl, SL_SEP(path), u2, name);
@@ -239,7 +237,7 @@ char *hdl_index_dir (const char *root, char *base_url, char *path, int opt) {
 
   if ((opt&OPT_CSV) == 0) {
     off+=parse_dir(root, base_url, path, opt, sm+off, IDXSIZ-off, print_html);
-    off+=snprintf(sm+off, IDXSIZ-off, "<hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION"</div>");
+    off+=snprintf(sm+off, IDXSIZ-off, "</p><hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION"</div>");
     off+=snprintf(sm+off, IDXSIZ-off, "</body>\n</html>");
   } else {
     off+=parse_dir(root, base_url, path, opt, sm+off, IDXSIZ-off, print_csv);
