@@ -85,7 +85,16 @@ static inline int my_open_movie(void **vd, char *fn, int render_fmt) {
     return -1;
   }
   ff_create(vd);
-  assert (render_fmt == PIX_FMT_YUV420P || render_fmt == PIX_FMT_RGB24 || render_fmt == PIX_FMT_RGBA);
+  assert (
+         render_fmt == PIX_FMT_YUV420P
+      || render_fmt == PIX_FMT_YUV440P
+      || render_fmt == PIX_FMT_YUYV422
+      || render_fmt == PIX_FMT_RGB24
+      || render_fmt == PIX_FMT_BGR24
+      || render_fmt == PIX_FMT_RGBA
+      || render_fmt == PIX_FMT_ARGB
+      || render_fmt == PIX_FMT_BGRA
+      );
 
   if (!ff_open_movie (*vd, fn, render_fmt)) {
     debugmsg(DEBUG_DCTL, "DCTL: opened file: '%s'\n", fn);

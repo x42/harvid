@@ -111,19 +111,25 @@ void parse_param(struct queryparserstate *qps, char *kvp) {
   } else if (!strcmp (kvp, "flatindex")) {
     qps->a->idx_option|=OPT_FLAT;
   } else if (!strcmp (kvp, "format")) {
-         if (!strcmp(val,"jpg") )  qps->a->render_fmt=FMT_JPG;
-    else if (!strcmp(val,"jpeg"))  qps->a->render_fmt=FMT_JPG;
-    else if (!strcmp(val,"png") )  qps->a->render_fmt=FMT_PNG;
-    else if (!strcmp(val,"ppm") )  qps->a->render_fmt=FMT_PPM;
-    else if (!strcmp(val,"raw") )  qps->a->render_fmt=FMT_RAW;
-    else if (!strcmp(val,"yuv") ) {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_YUV420P;}
-    else if (!strcmp(val,"rgb") ) {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_RGB24;}
-    else if (!strcmp(val,"rgba")) {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_RGBA;}
-    else if (!strcmp(val,"html"))  qps->a->render_fmt=OUT_HTML;
-    else if (!strcmp(val,"xhtml")) qps->a->render_fmt=OUT_HTML;
-    else if (!strcmp(val,"json"))  qps->a->render_fmt=OUT_JSON;
-    else if (!strcmp(val,"csv"))  {qps->a->render_fmt=OUT_CSV; qps->a->idx_option|=OPT_CSV;}
-    else if (!strcmp(val,"plain")) qps->a->render_fmt=OUT_PLAIN;
+         if (!strcmp(val,"jpg") )     qps->a->render_fmt=FMT_JPG;
+    else if (!strcmp(val,"jpeg"))     qps->a->render_fmt=FMT_JPG;
+    else if (!strcmp(val,"png") )     qps->a->render_fmt=FMT_PNG;
+    else if (!strcmp(val,"ppm") )     qps->a->render_fmt=FMT_PPM;
+    else if (!strcmp(val,"yuv") )    {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_YUV420P;}
+    else if (!strcmp(val,"yuv420") ) {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_YUV420P;}
+    else if (!strcmp(val,"yuv440") ) {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_YUV440P;}
+    else if (!strcmp(val,"yuv422") ) {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_YUYV422;}
+    else if (!strcmp(val,"rgb") )    {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_RGB24;}
+    else if (!strcmp(val,"rgb") )    {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_BGR24;}
+    else if (!strcmp(val,"rgba"))    {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_RGBA;}
+    else if (!strcmp(val,"argb"))    {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_ARGB;}
+    else if (!strcmp(val,"bgra"))    {qps->a->render_fmt=FMT_RAW; qps->a->decode_fmt=PIX_FMT_BGRA;}
+    /* info, version, rc,... format */
+    else if (!strcmp(val,"html"))     qps->a->render_fmt=OUT_HTML;
+    else if (!strcmp(val,"xhtml"))    qps->a->render_fmt=OUT_HTML;
+    else if (!strcmp(val,"json"))     qps->a->render_fmt=OUT_JSON;
+    else if (!strcmp(val,"csv"))     {qps->a->render_fmt=OUT_CSV; qps->a->idx_option|=OPT_CSV;}
+    else if (!strcmp(val,"plain"))    qps->a->render_fmt=OUT_PLAIN;
   }
 }
 
