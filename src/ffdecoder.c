@@ -109,8 +109,7 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
       {
 	int i;
 	for (i = 0; i < w*h*2; i += 2) {
-	 buf[i] = 0x80;
-	 buf[i+1] = 0x00;
+	 buf[i] = 0x00; buf[i+1] = 0x80;
 	}
       }
       break;
@@ -118,8 +117,7 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
       {
 	int i;
 	for (i = 0; i < w*h*2; i += 2) {
-	 buf[i] = 0x00;
-	 buf[i+1] = 0x80;
+	 buf[i] = 0x80; buf[i+1] = 0x00;
 	}
       }
       break;
@@ -150,32 +148,33 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
       break;
   }
 #if 1 // draw cross
-  int i;
-  const int x = w/2;
-  const int y = h/2;
+  int x,y;
   switch (ff->render_fmt) {
     case PIX_FMT_YUV420P:
     case PIX_FMT_YUV440P:
-      for (i=-16;i<=16; i++) {
-	if (x+i < w && x+i >=0) { buf[(x+i+y*w)] = 255; }
-	if (y+i < h && y+i >=0) { buf[(x+(y+i)*w)]=255; }
+      for (x = 0, y = 0; x < w-1; x++, y = h * x / w) {
+	int off = (x + w * y);
+	buf[off]=127; buf[off+1]=127;
+	off = (x + w * (h - y - 1));
+	buf[off]=127; buf[off+1]=127;
       }
       break;
     case PIX_FMT_YUYV422:
     case PIX_FMT_UYVY422:
-      {
-      const int O = (ff->render_fmt == PIX_FMT_UYVY422) ? 1 : 0;
-      for (i=-16;i<=16; i++) {
-	if (x+i < w && x+i >=0) { buf[(x+i+y*w)*2+O] = 255; }
-	if (y+i < h && y+i >=0) { buf[(x+(y+i)*w)*2+O]=255; }
-      }
+      for (x = 0, y = 0; x < w-1; x++, y = h * x / w) {
+	int off = (x + w * y) * 2;
+	buf[off] = 127; buf[off+1] = 127;
+	off = (x + w * (h - y - 1)) * 2;
+	buf[off] = 127; buf[off+1] = 127;
       }
       break;
     case PIX_FMT_RGB24:
     case PIX_FMT_BGR24:
-      for (i=-16;i<=16; i++) {
-	if (x+i < w && x+i >=0) { buf[(x+i+y*w)*3]   = 255; buf[(x+i+y*w)*3+1]   = 255; buf[(x+i+y*w)*3+2]   = 255; }
-	if (y+i < h && y+i >=0) { buf[(x+(y+i)*w)*3] = 255; buf[(x+(y+i)*w)*3+1] = 255; buf[(x+(y+i)*w)*3+2] = 255; }
+      for (x = 0, y = 0; x < w-1; x++, y = h * x / w) {
+	int off = 3 * (x + w * y);
+	buf[off]=255; buf[off+1]=255; buf[off+2]=255;
+	off = 3 * (x + w * (h - y - 1));
+	buf[off]=255; buf[off+1]=255; buf[off+2]=255;
       }
       break;
     case PIX_FMT_RGBA:
@@ -183,9 +182,11 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
     case PIX_FMT_ARGB:
       {
       const int O = (ff->render_fmt == PIX_FMT_ARGB) ? 1 : 0;
-      for (i=-16;i<=16; i++) {
-	if (x+i < w && x+i >=0) { buf[(x+i+y*w)*4+O]   = 255; buf[(x+i+y*w)*4+1+O]   = 255; buf[(x+i+y*w)*4+2+O]   = 255; }
-	if (y+i < h && y+i >=0) { buf[(x+(y+i)*w)*4+O] = 255; buf[(x+(y+i)*w)*4+1+O] = 255; buf[(x+(y+i)*w)*4+2+O] = 255; }
+      for (x = 0, y = 0; x < w-1; x++, y = h * x / w) {
+	int off = 4 * (x + w * y) + O;
+	buf[off]=255; buf[off+1]=255; buf[off+2]=255;
+	off = 4 * (x + w * (h - y - 1)) + O;
+	buf[off]=255; buf[off+1]=255; buf[off+2]=255;
       }
       }
       break;
