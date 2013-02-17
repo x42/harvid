@@ -96,6 +96,7 @@ static inline int my_open_movie(void **vd, char *fn, int render_fmt) {
          render_fmt == PIX_FMT_YUV420P
       || render_fmt == PIX_FMT_YUV440P
       || render_fmt == PIX_FMT_YUYV422
+      || render_fmt == PIX_FMT_UYVY422
       || render_fmt == PIX_FMT_RGB24
       || render_fmt == PIX_FMT_BGR24
       || render_fmt == PIX_FMT_RGBA

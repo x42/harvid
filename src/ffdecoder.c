@@ -806,12 +806,24 @@ const char * ff_fmt_to_text(int fmt) {
   switch (fmt) {
     case PIX_FMT_NONE:
       return "-";
+    case PIX_FMT_BGR24:
+      return "BGR24";
     case PIX_FMT_RGB24:
       return "RGB24";
     case PIX_FMT_RGBA:
       return "RGBA";
+    case PIX_FMT_BGRA:
+      return "BGRA";
+    case PIX_FMT_ARGB:
+      return "ARGB";
     case PIX_FMT_YUV420P:
       return "YUV420P";
+    case PIX_FMT_YUYV422:
+      return "YUYV422";
+    case PIX_FMT_UYVY422:
+      return "UYVY422";
+    case PIX_FMT_YUV440P:
+      return "YUV440P";
     default:
       return "?";
   }

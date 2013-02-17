@@ -119,6 +119,7 @@ void parse_param(struct queryparserstate *qps, char *kvp) {
     else if (!strcmp(val, "yuv420")) {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUV420P;}
     else if (!strcmp(val, "yuv440")) {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUV440P;}
     else if (!strcmp(val, "yuv422")) {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUYV422;}
+    else if (!strcmp(val, "uyv422")) {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_UYVY422;}
     else if (!strcmp(val, "rgb"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_RGB24;}
     else if (!strcmp(val, "rgb"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_BGR24;}
     else if (!strcmp(val, "rgba"))   {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_RGBA;}
