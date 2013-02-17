@@ -222,6 +222,7 @@ char *hdl_index_dir (const char *root, char *base_url, char *path, int opt) {
     off += snprintf(sm+off, IDXSIZ-off, "<title>harvid Index</title></head>\n");
     off += snprintf(sm+off, IDXSIZ-off, HTMLBODY);
     off += snprintf(sm+off, IDXSIZ-off, "<h2>harvid - Index</h2>\n<p>\n");
+    off += snprintf(sm+off, IDXSIZ-off, "<p>%s</h2>\n</p>\n", path);
   }
 
   if (bl > 1) {
