@@ -45,11 +45,6 @@ void dctrl_destroy(void **p);
  */
 int dctrl_get_id(void *p, const char *fn);
 /**
- * write debug info to stdout
- * @param p pointer to a decoder-control object
- */
-void dctrl_info_dump(void *p); // debug to stdout
-/**
  * HTML format debug info and store at most \a n bytes of the message to \a m
  * @param p pointer to a decoder-control object
  * @param m pointer to where result message is stored

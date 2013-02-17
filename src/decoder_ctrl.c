@@ -28,6 +28,7 @@
 #include "ffcompat.h"
 #include "daemon_log.h"
 
+#include "uthash.h"
 
 /* Video Object Flags */
 #define VOF_USED 1    ///< decoder is currently in use - decoder locked
@@ -50,10 +51,10 @@ typedef struct JVOBJECT {
 } JVOBJECT;
 
 typedef struct VidMap {
-  struct VidMap * next;
   int id;
   char *fn;
   time_t lru;
+  UT_hash_handle hh;
 } VidMap;
 
 typedef struct JVD {
@@ -65,7 +66,7 @@ typedef struct JVD {
   int busycnt;
   int purge_in_progress;
   pthread_mutex_t lock_jvo; // lock to modify (append to) jvo list
-  pthread_mutex_t lock_vml; // lock to modify (append to) vid list (inc monotonic)
+  pthread_rwlock_t lock_vml; // lock to modify (append to) vid list (inc monotonic)
   pthread_mutex_t lock_busy; // lock to read/increment monotonic;
 } JVD;
 
@@ -394,118 +395,98 @@ static JVOBJECT *getjvo(JVD *jvd) {
 // Video decoder management
 //
 
-static VidMap *newvid(VidMap *vml, int max_size) {
-  VidMap *vptr = vml, *vlru = NULL, *vlast = vml;
-  int i = 0;
-  time_t lru = time(NULL) + 1;
-  while (vptr) {
-    if (vptr->lru == 0) return vptr;
-    if (vptr->lru < lru) {
-      lru = vptr->lru;
-      vlru = vptr;
-    }
-    vlast = vptr;
-    vptr = vptr->next;
-    i++;
+static void clearvid(VidMap *vml, pthread_rwlock_t *vmllock) {
+  VidMap *vm, *tmp;
+  pthread_rwlock_wrlock(vmllock);
+  HASH_ITER(hh, vml, vm, tmp) {
+    HASH_DEL(vml,vm);
+    free(vm->fn);
+    free(vm);
   }
-  if (i < max_size) {
-    VidMap *n = calloc(1, sizeof(VidMap));
-    if (vlast) vlast->next = n;
-    return(n);
-  } else {
-    vlru->lru = 0;
-    vlru->id = 0;
-    free(vlru->fn);
-    vlru->fn = NULL;
-    return vlru;
-  }
-}
-
-static void clearvid(VidMap *vml, pthread_mutex_t *vmllock) {
-  VidMap *vptr = vml;
-  pthread_mutex_lock(vmllock);
-  while (vptr) {
-    VidMap *vnext = vptr->next;
-    free(vptr->fn);
-    vptr->next = NULL;
-    free(vptr);
-    vptr = vnext;
-  }
-  pthread_mutex_unlock(vmllock);
-}
-
-static VidMap *searchvidmap(VidMap *vml, int cmpmode, int id, const char *fn) {
-  VidMap *vptr;
-  for (vptr = vml; vptr ; vptr = vptr->next) {
-    if (    ((cmpmode&1) == 1 || vptr->id == id)
-        &&  ((cmpmode&2) == 2 || (vptr->fn && !strcmp(vptr->fn, fn)))
-        &&  vptr->lru > 0
-       )
-      return(vptr);
-  }
-  return(NULL);
+  pthread_rwlock_unlock(vmllock);
 }
 
 static int get_id(JVD *jvd, const char *fn) {
-  while (1) {
-    VidMap *vm = searchvidmap(jvd->vml, 1, 0, fn);
-    if (vm) {
-      pthread_mutex_lock(&jvd->lock_vml);
-      if (vm->lru == 0) {
-        pthread_mutex_unlock(&jvd->lock_vml);
-        continue;
-      }
-      vm->lru = time(NULL);
-      pthread_mutex_unlock(&jvd->lock_vml);
-      return vm->id;
-    }
+  VidMap *vm = NULL;
+  int rv;
 
-    /* add new entry */
-    if (pthread_mutex_trylock(&jvd->lock_vml)) {
-      /* check that no other thread got ahead of us */
-      vm = searchvidmap(jvd->vml, 1, 0, fn);
-      if (vm) {
-        pthread_mutex_unlock(&jvd->lock_vml);
-        return vm->id;
+  pthread_rwlock_rdlock(&jvd->lock_vml);
+  HASH_FIND_STR(jvd->vml, fn, vm);
+
+  if (vm) {
+    rv = vm->id;
+    vm->lru = time(NULL);
+    pthread_rwlock_unlock(&jvd->lock_vml);
+    return rv;
+  }
+  pthread_rwlock_unlock(&jvd->lock_vml);
+
+  /* create a new entry */
+  pthread_rwlock_wrlock(&jvd->lock_vml);
+
+  /* check that it has not been added meanwhile */
+  HASH_FIND_STR(jvd->vml, fn, vm);
+  if (vm) {
+    rv = vm->id;
+    vm->lru = time(NULL);
+    pthread_rwlock_unlock(&jvd->lock_vml);
+    return rv;
+  }
+
+  if(HASH_COUNT(jvd->vml) >= jvd->cache_size) {
+    /* delete lru */
+    VidMap *tmp, *vlru = NULL;
+    time_t lru = time(NULL) + 1;
+    HASH_ITER(hh, jvd->vml, vm, tmp) {
+      if (vm->lru < lru) {
+        lru = vm->lru;
+        vlru = vm;
       }
-      vm = newvid(jvd->vml, jvd->cache_size);
-      vm->id = jvd->monotonic++;
-      vm->fn = strdup(fn);
-      vm->lru = time(NULL);
-      pthread_mutex_unlock(&jvd->lock_vml);
-      return vm->id;
-    } else {
-      sched_yield();
+    }
+    if (vlru) {
+      HASH_DEL(jvd->vml, vlru);
+      free(vlru->fn);
+      free(vlru);
     }
   }
-  return -1; // never reached
+
+  vm = calloc(1, sizeof(VidMap));
+  vm->id = jvd->monotonic++;
+  vm->fn = strdup(fn);
+  vm->lru = time(NULL);
+  rv = vm->id;
+  HASH_ADD_KEYPTR(hh, jvd->vml, vm->fn, strlen(vm->fn), vm);
+  pthread_rwlock_unlock(&jvd->lock_vml);
+  return rv;
 }
 
 static char *get_fn(JVD *jvd, int id) {
-  VidMap *vm;
-  do {
-    vm = searchvidmap(jvd->vml, 2, id, NULL);
-    if (!vm) return (NULL);
-    pthread_mutex_lock(&jvd->lock_vml);
-    if (vm->lru == 0) {
-      pthread_mutex_unlock(&jvd->lock_vml);
-      continue;
+  VidMap *vm, *tmp;
+  pthread_rwlock_rdlock(&jvd->lock_vml);
+  HASH_ITER(hh, jvd->vml, vm, tmp) {
+    if (vm->id == id) {
+      pthread_rwlock_unlock(&jvd->lock_vml);
+      return vm->fn; // strdup
     }
-    pthread_mutex_unlock(&jvd->lock_vml);
-  } while (!vm);
-  return vm->fn;
+  }
+  pthread_rwlock_unlock(&jvd->lock_vml);
+  dlog(LOG_ERR, "can not find ID in hash table\n");
+  return NULL;
 }
 
 static void release_id(JVD *jvd, int id) {
-  pthread_mutex_lock(&jvd->lock_vml);
-  VidMap *vm = searchvidmap(jvd->vml, 2, id, NULL);
-  if (vm) {
-    vm->lru = 0;
-    vm->id = 0;
-    free(vm->fn);
-    vm->fn = NULL;
+  VidMap *vm, *tmp;
+  pthread_rwlock_wrlock(&jvd->lock_vml);
+  HASH_ITER(hh, jvd->vml, vm, tmp) {
+    if (vm->id == id) {
+      HASH_DEL(jvd->vml, vm);
+      free(vm->fn);
+      free(vm);
+      return;
+    }
   }
-  pthread_mutex_unlock(&jvd->lock_vml);
+  pthread_rwlock_unlock(&jvd->lock_vml);
+  dlog(LOG_ERR, "failed to delete ID from hash table\n");
 }
 
 
@@ -680,9 +661,9 @@ void dctrl_create(void **p, int max_decoders, int cache_size) {
 
   pthread_mutex_init(&jvd->lock_busy, NULL);
   pthread_mutex_init(&jvd->lock_jvo, NULL);
-  pthread_mutex_init(&jvd->lock_vml, NULL);
+  pthread_rwlock_init(&jvd->lock_vml, NULL);
 
-  jvd->vml = newvid(NULL, jvd->cache_size);
+  jvd->vml = NULL;
   jvd->jvo = newjvo(NULL, &jvd->lock_jvo);
 }
 
@@ -692,7 +673,7 @@ void dctrl_destroy(void **p) {
   clearvid(jvd->vml, &jvd->lock_vml);
   pthread_mutex_destroy(&jvd->lock_busy);
   pthread_mutex_destroy(&jvd->lock_jvo);
-  pthread_mutex_destroy(&jvd->lock_vml);
+  pthread_rwlock_destroy(&jvd->lock_vml);
   free(jvd->jvo);
   free(*((JVD**)p));
   *p = NULL;
@@ -773,20 +754,21 @@ static char *flags2txt(int f) {
 
 size_t dctrl_info_html (void *p, char *m, size_t n) {
   JVOBJECT *cptr = ((JVD*)p)->jvo;
-  VidMap *vptr = ((JVD*)p)->vml;
   int i = 0;
   size_t off = 0;
 
+  VidMap *vm, *tmp;
+  pthread_rwlock_rdlock(&((JVD*)p)->lock_vml);
   off += snprintf(m+off, n-off, "<h3>File Mapping:</h3>\n");
   off += snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
   off += snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Filename</th><th>LRU</th></tr>\n");
   off += snprintf(m+off, n-off, "\n");
-  while (vptr) {
+  HASH_ITER(hh, ((JVD*)p)->vml, vm, tmp) {
       off += snprintf(m+off, n-off, "<tr><td>%i</td><td>%i</td><td>%s</td><td>%"PRIlld"</td></tr>\n",
-          i++, vptr->id, vptr->fn?vptr->fn:"(null)", (long long)vptr->lru);
-    vptr = vptr->next;
+          i++, vm->id, vm->fn?vm->fn:"(null)", (long long)vm->lru);
   }
   off += snprintf(m+off, n-off, "</table>\n");
+  pthread_rwlock_unlock(&((JVD*)p)->lock_vml);
 
   i = 0;
   off += snprintf(m+off, n-off, "<h3>Decoder Objects:</h3>\n");
@@ -796,7 +778,7 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
   off += snprintf(m+off, n-off, "\n");
   while (cptr) {
     char *tmp = flags2txt(cptr->flags);
-    char *fn = get_fn((JVD*)p, cptr->id);
+    char *fn = (cptr->flags&VOF_VALID) ? get_fn((JVD*)p, cptr->id) : NULL;
     off += snprintf(m+off, n-off,
         "<tr><td>%i</td><td>%i</td><td>%s</td><td>%s</td>"/*"<td>%s</td>"*/"<td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
         i++, cptr->id, tmp, fn?fn:"-", /* (cptr->decoder?LIBAVCODEC_IDENT:"null"), */ff_fmt_to_text(cptr->fmt), cptr->frame, (long long)cptr->lru);
@@ -805,20 +787,6 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
   }
   off += snprintf(m+off, n-off, "</table>\n");
   return(off);
-}
-
-void dctrl_info_dump(void *p) {
-  JVOBJECT *cptr = ((JVD*)p)->jvo;
-  int i = 0;
-  printf("decoder info dump:\n");
-  while (cptr) {
-    char *fn = get_fn((JVD*)p, cptr->id);
-    printf("%i,%i,%i,%s,%lu:%s:%"PRId64"\n",
-        i, cptr->id, cptr->flags, fn?fn:"-", cptr->lru, (cptr->decoder?"open":"null"), cptr->frame);
-    i++;
-    cptr = cptr->next;
-  }
-  printf("------------\n");
 }
 
 // vim:sw=2 sts=2 ts=8 et:
