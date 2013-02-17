@@ -114,6 +114,15 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
 	}
       }
       break;
+    case PIX_FMT_YUYV422:
+      {
+	int i;
+	for (i = 0; i < w*h*2; i += 2) {
+	 buf[i] = 0x00;
+	 buf[i+1] = 0x80;
+	}
+      }
+      break;
     case PIX_FMT_YUV420P:
       {
 	size_t Ylen = w * h;
@@ -121,8 +130,18 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
 	memset(buf+Ylen, 0x80, Ylen/2);
       }
       break;
+    case PIX_FMT_YUV440P:
+      {
+	size_t Ylen = w * h;
+	memset(buf, 0, Ylen);
+	memset(buf+Ylen, 0x80, Ylen);
+      }
+      break;
+    case PIX_FMT_BGR24:
     case PIX_FMT_RGB24:
-    case PIX_FMT_RGB32:
+    case PIX_FMT_RGBA:
+    case PIX_FMT_BGRA:
+    case PIX_FMT_ARGB:
       memset(buf, 0, ff_getbuffersize(ff, NULL));
       break;
     default:
@@ -130,6 +149,50 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
 	fprintf(stderr, "render_empty_frame() with unknown render format\n");
       break;
   }
+#if 1 // draw cross
+  int i;
+  const int x = w/2;
+  const int y = h/2;
+  switch (ff->render_fmt) {
+    case PIX_FMT_YUV420P:
+    case PIX_FMT_YUV440P:
+      for (i=-16;i<=16; i++) {
+	if (x+i < w && x+i >=0) { buf[(x+i+y*w)] = 255; }
+	if (y+i < h && y+i >=0) { buf[(x+(y+i)*w)]=255; }
+      }
+      break;
+    case PIX_FMT_YUYV422:
+    case PIX_FMT_UYVY422:
+      {
+      const int O = (ff->render_fmt == PIX_FMT_UYVY422) ? 1 : 0;
+      for (i=-16;i<=16; i++) {
+	if (x+i < w && x+i >=0) { buf[(x+i+y*w)*2+O] = 255; }
+	if (y+i < h && y+i >=0) { buf[(x+(y+i)*w)*2+O]=255; }
+      }
+      }
+      break;
+    case PIX_FMT_RGB24:
+    case PIX_FMT_BGR24:
+      for (i=-16;i<=16; i++) {
+	if (x+i < w && x+i >=0) { buf[(x+i+y*w)*3]   = 255; buf[(x+i+y*w)*3+1]   = 255; buf[(x+i+y*w)*3+2]   = 255; }
+	if (y+i < h && y+i >=0) { buf[(x+(y+i)*w)*3] = 255; buf[(x+(y+i)*w)*3+1] = 255; buf[(x+(y+i)*w)*3+2] = 255; }
+      }
+      break;
+    case PIX_FMT_RGBA:
+    case PIX_FMT_BGRA:
+    case PIX_FMT_ARGB:
+      {
+      const int O = (ff->render_fmt == PIX_FMT_ARGB) ? 1 : 0;
+      for (i=-16;i<=16; i++) {
+	if (x+i < w && x+i >=0) { buf[(x+i+y*w)*4+O]   = 255; buf[(x+i+y*w)*4+1+O]   = 255; buf[(x+i+y*w)*4+2+O]   = 255; }
+	if (y+i < h && y+i >=0) { buf[(x+(y+i)*w)*4+O] = 255; buf[(x+(y+i)*w)*4+1+O] = 255; buf[(x+(y+i)*w)*4+2+O] = 255; }
+      }
+      }
+      break;
+    default:
+      break;
+  }
+#endif
 }
 
 static float ff_get_aspectratio(void *ptr) {
