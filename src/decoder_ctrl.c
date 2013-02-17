@@ -57,11 +57,13 @@ typedef struct VidMap {
   char *fn;
   time_t lru;
   UT_hash_handle hh;
+  UT_hash_handle hr;
 } VidMap;
 
 typedef struct JVD {
   JVOBJECT *jvo; // list of all decoder objects
-  VidMap *vml;   // filename <> id map
+  VidMap *vml;   // filename -> id map
+  VidMap *vmr;   // filename <- id map
   unsigned short monotonic;
   int max_objects;
   int cache_size;
@@ -225,7 +227,7 @@ static JVOBJECT *testjvd(JVOBJECT *jvo, unsigned short id, int fmt, int64_t fram
 
  @param id ; filter on id ; -1: all in cache.
 */
-static int clearjvo(JVD *jvd, int f, unsigned short id, int age, pthread_mutex_t *l) {
+static int clearjvo(JVD *jvd, int f, int id, int age, pthread_mutex_t *l) {
   JVOBJECT *cptr = jvd->jvo;
   JVOBJECT *prev = jvd->jvo;
   int total = 0, busy = 0, cleared = 0, freed = 0, count = 0, skipped = 0;
@@ -397,15 +399,16 @@ static JVOBJECT *getjvo(JVD *jvd) {
 // Video decoder management
 //
 
-static void clearvid(VidMap *vml, pthread_rwlock_t *vmllock) {
+static void clearvid(JVD* jvd) {
   VidMap *vm, *tmp;
-  pthread_rwlock_wrlock(vmllock);
-  HASH_ITER(hh, vml, vm, tmp) {
-    HASH_DEL(vml,vm);
+  pthread_rwlock_wrlock(&jvd->lock_vml);
+  HASH_ITER(hh, jvd->vml, vm, tmp) {
+    HASH_DEL(jvd->vml,vm);
+    HASH_DELETE(hr, jvd->vmr, vm);
     free(vm->fn);
     free(vm);
   }
-  pthread_rwlock_unlock(vmllock);
+  pthread_rwlock_unlock(&jvd->lock_vml);
 }
 
 static unsigned short get_id(JVD *jvd, const char *fn) {
@@ -447,46 +450,46 @@ static unsigned short get_id(JVD *jvd, const char *fn) {
     }
     if (vlru) {
       HASH_DEL(jvd->vml, vlru);
+      HASH_DELETE(hr, jvd->vmr, vlru);
       free(vlru->fn);
-      free(vlru);
+      vm = vlru;
+      memset(vm, 0, sizeof(VidMap));
     }
   }
 
-  vm = calloc(1, sizeof(VidMap));
+  if (!vm) vm = calloc(1, sizeof(VidMap));
+
   vm->id = jvd->monotonic++;
   vm->fn = strdup(fn);
   vm->lru = time(NULL);
   rv = vm->id;
   HASH_ADD_KEYPTR(hh, jvd->vml, vm->fn, strlen(vm->fn), vm);
+  HASH_ADD(hr, jvd->vmr, id, sizeof(unsigned short), vm);
   pthread_rwlock_unlock(&jvd->lock_vml);
   return rv;
 }
 
 static char *get_fn(JVD *jvd, unsigned short id) {
-  VidMap *vm, *tmp;
+  VidMap *vm;
   pthread_rwlock_rdlock(&jvd->lock_vml);
-  HASH_ITER(hh, jvd->vml, vm, tmp) {
-    if (vm->id == id) {
-      pthread_rwlock_unlock(&jvd->lock_vml);
-      return vm->fn; // strdup
-    }
-  }
+  HASH_FIND(hr, jvd->vmr, &id, sizeof(unsigned short), vm);
   pthread_rwlock_unlock(&jvd->lock_vml);
-  dlog(LOG_ERR, "can not find ID in hash table\n");
+  if (vm) return vm->fn; // XXX strdup before unlock
   return NULL;
 }
 
 static void release_id(JVD *jvd, unsigned short id) {
-  VidMap *vm, *tmp;
+  VidMap *vm;
   pthread_rwlock_wrlock(&jvd->lock_vml);
-  HASH_ITER(hh, jvd->vml, vm, tmp) {
-    if (vm->id == id) {
-      HASH_DEL(jvd->vml, vm);
-      free(vm->fn);
-      free(vm);
-      pthread_rwlock_unlock(&jvd->lock_vml);
-      return;
-    }
+  HASH_FIND(hr, jvd->vmr, &id, sizeof(unsigned short), vm);
+
+  if (vm) {
+    HASH_DEL(jvd->vml, vm);
+    HASH_DELETE(hr, jvd->vmr, vm);
+    pthread_rwlock_unlock(&jvd->lock_vml);
+    free(vm->fn);
+    free(vm);
+    return;
   }
   pthread_rwlock_unlock(&jvd->lock_vml);
   dlog(LOG_ERR, "failed to delete ID from hash table\n");
@@ -667,13 +670,14 @@ void dctrl_create(void **p, int max_decoders, int cache_size) {
   pthread_rwlock_init(&jvd->lock_vml, NULL);
 
   jvd->vml = NULL;
+  jvd->vmr = NULL;
   jvd->jvo = newjvo(NULL, &jvd->lock_jvo);
 }
 
 void dctrl_destroy(void **p) {
   JVD *jvd = (*((JVD**)p));
   clearjvo(jvd, 3, -1, -1, &jvd->lock_jvo);
-  clearvid(jvd->vml, &jvd->lock_vml);
+  clearvid(jvd);
   pthread_mutex_destroy(&jvd->lock_busy);
   pthread_mutex_destroy(&jvd->lock_jvo);
   pthread_rwlock_destroy(&jvd->lock_vml);
