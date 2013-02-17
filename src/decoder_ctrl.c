@@ -482,6 +482,7 @@ static void release_id(JVD *jvd, int id) {
       HASH_DEL(jvd->vml, vm);
       free(vm->fn);
       free(vm);
+      pthread_rwlock_unlock(&jvd->lock_vml);
       return;
     }
   }
