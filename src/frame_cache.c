@@ -33,6 +33,8 @@
 #include <assert.h>
 #include <pthread.h>
 
+//#define HASH_EMIT_KEYS 3
+#define HASH_FUNCTION HASH_SFH
 #include "uthash.h"
 
 /* FLAGS */
@@ -42,8 +44,8 @@
 
 typedef struct videocacheline {
   int id;         // file ID from VidMap
-  int w;
-  int h;
+  short w;
+  short h;
   int fmt;        // pixel format
   int64_t frame;
   int flags;
@@ -61,7 +63,7 @@ typedef struct videocacheline {
  * and realloccl_buf() must be called after this
  */
 static videocacheline *getcl(videocacheline **cache, int cfg_cachesize,
-    int id, int w, int h, int fmt, int64_t frame) {
+    unsigned short id, short w, short h, int fmt, int64_t frame) {
   videocacheline *cl = NULL;
 
   if (HASH_COUNT(*cache) >= cfg_cachesize) {
@@ -107,7 +109,7 @@ static videocacheline *getcl(videocacheline **cache, int cfg_cachesize,
 /* check if requested data exists in cache */
 static videocacheline *testclwh(videocacheline *cache,
     pthread_rwlock_t *lock,
-    int64_t frame, int w, int h, int fmt, int id) {
+    int64_t frame, short w, short h, int fmt, unsigned short id) {
   videocacheline *rv;
   const videocacheline cmp = {id, w, h, fmt, frame, 0, 0, 0, NULL };
   pthread_rwlock_rdlock(lock);
@@ -179,7 +181,7 @@ static void fc_flush_cache (xjcd *cc) {
   pthread_rwlock_unlock(&cc->lock);
 }
 
-static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, int w, int h, int fmt, int vid) {
+static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, short w, short h, int fmt, unsigned short vid) {
   /* check if the requested frame is cached */
   videocacheline *rv = testclwh(cc->vcache, &cc->lock, frame, w, h, fmt, vid);
   if (rv) {
@@ -277,7 +279,7 @@ void vcache_destroy(void **p) {
   *p = NULL;
 }
 
-uint8_t *vcache_get_buffer(void *p, void *dc, int id, int64_t frame, int w, int h, int fmt, void **cptr) {
+uint8_t *vcache_get_buffer(void *p, void *dc, unsigned short id, int64_t frame, short w, short h, int fmt, void **cptr) {
   videocacheline *cl = fc_readcl((xjcd*)p, dc, frame, w, h, fmt, id);
   if (!cl) {
     if (cptr) *cptr = NULL;

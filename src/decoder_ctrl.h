@@ -43,7 +43,7 @@ void dctrl_destroy(void **p);
  * @param fn file name to look up
  * @return file-id use with: dctrl_get_info() or dctrl_decode()
  */
-int dctrl_get_id(void *p, const char *fn);
+unsigned short dctrl_get_id(void *p, const char *fn);
 /**
  * HTML format debug info and store at most \a n bytes of the message to \a m
  * @param p pointer to a decoder-control object
@@ -58,7 +58,7 @@ size_t dctrl_info_html(void *p, char *m, size_t n);
  * @param i returned data
  * @return 0 on success, -1 otherwise
  */
-int dctrl_get_info(void *p, int id, VInfo *i);
+int dctrl_get_info(void *p, unsigned short id, VInfo *i);
 /**
  * set new scaling factors and return updated VInfo
  * @param p  pointer to a decoder-control object
@@ -68,14 +68,14 @@ int dctrl_get_info(void *p, int id, VInfo *i);
  * @param i optional - if not NULL \ref dctrl_get_info is called to fill in the data
  * @return 0 on success, -1 otherwise
  */
-int dctrl_get_info_scale(void *p, int id, VInfo *i, int w, int h, int fmt);
+int dctrl_get_info_scale(void *p, unsigned short id, VInfo *i, int w, int h, int fmt);
 
 /**
  * used by the frame-cache to decode a frame
  */
-int dctrl_decode(void *p, int vid, int64_t frame, uint8_t *b, int w, int h, int fmt);
+int dctrl_decode(void *p, unsigned short vid, int64_t frame, uint8_t *b, int w, int h, int fmt);
 
 /**
  */
-void dctrl_cache_clear(void *p, int f, int id);
+void dctrl_cache_clear(void *p, int f, unsigned short id);
 #endif

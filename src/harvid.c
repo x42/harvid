@@ -442,7 +442,7 @@ static char *file_info_raw (CONN *c, ics_request_args *a, VInfo *ji) {
 
 char *hdl_file_info (CONN *c, ics_request_args *a) {
   VInfo ji;
-  int vid;
+  unsigned short vid;
   vid = dctrl_get_id(dc, a->file_name);
   jvi_init(&ji);
   if (dctrl_get_info(dc, vid, &ji)) {
@@ -592,7 +592,7 @@ char *hdl_server_version (CONN *c, ics_request_args *a) {
 
 int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
   VInfo ji;
-  int vid;
+  unsigned short vid;
   void *cptr = NULL;
   uint8_t *optr = NULL;
   long int olen = 0;
