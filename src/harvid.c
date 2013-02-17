@@ -223,7 +223,7 @@ static int decode_switches (int argc, char **argv) {
         break;
       case 'C':
         initial_cache_size = atoi(optarg);
-        if (initial_cache_size < 2 || initial_cache_size > 8192)
+        if (initial_cache_size < 2 || initial_cache_size > 65535)
           initial_cache_size = 128;
         break;
       case 'V':
@@ -443,7 +443,7 @@ static char *file_info_raw (CONN *c, ics_request_args *a, VInfo *ji) {
 char *hdl_file_info (CONN *c, ics_request_args *a) {
   VInfo ji;
   unsigned short vid;
-  vid = dctrl_get_id(dc, a->file_name);
+  vid = dctrl_get_id(vc, dc, a->file_name);
   jvi_init(&ji);
   if (dctrl_get_info(dc, vid, &ji)) {
     return NULL;
@@ -598,7 +598,7 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
   long int olen = 0;
   uint8_t *bptr;
 
-  vid = dctrl_get_id(dc, a->file_name);
+  vid = dctrl_get_id(vc, dc, a->file_name);
   jvi_init(&ji);
 
   /* get canonical output width/height and corresponding buffersize */
@@ -657,11 +657,11 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
 }
 
 void hdl_clear_cache() {
-  vcache_clear(vc);
+  vcache_clear(vc, -1);
 }
 
 void hdl_purge_cache() {
-  vcache_clear(vc);
+  vcache_clear(vc, -1);
   dctrl_cache_clear(dc, 2, -1);
 }
 

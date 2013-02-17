@@ -123,9 +123,12 @@ static videocacheline *testclwh(videocacheline *cache,
  * if f==0 the cache is flushed objects in use are retained
  * time a cacheline is needed
  */
-static void clearcache(videocacheline **cache, pthread_rwlock_t *cachelock, int f) {
+static void clearcache(videocacheline **cache, pthread_rwlock_t *cachelock, int f, int id) {
   videocacheline *tmp, *cl = NULL;
   HASH_ITER(hh, *cache, cl, tmp) {
+    if (id >= 0 && cl->id != id) {
+      continue;
+    }
     if (f) {
       if (cl->flags & (CLF_DECODING|CLF_INUSE)) {
 	dlog(DLOG_WARNING, "CACHE: waiting for cacheline to be unlocked.\n");
@@ -175,7 +178,7 @@ static void fc_initialize_cache (xjcd *cc) {
 
 static void fc_flush_cache (xjcd *cc) {
   pthread_rwlock_wrlock(&cc->lock);
-  clearcache(&cc->vcache, &cc->lock, 1);
+  clearcache(&cc->vcache, &cc->lock, 1, -1);
   cc->cache_hits = 0;
   cc->cache_miss = 0;
   pthread_rwlock_unlock(&cc->lock);
@@ -248,10 +251,10 @@ static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, short w, sho
 ///////////////////////////////////////////////////////////////////////////////
 // public API
 
-void vcache_clear (void *p) {
+void vcache_clear (void *p, int id) {
   xjcd *cc = (xjcd*) p;
   pthread_rwlock_wrlock(&cc->lock);
-  clearcache(&cc->vcache, &cc->lock, 0);
+  clearcache(&cc->vcache, &cc->lock, 0, id);
   cc->cache_hits = 0;
   cc->cache_miss = 0;
   pthread_rwlock_unlock(&cc->lock);

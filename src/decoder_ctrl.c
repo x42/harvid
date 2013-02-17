@@ -24,6 +24,7 @@
 #include <assert.h>
 
 #include "decoder_ctrl.h"
+#include "frame_cache.h"
 #include "ffdecoder.h"
 #include "ffcompat.h"
 #include "daemon_log.h"
@@ -411,7 +412,7 @@ static void clearvid(JVD* jvd) {
   pthread_rwlock_unlock(&jvd->lock_vml);
 }
 
-static unsigned short get_id(JVD *jvd, const char *fn) {
+static unsigned short get_id(JVD *jvd, const char *fn, void *vc) {
   VidMap *vm = NULL;
   int rv;
 
@@ -460,11 +461,17 @@ static unsigned short get_id(JVD *jvd, const char *fn) {
   if (!vm) vm = calloc(1, sizeof(VidMap));
 
   vm->id = jvd->monotonic++;
+  if (jvd->monotonic == 0) {
+    dlog(LOG_INFO, "monotonic ID counter roll-over\n");
+    jvd->monotonic = 1;
+  }
   vm->fn = strdup(fn);
   vm->lru = time(NULL);
   rv = vm->id;
   HASH_ADD_KEYPTR(hh, jvd->vml, vm->fn, strlen(vm->fn), vm);
   HASH_ADD(hr, jvd->vmr, id, sizeof(unsigned short), vm);
+  /* invalidate frame-cache for this ID*/
+  if (vc) vcache_clear(vc, vm->id);
   pthread_rwlock_unlock(&jvd->lock_vml);
   return rv;
 }
@@ -686,9 +693,9 @@ void dctrl_destroy(void **p) {
   *p = NULL;
 }
 
-unsigned short dctrl_get_id(void *p, const char *fn) {
+unsigned short dctrl_get_id(void *vc, void *p, const char *fn) {
   JVD *jvd = (JVD*)p;
-  return get_id(jvd, fn);
+  return get_id(jvd, fn, vc);
 }
 
 

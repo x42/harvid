@@ -39,11 +39,12 @@ void dctrl_destroy(void **p);
 /**
  * request a video-object id for the given file
  *
+ * @param vc pointer to a video-cache object
  * @param p pointer to a decoder-control object
  * @param fn file name to look up
  * @return file-id use with: dctrl_get_info() or dctrl_decode()
  */
-unsigned short dctrl_get_id(void *p, const char *fn);
+unsigned short dctrl_get_id(void *vc, void *p, const char *fn);
 /**
  * HTML format debug info and store at most \a n bytes of the message to \a m
  * @param p pointer to a decoder-control object
