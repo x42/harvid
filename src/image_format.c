@@ -181,7 +181,7 @@ size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf) {
   long int rsize = ftell (x);
   rewind(x);
   if (fseek(x, 0L, SEEK_SET) < 0) {
-    dlog(LOG_DEBUG, "IMF: fseek failed\n");
+    dlog(LOG_WARNING, "IMF: fseek failed\n");
   }
   fflush(x);
   *out = (uint8_t*) malloc(rsize*sizeof(uint8_t));

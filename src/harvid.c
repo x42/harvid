@@ -187,7 +187,7 @@ static int decode_switches (int argc, char **argv) {
         if (strstr(optarg, "DCTL")) debug_section|=DEBUG_DCTL;
         if (strstr(optarg, "ICS")) debug_section|=DEBUG_ICS;
 #ifdef NDEBUG
-        printf(stderr, "harvid was built with NDEBUG. '-d' has no affect.\n");
+        fprintf(stderr, "harvid was built with NDEBUG. '-d' has no affect.\n");
 #endif
         break;
       case 'D':		/* --daemonize */

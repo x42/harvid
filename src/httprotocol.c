@@ -155,10 +155,11 @@ int http_tx(int fd, int s, httpheader *h, size_t len, const uint8_t *buf) {
     else {
 #ifndef HAVE_WINDOWS
       int rv = write(fd, buf+offset, len-offset);
+      debugmsg(DEBUG_HTTP, "  written (%d/%zu) @%zu on fd:%i\n", rv, len-offset, offset, fd);
 #else
       int rv = send(fd, (const char*) (buf+offset), (size_t) (len-offset), 0);
+      debugmsg(DEBUG_HTTP, "  written (%d/%lu) @%lu on fd:%i\n", rv, (unsigned long)(len-offset), (unsigned long) offset, fd);
 #endif
-      debugmsg(DEBUG_HTTP, "  written (%u/%u) @%u on fd:%i\n", rv, len-offset, offset, fd);
       if (rv < 0) {
         dlog(DLOG_WARNING, "HTTP: write to socket failed: %s\n", strerror(errno));
         break; // TODO: don't break on EAGAIN, ENOBUFS, ENOMEM or similar
@@ -385,7 +386,11 @@ int protocol_handler(CONN *c, void *unused) {
     while (header && (*header == '\r' || *header == '\n')) header++;
   }
 
-  debugmsg(DEBUG_HTTP, "HTTP: CON header-len: %i\n", strlen(header));
+#ifdef HAVE_WINDOWS
+  debugmsg(DEBUG_HTTP, "HTTP: CON header-len: %lu\n", (long unsigned) strlen(header));
+#else
+  debugmsg(DEBUG_HTTP, "HTTP: CON header-len: %zu\n", strlen(header));
+#endif
   debugmsg(DEBUG_HTTP, "HTTP: CON header: ''%s''\n", header);
 
 
@@ -478,7 +483,11 @@ int protocol_handler(CONN *c, void *unused) {
       && (num < BUFSIZ)
       ) {
       header[contentlength] = '\0';
-      debugmsg(DEBUG_CON, "HTTP: translate POST->GET query - length data:%d cl:%ld\n", strlen(header), contentlength);
+#ifdef HAVE_WINDOWS
+      debugmsg(DEBUG_CON, "HTTP: translate POST->GET query - length data:%lu cl:%ld\n", (long unsigned) strlen(header), contentlength);
+#else
+      debugmsg(DEBUG_CON, "HTTP: translate POST->GET query - length data:%zu cl:%ld\n", strlen(header), contentlength);
+#endif
       debugmsg(DEBUG_CON, "HTTP: x-www-form-urlencoded:'%s'\n", header);
       query = header;
       method_str = "GET";

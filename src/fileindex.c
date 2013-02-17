@@ -168,7 +168,7 @@ int parse_dir (const char *root, const char *burl, const char *path, int opt, ch
   size_t off = 0;
   snprintf(dn, MAX_PATH, "%s%s%s", root, SL_SEP(root), path);
 
-  dlog(LOG_DEBUG, "IndexDir: indexing '%s'\n", dn);
+  debugmsg(DEBUG_ICS, "IndexDir: indexing '%s'\n", dn);
   if (!(D = opendir (dn)))  {
     dlog(LOG_WARNING, "IndexDir: could not open dir '%s'\n", dn);
     return 0;

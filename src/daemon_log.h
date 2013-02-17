@@ -41,7 +41,7 @@
 #include <windows.h>
 #include <winsock.h>
 
-#define LOG_EMERG 2
+#define LOG_EMERG 1
 #define LOG_CRIT 2
 #define LOG_ERR 3
 #define LOG_WARNING 4
