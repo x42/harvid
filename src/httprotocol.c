@@ -309,7 +309,7 @@ static char *get_next_line(char **str) {
   return t;
 }
 
-/* check accept  for image/png[;..] */
+/* check accept for image/png[;..] */
 static int compare_accept(char *line) {
   int rv = 0;
   char *tmp;

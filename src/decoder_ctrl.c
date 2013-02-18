@@ -327,7 +327,7 @@ static int clearjvo(JVD *jvd, int f, int id, int age, pthread_mutex_t *l) {
     pthread_mutex_unlock(&jvd->lock_busy);
   }
 
-  dlog(LOG_INFO, "DCTL: GC processed %d (freed: %d, cleared: %d, busy: %d) skipped: %d, total: %d\n", count, freed, cleared, busy, skipped, total);
+  debugmsg(DEBUG_DCTL, "DCTL: GC processed %d (freed: %d, cleared: %d, busy: %d) skipped: %d, total: %d\n", count, freed, cleared, busy, skipped, total);
   return (cleared);
 }
 

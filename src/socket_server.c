@@ -265,10 +265,10 @@ static void start_child(ICI *d, int fd, char *rh, unsigned short rp) {
     d->num_clients--;
     pthread_mutex_unlock(&d->lock);
     free(c);
-    dlog(DLOG_WARNING, "SRV: Connection terminated: now %i connections active\n", d->num_clients);
+    debugmsg(DEBUG_SRV, "SRV: Connection terminated: now %i connections active\n", d->num_clients);
     return;
   }
-  dlog(DLOG_INFO, "SRV: Connection started: now %i connections active\n", d->num_clients);
+  debugmsg(DEBUG_SRV, "SRV: Connection started: now %i connections active\n", d->num_clients);
 }
 
 /** handshake - accept incoming connection  */
