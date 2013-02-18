@@ -196,34 +196,37 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
 #endif
 }
 
-static float ff_get_aspectratio(void *ptr) {
+static double ff_get_aspectratio(void *ptr) {
   ffst *ff = (ffst*)ptr;
-  float aspect_ratio;
+  double aspect_ratio;
   if (ff->pCodecCtx->sample_aspect_ratio.num == 0)
-    aspect_ratio = 0;
+    aspect_ratio = 1.77;
   else
     aspect_ratio = av_q2d(ff->pCodecCtx->sample_aspect_ratio)
-                   * (float)ff->pCodecCtx->width / (float)ff->pCodecCtx->height;
+                   * (double)ff->pCodecCtx->width / (double)ff->pCodecCtx->height;
   if (aspect_ratio <= 0.0)
-    aspect_ratio = (float)ff->pCodecCtx->width / (float)ff->pCodecCtx->height;
+    aspect_ratio = (double)ff->pCodecCtx->width / (double)ff->pCodecCtx->height;
   return (aspect_ratio);
 }
 
 static void ff_caononicalize_size2(void *ptr, int *w, int *h) {
   ffst *ff = (ffst*)ptr;
-  float aspect_ratio = ff_get_aspectratio(ptr);
+  double aspect_ratio = ff_get_aspectratio(ptr);
   if (!w || !h) return;
 
-  if ((*h) < 0  && (*w) > 0) (*h) = (int) floorf((float)(*w)/aspect_ratio);
-  else if ((*h) > 0  && (*w) < 0) (*w) = (int) floorf((float)(*h)*aspect_ratio);
+  if ((*h) < 16 && (*w) > 15) (*h) = (int) floorf((float)(*w)/aspect_ratio);
+  else if ((*h) > 15  && (*w) < 16) (*w) = (int) floorf((float)(*h)*aspect_ratio);
 
-  #ifdef SCALE_UP
-  if ((*w) < 0) (*w) = (int) floorf((float)ff->pCodecCtx->height * aspect_ratio);
-  if ((*h) < 0) (*h) = ff->pCodecCtx->height;
-  #else
-  if ((*w) < 0) (*w) = ff->pCodecCtx->width ;
-  if ((*h) < 0) (*h)  = (int) floorf((float)ff->pCodecCtx->width / aspect_ratio);
-  #endif
+  if ((*w) < 16 || (*h) < 16) {
+#ifdef SCALE_UP
+    (*w) = (int) floor((double)ff->pCodecCtx->height * aspect_ratio);
+    (*h) = ff->pCodecCtx->height;
+#else
+    (*w) = ff->pCodecCtx->width ;
+    (*h) = (int) floor((double)ff->pCodecCtx->width / aspect_ratio);
+#endif
+  }
+  printf("DEBUG %d x %d\n", (*w), (*h));
 }
 
 static void ff_caononical_size(void *ptr) {
@@ -451,11 +454,11 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
 // FIXME: don't scale here - announce aspect ratio
 // out_width/height remains in aspect 1:1
 #ifdef SCALE_UP
-  ff->movie_width = (int) floorf((float)ff->pCodecCtx->height * ff_get_aspectratio(ff));
+  ff->movie_width = (int) floor((double)ff->pCodecCtx->height * ff_get_aspectratio(ff));
   ff->movie_height = ff->pCodecCtx->height;
 #else
   ff->movie_width = ff->pCodecCtx->width;
-  ff->movie_height = (int) floorf((float)ff->pCodecCtx->width / ff_get_aspectratio(ff));
+  ff->movie_height = (int) floor((double)ff->pCodecCtx->width / ff_get_aspectratio(ff));
 #endif
 
   // somewhere around LIBAVFORMAT_BUILD  4630

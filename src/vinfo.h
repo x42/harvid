@@ -33,7 +33,7 @@
 typedef struct {
   int movie_width;        ///< read-only image-size
   int movie_height;       ///< read-only image-size
-  float movie_aspect;     ///< read-only original aspect-ratio
+  double movie_aspect;    ///< read-only original aspect-ratio
   int out_width;          ///< actual output image geometry
   int out_height;         ///< may be overwritten
   TimecodeRate framerate; ///< framerate num/den&flags
