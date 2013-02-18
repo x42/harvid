@@ -401,12 +401,14 @@ static JVOBJECT *getjvo(JVD *jvd) {
 // Video decoder management
 //
 
-static void clearvid(JVD* jvd) {
+static void clearvid(JVD* jvd, void *vc) {
   VidMap *vm, *tmp;
   pthread_rwlock_wrlock(&jvd->lock_vml);
   HASH_ITER(hh, jvd->vml, vm, tmp) {
     HASH_DEL(jvd->vml,vm);
     HASH_DELETE(hr, jvd->vmr, vm);
+    if (vc) vcache_clear(vc, vm->id);
+    clearjvo(jvd, 3, vm->id, -1, &jvd->lock_jvo);
     free(vm->fn);
     free(vm);
   }
@@ -685,7 +687,7 @@ void dctrl_create(void **p, int max_decoders, int cache_size) {
 void dctrl_destroy(void **p) {
   JVD *jvd = (*((JVD**)p));
   clearjvo(jvd, 3, -1, -1, &jvd->lock_jvo);
-  clearvid(jvd);
+  clearvid(jvd, NULL);
   pthread_mutex_destroy(&jvd->lock_busy);
   pthread_mutex_destroy(&jvd->lock_jvo);
   pthread_rwlock_destroy(&jvd->lock_vml);
@@ -727,9 +729,11 @@ int dctrl_get_info_scale(void *p, unsigned short id, VInfo *i, int w, int h, int
   return(0);
 }
 
-void dctrl_cache_clear(void *p, int f, unsigned short id) {
+void dctrl_cache_clear(void *vc, void *p, int f, int id) {
   JVD *jvd = (JVD*)p;
   clearjvo(jvd, f, id, -1, &jvd->lock_jvo);
+  if (vc) clearvid(jvd, vc);
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////

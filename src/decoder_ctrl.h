@@ -79,5 +79,5 @@ int dctrl_decode(void *p, unsigned short vid, int64_t frame, uint8_t *b, int w, 
 
 /**
  */
-void dctrl_cache_clear(void *p, int f, unsigned short id);
+void dctrl_cache_clear(void *vc, void *p, int f, int id);
 #endif
