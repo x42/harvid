@@ -12,7 +12,7 @@
 #define HTMLBODY HTMLBODYPERC("%")
 
 #define CENTERDIV \
-	"<div style=\"width:30em; margin:0 auto;\">\n"
+	"<div style=\"width:34em; margin:0 auto;\">\n"
 
 #define HTMLFOOTER \
 	"<hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION" at %s:%i</div>"

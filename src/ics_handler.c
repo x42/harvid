@@ -121,7 +121,7 @@ void parse_param(struct queryparserstate *qps, char *kvp) {
     else if (!strcmp(val, "yuv422")) {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUYV422;}
     else if (!strcmp(val, "uyv422")) {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_UYVY422;}
     else if (!strcmp(val, "rgb"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_RGB24;}
-    else if (!strcmp(val, "rgb"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_BGR24;}
+    else if (!strcmp(val, "bgr"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_BGR24;}
     else if (!strcmp(val, "rgba"))   {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_RGBA;}
     else if (!strcmp(val, "argb"))   {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_ARGB;}
     else if (!strcmp(val, "bgra"))   {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_BGRA;}
@@ -281,7 +281,7 @@ void ics_http_handler(
         SEND200CT(info, CONTENT_TYPE_SWITCH(a.render_fmt));
         free(info);
       } else {
-        httperror(c->fd, 503, "Service Unavailable", "<p>Server is overloaded (no decoder available).</p>");
+        httperror(c->fd, 503, "Service Unavailable", "<p>No decoder is available. Either the server is overloaded or the file is invalid (no video track, unknown codec,..)</p>");
       }
     } else {
       httperror(c->fd, 400, "Bad Request", "<p>Insufficient parse query parameters.</p>");

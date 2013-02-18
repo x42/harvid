@@ -321,7 +321,7 @@ char *hdl_homepage_html (CONN *c) {
   off+=snprintf(msg+off, HPSIZE-off, "<title>harvid</title></head>\n");
   off+=snprintf(msg+off, HPSIZE-off, HTMLBODY);
   off+=snprintf(msg+off, HPSIZE-off, CENTERDIV);
-  off+=snprintf(msg+off, HPSIZE-off, "<div style=\"float:left;\"><h2>Built-in handlers</h2>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<div style=\"float:left;margin:0 2em;\"><h2>Built-in handlers</h2>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<ul>");
   if (!cfg_noindex) {
     off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"index/\">File Index</a></li>\n");
@@ -332,7 +332,7 @@ char *hdl_homepage_html (CONN *c) {
   off+=snprintf(msg+off, HPSIZE-off, "</ul></div>");
 
   if (cfg_adminmask)
-    off+=snprintf(msg+off, HPSIZE-off, "<div style=\"float:right;\"><h2>Admin Tasks:</h2><ul>\n");
+    off+=snprintf(msg+off, HPSIZE-off, "<div style=\"float:right;margin:0 2em;\"><h2>Admin Tasks:</h2><ul>\n");
   if (cfg_adminmask&ADM_FLUSHCACHE)
     off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"admin/flush_cache\">Flush Cache</a></li>\n");
   if (cfg_adminmask&ADM_PURGECACHE)
@@ -342,8 +342,12 @@ char *hdl_homepage_html (CONN *c) {
   if (cfg_adminmask)
     off+=snprintf(msg+off, HPSIZE-off, "</ul>\n</div>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<div style=\"clear:both;\"></div><hr/>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p style=\"text-align:justify;\">The default request handler decodes images and requires a <code>?frame=NUM&amp;file=PATH</code> URL query or post parameters. Video frames are counted starting at zero. Default options are <code>w=0&amp;h=0&amp;format=png</code> which serves the image in pre-scaled to its effective size as png image. If either only <em>width</em> or <em>height</em> is specified with a value greater than 15, the other is calculated according to the movie's effective aspect-ratio however the minimum size is 16x16. A geometry smaller than 16x16 will return the image in its original size.</p>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<p>Available query parameters: frame, w, h, file, format.</p>\n");
-  off+=snprintf(msg+off, HPSIZE-off, "<p>Supported image output formats: jpg, jpeg, png, ppm, yuv, yuv420, yuv440, yuv422, rgb, rgb, rgba, argb, bgra.</p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p>Supported image output pixel formats:</p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<ul>\n<li>Encoded: jpg, jpeg, png, ppm</li>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<li>Raw RGB: rgb, bgr, rgba, argb, bgra</li>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<li>Raw YUV: yuv, yuv420, yuv440, yuv422, uyv422</li>\n</ul>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<p>Supported info output formats: html, xhtml, json, csv, plain.</p>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<p style=\"text-align:center\"><a href=\"https://github.com/x42/harvid\">harvid @ GitHub</a></p>\n");
   off+=snprintf(msg+off, HPSIZE-off, "</div>\n");

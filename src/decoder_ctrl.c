@@ -769,7 +769,7 @@ static char *flags2txt(int f) {
 
 size_t dctrl_info_html (void *p, char *m, size_t n) {
   JVOBJECT *cptr = ((JVD*)p)->jvo;
-  int i = 0;
+  int i = 1;
   size_t off = 0;
 
   VidMap *vm, *tmp;
@@ -779,13 +779,13 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
   off += snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Filename</th><th>LRU</th></tr>\n");
   off += snprintf(m+off, n-off, "\n");
   HASH_ITER(hh, ((JVD*)p)->vml, vm, tmp) {
-      off += snprintf(m+off, n-off, "<tr><td>%i</td><td>%i</td><td>%s</td><td>%"PRIlld"</td></tr>\n",
+      off += snprintf(m+off, n-off, "<tr><td>%d.</td><td>%i</td><td>%s</td><td>%"PRIlld"</td></tr>\n",
           i++, vm->id, vm->fn?vm->fn:"(null)", (long long)vm->lru);
   }
   off += snprintf(m+off, n-off, "</table>\n");
   pthread_rwlock_unlock(&((JVD*)p)->lock_vml);
 
-  i = 0;
+  i = 1;
   off += snprintf(m+off, n-off, "<h3>Decoder Objects:</h3>\n");
   off += snprintf(m+off, n-off, "<p>busy: %d%s</p>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
   off += snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
@@ -795,7 +795,7 @@ size_t dctrl_info_html (void *p, char *m, size_t n) {
     char *tmp = flags2txt(cptr->flags);
     char *fn = (cptr->flags&VOF_VALID) ? get_fn((JVD*)p, cptr->id) : NULL;
     off += snprintf(m+off, n-off,
-        "<tr><td>%i</td><td>%i</td><td>%s</td><td>%s</td>"/*"<td>%s</td>"*/"<td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
+        "<tr><td>%d.</td><td>%i</td><td>%s</td><td>%s</td>"/*"<td>%s</td>"*/"<td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
         i++, cptr->id, tmp, fn?fn:"-", /* (cptr->decoder?LIBAVCODEC_IDENT:"null"), */ff_fmt_to_text(cptr->fmt), cptr->frame, (long long)cptr->lru);
     free(tmp);
     cptr = cptr->next;

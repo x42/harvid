@@ -334,7 +334,7 @@ static char *flags2txt(int f) {
 
 size_t vcache_info_html(void *p, char *m, size_t n) {
   size_t off = 0;
-  int i = 0;
+  int i = 1;
   videocacheline *cptr, *tmp;
 
   off += snprintf(m+off, n-off, "<h3>Cache Info:</h3>\n");
@@ -347,7 +347,7 @@ size_t vcache_info_html(void *p, char *m, size_t n) {
   HASH_ITER(hh, ((xjcd*)p)->vcache, cptr, tmp) {
     char *tmp = flags2txt(cptr->flags);
     off += snprintf(m+off, n-off,
-        "<tr><td>%d</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
+        "<tr><td>%d.</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
 	i, cptr->id, tmp, cptr->w, cptr->h, (cptr->b ? ff_fmt_to_text(cptr->fmt) : "null"), cptr->frame, (long long) cptr->lru);
     free(tmp);
     i++;
