@@ -72,8 +72,8 @@ static videocacheline *getcl(videocacheline **cache, int cfg_cachesize,
     HASH_ITER(hh, *cache, cl, tmp) {
       if (cl->flags == 0) return cl;
       if (!(cl->flags&(CLF_DECODING|CLF_INUSE)) && (cl->lru < lru))  {
-	lru = cl->lru;
-	clru = cl;
+        lru = cl->lru;
+        clru = cl;
       }
     }
     if (clru) {
@@ -81,11 +81,11 @@ static videocacheline *getcl(videocacheline **cache, int cfg_cachesize,
       assert(clru->refcnt == 0);
       cl = clru;
       if (cl->b && cl->w == w && cl->h == h && cl->fmt == fmt) {
-	cl->flags = 0;
-	memset(&cl->hh, 0, sizeof(UT_hash_handle));
+        cl->flags = 0;
+        memset(&cl->hh, 0, sizeof(UT_hash_handle));
       } else {
-	free(cl->b);
-	memset(cl, 0, sizeof(videocacheline));
+        free(cl->b);
+        memset(cl, 0, sizeof(videocacheline));
       }
     } else {
       dlog(DLOG_WARNING, "CACHE: cache full - all cache-lines in use.\n");
@@ -131,12 +131,12 @@ static void clearcache(videocacheline **cache, pthread_rwlock_t *cachelock, int 
     }
     if (f) {
       if (cl->flags & (CLF_DECODING|CLF_INUSE)) {
-	dlog(DLOG_WARNING, "CACHE: waiting for cacheline to be unlocked.\n");
+        dlog(DLOG_WARNING, "CACHE: waiting for cacheline to be unlocked.\n");
       }
       while (cl->flags & (CLF_DECODING|CLF_INUSE)) {
-	pthread_rwlock_unlock(cachelock);
-	mymsleep(5);
-	pthread_rwlock_wrlock(cachelock);
+        pthread_rwlock_unlock(cachelock);
+        mymsleep(5);
+        pthread_rwlock_wrlock(cachelock);
       }
     }
     if (cl->flags & (CLF_DECODING|CLF_INUSE)) {
@@ -346,8 +346,8 @@ void vcache_info_html(void *p, char **m, size_t *o, size_t *s) {
   HASH_ITER(hh, ((xjcd*)p)->vcache, cptr, tmp) {
     char *tmp = flags2txt(cptr->flags);
     rprintf(
-	"<tr><td>%d.</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
-	i, cptr->id, tmp, cptr->w, cptr->h, (cptr->b ? ff_fmt_to_text(cptr->fmt) : "null"), cptr->frame, (long long) cptr->lru);
+        "<tr><td>%d.</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
+        i, cptr->id, tmp, cptr->w, cptr->h, (cptr->b ? ff_fmt_to_text(cptr->fmt) : "null"), cptr->frame, (long long) cptr->lru);
     free(tmp);
     i++;
   }
@@ -355,4 +355,4 @@ void vcache_info_html(void *p, char **m, size_t *o, size_t *s) {
   rprintf("</table>\n");
 }
 
-/* vi:set ts=8 sts=2 sw=2: */
+// vim:sw=2 sts=2 ts=8 et:
