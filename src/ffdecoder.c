@@ -226,7 +226,6 @@ static void ff_caononicalize_size2(void *ptr, int *w, int *h) {
     (*h) = (int) floor((double)ff->pCodecCtx->width / aspect_ratio);
 #endif
   }
-  printf("DEBUG %d x %d\n", (*w), (*h));
 }
 
 static void ff_caononical_size(void *ptr) {
