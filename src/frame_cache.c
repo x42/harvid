@@ -332,29 +332,27 @@ static char *flags2txt(int f) {
   return rv;
 }
 
-size_t vcache_info_html(void *p, char *m, size_t n) {
-  size_t off = 0;
+void vcache_info_html(void *p, char **m, size_t *o, size_t *s) {
   int i = 1;
   videocacheline *cptr, *tmp;
 
-  off += snprintf(m+off, n-off, "<h3>Cache Info:</h3>\n");
-  off += snprintf(m+off, n-off, "<p>Size: max. %i entries.\n", ((xjcd*)p)->cfg_cachesize);
-  off += snprintf(m+off, n-off, "Hits: %d, Misses: %d</p>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
-  off += snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
-  off += snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>W</th><th>H</th><th>Buffer</th><th>Frame#</th><th>LRU</th></tr>\n");
+  rprintf("<h3>Cache Info:</h3>\n");
+  rprintf("<p>Size: max. %i entries.\n", ((xjcd*)p)->cfg_cachesize);
+  rprintf("Hits: %d, Misses: %d</p>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
+  rprintf("<table style=\"text-align:center;width:100%%\">\n");
+  rprintf("<tr><th>#</th><th>file-id</th><th>Flags</th><th>W</th><th>H</th><th>Buffer</th><th>Frame#</th><th>LRU</th></tr>\n");
   /* walk comlete tree */
   pthread_rwlock_rdlock(&((xjcd*)p)->lock);
   HASH_ITER(hh, ((xjcd*)p)->vcache, cptr, tmp) {
     char *tmp = flags2txt(cptr->flags);
-    off += snprintf(m+off, n-off,
-        "<tr><td>%d.</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
+    rprintf(
+	"<tr><td>%d.</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
 	i, cptr->id, tmp, cptr->w, cptr->h, (cptr->b ? ff_fmt_to_text(cptr->fmt) : "null"), cptr->frame, (long long) cptr->lru);
     free(tmp);
     i++;
   }
   pthread_rwlock_unlock(&((xjcd*)p)->lock);
-  off += snprintf(m+off, n-off, "</table>\n");
-  return(off);
+  rprintf("</table>\n");
 }
 
 /* vi:set ts=8 sts=2 sw=2: */

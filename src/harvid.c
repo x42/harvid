@@ -313,7 +313,7 @@ errexit:
 #include "ics_handler.h"
 #include "htmlconst.h"
 
-#define HPSIZE 8192 // max size of homepage in bytes.
+#define HPSIZE 4096 // max size of homepage in bytes.
 char *hdl_homepage_html (CONN *c) {
   char *msg = malloc(HPSIZE * sizeof(char));
   int off = 0;
@@ -356,90 +356,92 @@ char *hdl_homepage_html (CONN *c) {
   return msg;
 }
 
-#define STASIZ (262100)
 char *hdl_server_status_html (CONN *c) {
-  char *sm = malloc(STASIZ * sizeof(char));
-  int off = 0;
-  off+=snprintf(sm+off, STASIZ-off, DOCTYPE HTMLOPEN);
-  off+=snprintf(sm+off, STASIZ-off, "<title>harvid status</title></head>\n");
-  off+=snprintf(sm+off, STASIZ-off, HTMLBODY);
-  off+=snprintf(sm+off, STASIZ-off, "<h2>harvid status</h2>\n");
-  off+=snprintf(sm+off, STASIZ-off, "<p>status: ok, online.</p>\n");
-  off+=snprintf(sm+off, STASIZ-off, "<p>concurrent connections: current/max-seen/limit: %d/%d/%d</p>\n", c->d->num_clients, c->d->max_clients, MAXCONNECTIONS);
-  off+=dctrl_info_html(dc, sm+off, STASIZ-off);
-  off+=vcache_info_html(vc, sm+off, STASIZ-off);
-  off+=snprintf(sm+off, STASIZ-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
-  off+=snprintf(sm+off, STASIZ-off, "</body>\n</html>");
+  size_t ss = 1024;
+  size_t off = 0;
+  char *sm = malloc(ss * sizeof(char));
+  raprintf(sm, off, ss, DOCTYPE HTMLOPEN);
+  raprintf(sm, off, ss, "<title>harvid status</title></head>\n");
+  raprintf(sm, off, ss, HTMLBODY);
+  raprintf(sm, off, ss, "<h2>harvid status</h2>\n");
+  raprintf(sm, off, ss, "<p>status: ok, online.</p>\n");
+  raprintf(sm, off, ss, "<p>concurrent connections: current/max-seen/limit: %d/%d/%d</p>\n", c->d->num_clients, c->d->max_clients, MAXCONNECTIONS);
+  dctrl_info_html(dc, &sm, &off, &ss);
+  vcache_info_html(vc, &sm, &off, &ss);
+  raprintf(sm, off, ss, HTMLFOOTER, c->d->local_addr, c->d->local_port);
+  raprintf(sm, off, ss, "</body>\n</html>");
   return (sm);
 }
 
+#define NFOSIZ (256)
 static char *file_info_json (CONN *c, ics_request_args *a, VInfo *ji) {
-  char *im = malloc(256 * sizeof(char));
+  char *im = malloc(NFOSIZ * sizeof(char));
   int off = 0;
-  off+=snprintf(im+off, 256-off, "{");
-//off+=snprintf(im+off, 256-off, "\"geometry\":[%i,%i],", ji->movie_width, ji->movie_height);
-  off+=snprintf(im+off, 256-off, "\"width\":%i", ji->movie_width);
-  off+=snprintf(im+off, 256-off, ",\"height\":%i", ji->movie_height);
-  off+=snprintf(im+off, 256-off, ",\"aspect\":%.3f", ji->movie_aspect);
-  off+=snprintf(im+off, 256-off, ",\"framerate\":%.3f", timecode_rate_to_double(&ji->framerate));
-  off+=snprintf(im+off, 256-off, ",\"duration\":%"PRId64, ji->frames);
-  off+=snprintf(im+off, 256-off, "}");
+  off+=snprintf(im+off, NFOSIZ-off, "{");
+//off+=snprintf(im+off, NFOSIZ-off, "\"geometry\":[%i,%i],", ji->movie_width, ji->movie_height);
+  off+=snprintf(im+off, NFOSIZ-off, "\"width\":%i", ji->movie_width);
+  off+=snprintf(im+off, NFOSIZ-off, ",\"height\":%i", ji->movie_height);
+  off+=snprintf(im+off, NFOSIZ-off, ",\"aspect\":%.3f", ji->movie_aspect);
+  off+=snprintf(im+off, NFOSIZ-off, ",\"framerate\":%.3f", timecode_rate_to_double(&ji->framerate));
+  off+=snprintf(im+off, NFOSIZ-off, ",\"duration\":%"PRId64, ji->frames);
+  off+=snprintf(im+off, NFOSIZ-off, "}");
   jvi_free(ji);
   return (im);
 }
 
 static char *file_info_csv (CONN *c, ics_request_args *a, VInfo *ji) {
-  char *im = malloc(256 * sizeof(char));
+  char *im = malloc(NFOSIZ * sizeof(char));
   int off = 0;
-  off+=snprintf(im+off, 256-off, "1"); // FORMAT VERSION
-  off+=snprintf(im+off, 256-off, ",%i", ji->movie_width);
-  off+=snprintf(im+off, 256-off, ",%i", ji->movie_height);
-  off+=snprintf(im+off, 256-off, ",%f\n", ji->movie_aspect);
-  off+=snprintf(im+off, 256-off, ",%.3f", timecode_rate_to_double(&ji->framerate));
-  off+=snprintf(im+off, 256-off, ",%"PRId64, ji->frames);
-  off+=snprintf(im+off, 256-off, "\n");
+  off+=snprintf(im+off, NFOSIZ-off, "1"); // FORMAT VERSION
+  off+=snprintf(im+off, NFOSIZ-off, ",%i", ji->movie_width);
+  off+=snprintf(im+off, NFOSIZ-off, ",%i", ji->movie_height);
+  off+=snprintf(im+off, NFOSIZ-off, ",%f\n", ji->movie_aspect);
+  off+=snprintf(im+off, NFOSIZ-off, ",%.3f", timecode_rate_to_double(&ji->framerate));
+  off+=snprintf(im+off, NFOSIZ-off, ",%"PRId64, ji->frames);
+  off+=snprintf(im+off, NFOSIZ-off, "\n");
   jvi_free(ji);
   return (im);
 }
 
+#define FIHSIZ 8192
 static char *file_info_html (CONN *c, ics_request_args *a, VInfo *ji) {
-  char *im = malloc(STASIZ * sizeof(char));
+  char *im = malloc(FIHSIZ * sizeof(char));
   int off = 0;
   char smpte[14], *tmp;
   timecode_framenumber_to_string(smpte, &ji->framerate, ji->frames);
 
-  off+=snprintf(im+off, STASIZ-off, DOCTYPE HTMLOPEN);
-  off+=snprintf(im+off, STASIZ-off, "<title>harvid file info</title></head>\n");
-  off+=snprintf(im+off, STASIZ-off, HTMLBODY);
-  off+=snprintf(im+off, STASIZ-off, CENTERDIV);
-  off+=snprintf(im+off, STASIZ-off, "<h2>File info</h2>\n\n");
+  off+=snprintf(im+off, FIHSIZ-off, DOCTYPE HTMLOPEN);
+  off+=snprintf(im+off, FIHSIZ-off, "<title>harvid file info</title></head>\n");
+  off+=snprintf(im+off, FIHSIZ-off, HTMLBODY);
+  off+=snprintf(im+off, FIHSIZ-off, CENTERDIV);
+  off+=snprintf(im+off, FIHSIZ-off, "<h2>File info</h2>\n\n");
   tmp = url_escape(a->file_qurl, 0);
-  off+=snprintf(im+off, STASIZ-off, "<p>File: <a href=\"/?frame=0&amp;file=%s\">%s</a></p><ul>\n",
+  off+=snprintf(im+off, FIHSIZ-off, "<p>File: <a href=\"/?frame=0&amp;file=%s\">%s</a></p><ul>\n",
       tmp, a->file_qurl); free(tmp);
-  off+=snprintf(im+off, STASIZ-off, "<li>Geometry: %ix%i</li>\n", ji->movie_width, ji->movie_height);
-  off+=snprintf(im+off, STASIZ-off, "<li>Aspect-Ratio: %.3f</li>\n", ji->movie_aspect);
-  off+=snprintf(im+off, STASIZ-off, "<li>Framerate: %.2f</li>\n", timecode_rate_to_double(&ji->framerate));
-  off+=snprintf(im+off, STASIZ-off, "<li>Duration: %s</li>\n", smpte);
-  off+=snprintf(im+off, STASIZ-off, "<li>Duration: %.2f sec</li>\n", (double)ji->frames/timecode_rate_to_double(&ji->framerate));
-  off+=snprintf(im+off, STASIZ-off, "<li>Duration: %"PRId64" frames</li>\n", ji->frames);
-  off+=snprintf(im+off, STASIZ-off, "</ul>\n</div>\n");
-  off+=snprintf(im+off, STASIZ-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
-  off+=snprintf(im+off, STASIZ-off, "</body>\n</html>");
+  off+=snprintf(im+off, FIHSIZ-off, "<li>Geometry: %ix%i</li>\n", ji->movie_width, ji->movie_height);
+  off+=snprintf(im+off, FIHSIZ-off, "<li>Aspect-Ratio: %.3f</li>\n", ji->movie_aspect);
+  off+=snprintf(im+off, FIHSIZ-off, "<li>Framerate: %.2f</li>\n", timecode_rate_to_double(&ji->framerate));
+  off+=snprintf(im+off, FIHSIZ-off, "<li>Duration: %s</li>\n", smpte);
+  off+=snprintf(im+off, FIHSIZ-off, "<li>Duration: %.2f sec</li>\n", (double)ji->frames/timecode_rate_to_double(&ji->framerate));
+  off+=snprintf(im+off, FIHSIZ-off, "<li>Duration: %"PRId64" frames</li>\n", ji->frames);
+  off+=snprintf(im+off, FIHSIZ-off, "</ul>\n</div>\n");
+  off+=snprintf(im+off, FIHSIZ-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
+  off+=snprintf(im+off, FIHSIZ-off, "</body>\n</html>");
   jvi_free(ji);
   return (im);
 }
 
 static char *file_info_raw (CONN *c, ics_request_args *a, VInfo *ji) {
-  char *im = malloc(STASIZ * sizeof(char));
+  char *im = malloc(NFOSIZ * sizeof(char));
   int off = 0;
   char smpte[14];
   timecode_framenumber_to_string(smpte, &ji->framerate, ji->frames);
 
-  off+=snprintf(im+off, STASIZ-off, "1\n"); // FORMAT VERSION
-  off+=snprintf(im+off, STASIZ-off, "%.3f\n", timecode_rate_to_double(&ji->framerate)); // fps
-  off+=snprintf(im+off, STASIZ-off, "%"PRId64"\n", ji->frames); // duration
-  off+=snprintf(im+off, STASIZ-off, "0.0\n"); // start-offset TODO
-  off+=snprintf(im+off, STASIZ-off, "%f\n", ji->movie_aspect);
+  off+=snprintf(im+off, NFOSIZ-off, "1\n"); // FORMAT VERSION
+  off+=snprintf(im+off, NFOSIZ-off, "%.3f\n", timecode_rate_to_double(&ji->framerate)); // fps
+  off+=snprintf(im+off, NFOSIZ-off, "%"PRId64"\n", ji->frames); // duration
+  off+=snprintf(im+off, NFOSIZ-off, "0.0\n"); // start-offset TODO
+  off+=snprintf(im+off, NFOSIZ-off, "%f\n", ji->movie_aspect);
   jvi_free(ji);
   return (im);
 }
@@ -466,7 +468,7 @@ char *hdl_file_info (CONN *c, ics_request_args *a) {
 
 /////////////
 
-#define SINFOSIZ (1024)
+#define SINFOSIZ 2048
 char *hdl_server_info (CONN *c, ics_request_args *a) {
   char *info = malloc(SINFOSIZ * sizeof(char));
   int off = 0;

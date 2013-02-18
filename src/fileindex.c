@@ -62,22 +62,20 @@ char *str_escape(const char *string, int inlength, const char esc) {
   return ns;
 }
 
-static int print_html (int what, const char *burl, const char *path, const char *name, char *m, size_t n) {
-  size_t off = 0;
+static void print_html (int what, const char *burl, const char *path, const char *name, char **m, size_t *o, size_t *s) {
   switch(what) {
     case 1:
       {
       char *u1, *u2;
       u1 = url_escape(path, 0);
       u2 = url_escape(name, 0);
-      off += snprintf(m+off, n-off,
-       "[<b>F</b>] <a href=\"%s?frame=0&amp;file=%s%s%s\">%s</a>",
+      rprintf("[<b>F</b>] <a href=\"%s?frame=0&amp;file=%s%s%s\">%s</a>",
         burl, u1, SL_SEP(path), u2, name);
-      off += snprintf(m+off, n-off,
+      rprintf(
        " [<a href=\"%sinfo?file=%s%s&amp;format=html\">info</a>]",
         burl, u1, u2
         );
-      off += snprintf(m+off, n-off, "<br/>\n");
+      rprintf("<br/>\n");
       if (u1) free(u1);
       if (u2) free(u2);
       }
@@ -85,7 +83,7 @@ static int print_html (int what, const char *burl, const char *path, const char 
     case 0:
       {
       char *u2 = url_escape(name, 0);
-      off += snprintf(m+off, n-off,
+      rprintf(
        "[D]<a href=\"%s%s%s/\">%s</a><br/>\n",
         burl, SL_SEP(path), u2, name);
       free(u2);
@@ -94,11 +92,9 @@ static int print_html (int what, const char *burl, const char *path, const char 
     default:
       break;
   }
-  return(off);
 }
 
-static int print_csv (int what, const char *burl, const char *path, const char *name, char *m, size_t n) {
-  size_t off = 0;
+static void print_csv (int what, const char *burl, const char *path, const char *name, char **m, size_t *o, size_t *s) {
   switch(what) {
     case 1:
       {
@@ -106,8 +102,7 @@ static int print_csv (int what, const char *burl, const char *path, const char *
       u1 = url_escape(path, 0);
       u2 = url_escape(name, 0);
       c1 = str_escape(name, 0, '"');
-      off += snprintf(m+off, n-off,
-       "F,\"%s\",\"%s%s%s\",\"%s\"\n", burl, u1, SL_SEP(path), u2, c1);
+      rprintf("F,\"%s\",\"%s%s%s\",\"%s\"\n", burl, u1, SL_SEP(path), u2, c1);
       free(u1); free(u2); free(c1);
       }
       break;
@@ -116,20 +111,18 @@ static int print_csv (int what, const char *burl, const char *path, const char *
       char *u2, *c1;
       u2 = url_escape(name, 0);
       c1 = str_escape(name, 0, '"');
-      off += snprintf(m+off, n-off,
-       "D,\"%s%s%s\",\"%s\"\n", burl, SL_SEP(path), u2, c1);
+      rprintf("D,\"%s%s%s\",\"%s\"\n", burl, SL_SEP(path), u2, c1);
       free(u2); free(c1);
       }
       break;
     default:
       break;
   }
-  return(off);
 }
 
 
-static int parse_direntry (const char *root, const char *burl, const char *path, const char *name, int opt, char *m, size_t n, int (*print_fn)(const int what, const char*, const char*, const char*, char*, size_t) ) {
-  int rv = 0;
+static void parse_direntry (const char *root, const char *burl, const char *path, const char *name, int opt,
+    char **m, size_t *o, size_t *s, void (*print_fn)(const int what, const char*, const char*, const char*, char**, size_t*, size_t*) ) {
   char *url = strdup(burl);
   char *vurl = strstr(url, "/index"); // TODO - do once per dir.
   if (vurl) *++vurl = 0;
@@ -155,23 +148,22 @@ static int parse_direntry (const char *root, const char *burl, const char *path,
               || !strcmp(&name[l], ".webm")
                )
      ) {
-    rv = print_fn(1, url, path, name, m, n);
+    print_fn(1, url, path, name, m, o, s);
   }
   free(url);
-  return rv;
 }
 
-int parse_dir (const char *root, const char *burl, const char *path, int opt, char *m, size_t n, int (*print_fn)(const int what, const char*, const char*, const char*, char*, size_t) ) {
+void parse_dir (const char *root, const char *burl, const char *path, int opt,
+    char **m, size_t *o, size_t *s, void (*print_fn)(const int what, const char*, const char*, const char*, char**, size_t*, size_t*) ) {
   DIR  *D;
   struct dirent *dd;
   char dn[MAX_PATH];
-  size_t off = 0;
   snprintf(dn, MAX_PATH, "%s%s%s", root, SL_SEP(root), path);
 
   debugmsg(DEBUG_ICS, "IndexDir: indexing '%s'\n", dn);
   if (!(D = opendir (dn)))  {
     dlog(LOG_WARNING, "IndexDir: could not open dir '%s'\n", dn);
-    return 0;
+    return;
   }
 
   while ((dd = readdir (D))) {
@@ -192,9 +184,9 @@ int parse_dir (const char *root, const char *burl, const char *path, int opt, ch
         if ((opt&OPT_FLAT) == OPT_FLAT) {
           char pn[MAX_PATH];
           snprintf(pn, MAX_PATH, "%s%s%s/", path, SL_SEP(path), dd->d_name);
-          off += parse_dir(root, burl, pn, opt, m+off, n-off, print_fn);
+          parse_dir(root, burl, pn, opt, m, o, s, print_fn);
         } else {
-          off += print_fn(0, burl, path, dd->d_name, m+off, n-off);
+          print_fn(0, burl, path, dd->d_name, m, o, s);
         }
       }
       else if (
@@ -202,27 +194,25 @@ int parse_dir (const char *root, const char *burl, const char *path, int opt, ch
           S_ISLNK(fs.st_mode) ||
 #endif
           S_ISREG(fs.st_mode)) {
-        off += parse_direntry(root, burl, path, dd->d_name, opt, m+off, n-off, print_fn);
+        parse_direntry(root, burl, path, dd->d_name, opt, m, o, s, print_fn);
       }
     }
   }
   closedir(D);
-  return(off);
 }
 
-#define IDXSIZ (65536*4) // TODO dynamic size
-
 char *hdl_index_dir (const char *root, char *base_url, char *path, int opt) {
-  char *sm = malloc(IDXSIZ * sizeof(char));
-  int off = 0;
+  size_t off = 0;
+  size_t ss = 1024;
+  char *sm = malloc(ss * sizeof(char));
   int bl = strlen(base_url) - 2;
 
   if ((opt&OPT_CSV) == 0) {
-    off += snprintf(sm+off, IDXSIZ-off, DOCTYPE HTMLOPEN);
-    off += snprintf(sm+off, IDXSIZ-off, "<title>harvid Index</title></head>\n");
-    off += snprintf(sm+off, IDXSIZ-off, HTMLBODY);
-    off += snprintf(sm+off, IDXSIZ-off, "<h2>harvid - Index</h2>\n<p>\n");
-    off += snprintf(sm+off, IDXSIZ-off, "<p>%s</h2>\n</p>\n", path);
+    raprintf(sm, off, ss, DOCTYPE HTMLOPEN);
+    raprintf(sm, off, ss, "<title>harvid Index</title></head>\n");
+    raprintf(sm, off, ss, HTMLBODY);
+    raprintf(sm, off, ss, "<h2>harvid - Index</h2>\n<p>\n");
+    raprintf(sm, off, ss, "<p>%s</h2>\n</p>\n", path);
   }
 
   if (bl > 1) {
@@ -230,21 +220,19 @@ char *hdl_index_dir (const char *root, char *base_url, char *path, int opt) {
     if (bl > 0) {  // TODO: check for '/index/'
       base_url[bl] = 0;
       if ((opt&OPT_CSV) == 0) {
-        off += snprintf(sm+off, IDXSIZ-off, "<a href=\"%s/\">..</a><br/>\n", base_url);
+        raprintf(sm, off, ss, "<a href=\"%s/\">..</a><br/>\n", base_url);
       }
       base_url[bl] = '/';
     }
   }
 
   if ((opt&OPT_CSV) == 0) {
-    off += parse_dir(root, base_url, path, opt, sm+off, IDXSIZ-off, print_html);
-    off += snprintf(sm+off, IDXSIZ-off, "</p><hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION"</div>");
-    off += snprintf(sm+off, IDXSIZ-off, "</body>\n</html>");
+    parse_dir(root, base_url, path, opt, &sm, &off, &ss, print_html);
+    raprintf(sm, off, ss, "</p><hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION"</div>");
+    raprintf(sm, off, ss, "</body>\n</html>");
   } else {
-    off += parse_dir(root, base_url, path, opt, sm+off, IDXSIZ-off, print_csv);
+    parse_dir(root, base_url, path, opt, &sm, &off, &ss, print_csv);
   }
-
-  sm[IDXSIZ-1] = '\0';
   return (sm);
 }
 

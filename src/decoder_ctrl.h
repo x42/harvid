@@ -49,9 +49,10 @@ unsigned short dctrl_get_id(void *vc, void *p, const char *fn);
  * HTML format debug info and store at most \a n bytes of the message to \a m
  * @param p pointer to a decoder-control object
  * @param m pointer to where result message is stored
- * @param n max length of message.
+ * @param o pointer current offset in m
+ * @param s pointer max length of message.
  */
-size_t dctrl_info_html(void *p, char *m, size_t n);
+void dctrl_info_html(void *p, char **m, size_t *o, size_t *s);
 /**
  * request VInfo video-info for given decoder-object
  * @param p  pointer to a decoder-control object

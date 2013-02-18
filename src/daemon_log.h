@@ -94,4 +94,18 @@ void dlog_close(void);
 
 const char *dlog_level_name(int lvl);
 
+#define raprintf(p, off, siz, ...) \
+{ \
+  if (siz - off < 256) { siz *= 2; p = realloc(p, siz * sizeof(char)); } \
+  off += snprintf(p + off, siz - off, __VA_ARGS__); \
+}
+
+#define rpprintf(p, off, siz, ...) \
+{ \
+  if ((*siz) - (*off) < 256) { (*siz) *= 2; (*p) = realloc(*p, (*siz) * sizeof(char)); } \
+  (*off) += snprintf((*p) + (*off), (*siz) - (*off), __VA_ARGS__); \
+}
+
+#define rprintf(...) rpprintf(m,o,s, __VA_ARGS__)
+
 #endif

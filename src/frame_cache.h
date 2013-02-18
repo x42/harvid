@@ -30,6 +30,6 @@ void vcache_clear (void *p, int id);
 uint8_t *vcache_get_buffer(void *p, void *dc, unsigned short id, int64_t frame, short w, short h, int fmt, void **cptr);
 void vcache_release_buffer(void *p, void *cptr);
 
-size_t vcache_info_html(void *p, char *m, size_t n); // write HTML to m - max length n
+void vcache_info_html(void *p, char **m, size_t *o, size_t *s);
 
 #endif

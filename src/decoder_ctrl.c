@@ -767,41 +767,39 @@ static char *flags2txt(int f) {
   return rv;
 }
 
-size_t dctrl_info_html (void *p, char *m, size_t n) {
+void dctrl_info_html (void *p, char **m, size_t *o, size_t *s) {
   JVOBJECT *cptr = ((JVD*)p)->jvo;
   int i = 1;
-  size_t off = 0;
 
   VidMap *vm, *tmp;
   pthread_rwlock_rdlock(&((JVD*)p)->lock_vml);
-  off += snprintf(m+off, n-off, "<h3>File Mapping:</h3>\n");
-  off += snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
-  off += snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Filename</th><th>LRU</th></tr>\n");
-  off += snprintf(m+off, n-off, "\n");
+  rprintf("<h3>File Mapping:</h3>\n");
+  rprintf("<table style=\"text-align:center;width:100%%\">\n");
+  rprintf("<tr><th>#</th><th>file-id</th><th>Filename</th><th>LRU</th></tr>\n");
+  rprintf("\n");
   HASH_ITER(hh, ((JVD*)p)->vml, vm, tmp) {
-      off += snprintf(m+off, n-off, "<tr><td>%d.</td><td>%i</td><td>%s</td><td>%"PRIlld"</td></tr>\n",
+      rprintf("<tr><td>%d.</td><td>%i</td><td>%s</td><td>%"PRIlld"</td></tr>\n",
           i++, vm->id, vm->fn?vm->fn:"(null)", (long long)vm->lru);
   }
-  off += snprintf(m+off, n-off, "</table>\n");
+  rprintf("</table>\n");
   pthread_rwlock_unlock(&((JVD*)p)->lock_vml);
 
   i = 1;
-  off += snprintf(m+off, n-off, "<h3>Decoder Objects:</h3>\n");
-  off += snprintf(m+off, n-off, "<p>busy: %d%s</p>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
-  off += snprintf(m+off, n-off, "<table style=\"text-align:center;width:100%%\">\n");
-  off += snprintf(m+off, n-off, "<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th>"/* "<th>Decoder</th>"*/"<th>PixFmt</th><th>Frame#</th><th>LRU</th></tr>\n");
-  off += snprintf(m+off, n-off, "\n");
+  rprintf("<h3>Decoder Objects:</h3>\n");
+  rprintf("<p>busy: %d%s</p>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
+  rprintf("<table style=\"text-align:center;width:100%%\">\n");
+  rprintf("<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th>"/* "<th>Decoder</th>"*/"<th>PixFmt</th><th>Frame#</th><th>LRU</th></tr>\n");
+  rprintf("\n");
   while (cptr) {
     char *tmp = flags2txt(cptr->flags);
     char *fn = (cptr->flags&VOF_VALID) ? get_fn((JVD*)p, cptr->id) : NULL;
-    off += snprintf(m+off, n-off,
+    rprintf(
         "<tr><td>%d.</td><td>%i</td><td>%s</td><td>%s</td>"/*"<td>%s</td>"*/"<td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
         i++, cptr->id, tmp, fn?fn:"-", /* (cptr->decoder?LIBAVCODEC_IDENT:"null"), */ff_fmt_to_text(cptr->fmt), cptr->frame, (long long)cptr->lru);
     free(tmp);
     cptr = cptr->next;
   }
-  off += snprintf(m+off, n-off, "</table>\n");
-  return(off);
+  rprintf("</table>\n");
 }
 
 // vim:sw=2 sts=2 ts=8 et:
