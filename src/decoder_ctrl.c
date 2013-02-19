@@ -42,18 +42,24 @@
 #define VOF_PENDING 8 ///< decoder is just opening a file (my_open_movie)
 #define VOF_INFO 16   ///< decoder is currently in use for info (size/fps) lookup only
 
+/* id + fmt */
+#define CLKEYLEN (offsetof(JVOBJECT, frame) - offsetof(JVOBJECT, id))
+
 typedef struct JVOBJECT {
-  struct JVOBJECT *next;
-  void *decoder;        // opaque ffdecoder
   unsigned short id;    // file ID from VidMap
-  int64_t frame;        // decoded frame-number
   int fmt;              // pixel format
+  int64_t frame;        // decoded frame-number
   time_t lru;           // least recently used time
-  //int hitcount        //  -- unused; least-frequently used idea
+  int hitcount_decoder; // least-frequently used idea
+  int hitcount_info;    // least-frequently used idea
   pthread_mutex_t lock; // lock to modify flags and refcnt
   int flags;
   int infolock_refcnt;
-} JVOBJECT;
+  void *decoder;        // opaque ffdecoder
+  struct JVOBJECT *next;
+  UT_hash_handle hhi;
+  UT_hash_handle hhf;
+} /*__attribute__((__packed__)) */ JVOBJECT;
 
 typedef struct VidMap {
   unsigned short id;
@@ -65,16 +71,19 @@ typedef struct VidMap {
 
 typedef struct JVD {
   JVOBJECT *jvo; // list of all decoder objects
+  JVOBJECT *jvf; // hash-index of jvo
+  JVOBJECT *jvi; // hash-index of jvo
   VidMap *vml;   // filename -> id map
   VidMap *vmr;   // filename <- id map
-  unsigned short monotonic;
-  int max_objects;
-  int cache_size;
-  int busycnt;
+  unsigned short monotonic; // monotonic count for VidMap ID (wrap-around case is handled)
+  int max_objects; // config
+  int cache_size;  // config
+  int busycnt; // prevent cache purge/cleanup while decoders are active
   int purge_in_progress;
-  pthread_mutex_t lock_jvo;  // lock to modify (append to) jvo list
-  pthread_rwlock_t lock_vml; // lock to modify VidMap (inc monotonic)
-  pthread_mutex_t lock_busy; // lock to read/increment monotonic;
+  pthread_mutex_t lock_jvo;  // lock to modify (append to) jvo list (TODO consolidate w/ lock_jdh)
+  pthread_rwlock_t lock_jdh; // lock for jvo index-hash
+  pthread_rwlock_t lock_vml; // lock to modify monotonic (TODO consolidate w/ lock_jdh)
+  pthread_mutex_t lock_busy; // lock to modify busycnt;
 } JVD;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -151,7 +160,7 @@ static JVOBJECT *newjvo (JVOBJECT *jvo, pthread_mutex_t *appendlock) {
  *
  * this function is non-blocking (no locking):
  * there is no guarantee that the returned object's state
- * had not changed meanwhile.
+ * was not changed meanwhile.
  */
 static JVOBJECT *testjvd(JVOBJECT *jvo, unsigned short id, int fmt, int64_t frame) {
   JVOBJECT *cptr;
@@ -218,6 +227,22 @@ static JVOBJECT *testjvd(JVOBJECT *jvo, unsigned short id, int fmt, int64_t fram
     return(dec_closed);
   }
   return(NULL);
+}
+
+static void hashref_delete_jvo(JVD *jvd, JVOBJECT *jvo) {
+  JVOBJECT *jvx, *jvtmp;
+  pthread_rwlock_wrlock(&jvd->lock_jdh);
+  HASH_ITER(hhf, jvd->jvf, jvx, jvtmp) {
+    if (jvx == jvo) {
+      debugmsg(DEBUG_DCTL, "delete index hash -> i:%d f:%d\n", jvo->id, jvo->fmt);
+      HASH_DELETE(hhi, jvd->jvi, jvo);
+      HASH_DELETE(hhf, jvd->jvf, jvo);
+      memset(&jvo->hhi, 0, sizeof(UT_hash_handle));
+      memset(&jvo->hhf, 0, sizeof(UT_hash_handle));
+      break;
+    }
+  }
+  pthread_rwlock_unlock(&jvd->lock_jdh);
 }
 
 /* clear object information
@@ -302,9 +327,13 @@ static int clearjvo(JVD *jvd, int f, int id, int age, pthread_mutex_t *l) {
       cptr->fmt = PIX_FMT_NONE;
     }
 
+    hashref_delete_jvo(jvd, cptr);
+
     if (f > 0) {
       cptr->id = 0;
       cptr->lru = 0;
+      cptr->hitcount_info = 0;
+      cptr->hitcount_decoder = 0;
       cptr->frame = -1;
       cptr->flags &= ~VOF_VALID;
     }
@@ -383,10 +412,14 @@ static JVOBJECT *getjvo(JVD *jvd) {
           cptr->fmt = PIX_FMT_NONE;
         }
 
+        hashref_delete_jvo(jvd, cptr);
+
         cptr->id = 0;
         cptr->lru = 0;
         cptr->flags = 0;
         cptr->frame = -1;
+        cptr->hitcount_info = 0;
+        cptr->hitcount_decoder = 0;
         assert(cptr->infolock_refcnt == 0);
         pthread_mutex_unlock(&cptr->lock);
         return (cptr);
@@ -508,8 +541,8 @@ static void release_id(JVD *jvd, unsigned short id) {
 }
 
 
-static JVOBJECT *new_video_object(JVD *jvd, unsigned short id) {
-  JVOBJECT *jvo;
+static JVOBJECT *new_video_object(JVD *jvd, unsigned short id, int fmt) {
+  JVOBJECT *jvo, *jvx;
   debugmsg(DEBUG_DCTL, "new_video_object()\n");
   do {
     jvo = getjvo(jvd);
@@ -526,10 +559,21 @@ static JVOBJECT *new_video_object(JVD *jvd, unsigned short id) {
     }
   } while (!jvo);
 
+
   jvo->id = id;
+  jvo->fmt = fmt == PIX_FMT_NONE ? DEFAULT_PIX_FMT : fmt;
   jvo->frame = -1;
-  jvo->fmt = PIX_FMT_NONE;
   jvo->flags |= VOF_VALID;
+
+  pthread_rwlock_wrlock(&jvd->lock_jdh);
+  HASH_FIND(hhi, jvd->jvi, &id, sizeof(unsigned short), jvx);
+  if (!jvx) {
+    debugmsg(DEBUG_DCTL, "linking index hash -> i:%d f:%d\n", id, fmt);
+    HASH_ADD(hhi, jvd->jvi, id, sizeof(unsigned short), jvo);
+    HASH_ADD(hhf, jvd->jvf, id, CLKEYLEN, jvo);
+  }
+  pthread_rwlock_unlock(&jvd->lock_jdh);
+
   pthread_mutex_unlock(&jvo->lock);
   return(jvo);
 }
@@ -565,17 +609,35 @@ static int release_video_object(JVD *jvd, char *fn) {
 // lookup or create new decoder for file ID
 static void * dctrl_get_decoder(void *p, unsigned short id, int fmt, int64_t frame) {
   JVD *jvd = (JVD*)p;
+  JVOBJECT *jvo = NULL;
   BUSYADD(jvd)
+
+  /* create hash for info lookups, reference first decoder for each id
+   * use it IFF frame == -1  (ie. non-blocking info lookups) */
+  if (frame < 0) {
+    pthread_rwlock_rdlock(&jvd->lock_jdh);
+    if (fmt == PIX_FMT_NONE) {
+      HASH_FIND(hhi, jvd->jvi, &id, sizeof(unsigned short), jvo);
+    } else {
+      const JVOBJECT jvt = {id, fmt, 0};
+      HASH_FIND(hhf, jvd->jvf, &jvt, CLKEYLEN, jvo);
+    }
+    pthread_rwlock_unlock(&jvd->lock_jdh);
+    if (jvo) {
+      debugmsg(DEBUG_DCTL, "ID found in hashtable\n");
+    }
+  }
 
 tryagain:
   debugmsg(DEBUG_DCTL, "DCTL: get_decoder fileid=%i\n", id);
 
-  JVOBJECT *jvo;
-  int timeout = 40; // new_video_object() delays 5ms at a time.
-  do {
-    jvo = testjvd(jvd->jvo, id, fmt, frame);
-    if (!jvo) jvo = new_video_object(jvd, id);
-  } while (--timeout > 0 && !jvo);
+  if (!jvo) {
+    int timeout = 40; // new_video_object() delays 5ms at a time.
+    do {
+      jvo = testjvd(jvd->jvo, id, fmt, frame);
+      if (!jvo) jvo = new_video_object(jvd, id, fmt);
+    } while (--timeout > 0 && !jvo);
+  }
 
   if (!jvo) {
     dlog(DLOG_ERR, "DCTL: no decoder object available.\n");
@@ -592,7 +654,7 @@ tryagain:
   pthread_mutex_unlock(&jvo->lock);
 
   if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_INFO)) == (VOF_VALID)) {
-    if (fmt == PIX_FMT_NONE) fmt = DEFAULT_PIX_FMT; // TODO global default
+    if (fmt == PIX_FMT_NONE) fmt = DEFAULT_PIX_FMT;
     if (!my_open_movie(&jvo->decoder, get_fn(jvd, jvo->id), fmt)) {
       pthread_mutex_lock(&jvo->lock);
       jvo->fmt = fmt;
@@ -661,6 +723,7 @@ static void dctrl_release_infolock(void *dec) {
 static inline int xdctrl_decode(void *dec, int64_t frame, uint8_t *b, int w, int h) {
   JVOBJECT *jvo = (JVOBJECT *) dec;
   jvo->lru = time(NULL);
+  jvo->hitcount_decoder++;
   int rv = my_decode(jvo->decoder, frame, b, w, h);
   jvo->frame = frame;
   return rv;
@@ -680,10 +743,16 @@ void dctrl_create(void **p, int max_decoders, int cache_size) {
   pthread_mutex_init(&jvd->lock_busy, NULL);
   pthread_mutex_init(&jvd->lock_jvo, NULL);
   pthread_rwlock_init(&jvd->lock_vml, NULL);
+  pthread_rwlock_init(&jvd->lock_jdh, NULL);
 
   jvd->vml = NULL;
   jvd->vmr = NULL;
+  jvd->jvi = NULL;
+  jvd->jvf = NULL;
   jvd->jvo = newjvo(NULL, &jvd->lock_jvo);
+
+  HASH_ADD(hhi, jvd->jvi, id, sizeof(unsigned short), jvd->jvo);
+  HASH_ADD(hhf, jvd->jvf, id, CLKEYLEN, jvd->jvo);
 }
 
 void dctrl_destroy(void **p) {
@@ -693,6 +762,7 @@ void dctrl_destroy(void **p) {
   pthread_mutex_destroy(&jvd->lock_busy);
   pthread_mutex_destroy(&jvd->lock_jvo);
   pthread_rwlock_destroy(&jvd->lock_vml);
+  pthread_rwlock_destroy(&jvd->lock_jdh);
   free(jvd->jvo);
   free(*((JVD**)p));
   *p = NULL;
@@ -719,6 +789,7 @@ int dctrl_get_info(void *p, unsigned short id, VInfo *i) {
   JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, PIX_FMT_NONE, -1);
   if (!jvo) return -1;
   my_get_info(jvo->decoder, i);
+  jvo->hitcount_info++;
   dctrl_release_infolock(jvo);
   return(0);
 }
@@ -727,6 +798,7 @@ int dctrl_get_info_scale(void *p, unsigned short id, VInfo *i, int w, int h, int
   JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, fmt, -1);
   if (!jvo) return -1;
   my_get_info_canonical(jvo->decoder, i, w, h);
+  jvo->hitcount_info++;
   dctrl_release_infolock(jvo);
   return(0);
 }
@@ -794,14 +866,15 @@ void dctrl_info_html (void *p, char **m, size_t *o, size_t *s) {
   rprintf("<h3>Decoder Objects:</h3>\n");
   rprintf("<p>busy: %d%s</p>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
   rprintf("<table style=\"text-align:center;width:100%%\">\n");
-  rprintf("<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th>"/* "<th>Decoder</th>"*/"<th>PixFmt</th><th>Frame#</th><th>LRU</th></tr>\n");
+  rprintf("<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th>"/* "<th>Decoder</th>"*/"<th>PixFmt</th><th>Hitcount</th><th>Frame#</th><th>LRU</th></tr>\n");
   rprintf("\n");
   while (cptr) {
     char *tmp = flags2txt(cptr->flags);
     char *fn = (cptr->flags&VOF_VALID) ? get_fn((JVD*)p, cptr->id) : NULL;
     rprintf(
-        "<tr><td>%d.</td><td>%i</td><td>%s</td><td>%s</td>"/*"<td>%s</td>"*/"<td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
-        i++, cptr->id, tmp, fn?fn:"-", /* (cptr->decoder?LIBAVCODEC_IDENT:"null"), */ff_fmt_to_text(cptr->fmt), cptr->frame, (long long)cptr->lru);
+        "<tr><td>%d.</td><td>%i</td><td>%s</td><td>%s</td>"/*"<td>%s</td>"*/"<td>%s</td><td>i:%d,d:%d</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
+        i++, cptr->id, tmp, fn?fn:"-", /* (cptr->decoder?LIBAVCODEC_IDENT:"null"), */
+        ff_fmt_to_text(cptr->fmt), cptr->hitcount_info, cptr->hitcount_decoder, cptr->frame, (long long)cptr->lru);
     free(tmp);
     cptr = cptr->next;
   }
