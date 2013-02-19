@@ -39,6 +39,7 @@
 
 #ifndef HAVE_WINDOWS
 #include <arpa/inet.h> // inet_addr
+#include <sys/mman.h>  // memlock
 #endif
 
 #ifndef DEFAULT_PORT
@@ -55,6 +56,7 @@ int   want_quiet = 0;
 int   want_verbose = 0;
 int   cfg_daemonize = 0;
 int   cfg_syslog = 0;
+int   cfg_memlock = 0;
 int   cfg_noindex = 0; // TODO commandline arg to en/disable, flatindex
 int   cfg_adminmask = ADM_FLUSHCACHE;
 char *cfg_logfile = NULL;
@@ -90,6 +92,7 @@ static void usage (int status) {
 "  -h, --help                 display this help and exit\n"
 "  -l <path>,  \n"
 "      --logfile <path>       specify file for log messages\n"
+"  -M, --memlock              attempt to lock memory (prevent cache paging)\n"
 "  -p <num>, --port <num>     TCP port to listen on (default %i)\n"
 "  -P <listenaddr>            IP address to listen on (default 0.0.0.0)\n"
 "  -q, --quiet, --silent      inhibit usual output (may be used thrice)\n"
@@ -123,6 +126,7 @@ static struct option const long_options[] =
   {"groupname", required_argument, 0, 'g'},
   {"help", no_argument, 0, 'h'},
   {"logfile", required_argument, 0, 'l'},
+  {"memlock", no_argument, 0, 'M'},
   {"port", required_argument, 0, 'p'},
   {"listenip", required_argument, 0, 'P'},
   {"quiet", no_argument, 0, 'q'},
@@ -148,6 +152,7 @@ static int decode_switches (int argc, char **argv) {
          "g:"	/* setGroup */
          "h"	/* help */
          "l:"	/* logfile */
+         "M"	/* memlock */
          "p:"	/* port */
          "P:"	/* IP */
          "q"	/* quiet or silent */
@@ -197,6 +202,9 @@ static int decode_switches (int argc, char **argv) {
         cfg_syslog = 0;
         if (cfg_logfile) free(cfg_logfile);
         cfg_logfile = strdup(optarg);
+        break;
+      case 'M':		/* --memlock */
+        cfg_memlock = 1;
         break;
       case 's':		/* --syslog */
         cfg_syslog = 1;
@@ -291,6 +299,16 @@ int main (int argc, char **argv) {
   vcache_create(&vc);
   vcache_resize(&vc, initial_cache_size);
   dctrl_create(&dc, 64, initial_cache_size);
+
+  if (cfg_memlock) {
+#ifndef HAVE_WINDOWS
+    if (mlockall(MCL_CURRENT|MCL_FUTURE)) {
+      dlog(LOG_WARNING, "failed to lock memory.\n");
+    }
+#else
+    dlog(LOG_WARNING, "memory locking is not available on windows.\n");
+#endif
+  }
 
   dlog(DLOG_INFO, "Initialization complete. starting server.\n");
   start_tcp_server(cfg_host, cfg_port, docroot, cfg_username, cfg_groupname, NULL);
