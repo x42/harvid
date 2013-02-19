@@ -670,7 +670,10 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
         h->ctype = "image/unknown";
     }
     http_tx(fd, 200, h, olen, optr);
-    if (a->render_fmt != FMT_RAW) free(optr); // free formatted image
+    if (a->render_fmt != FMT_RAW) {
+      // TODO cache formatted image
+      free(optr); // free formatted image
+    }
   } else {
     dlog(DLOG_ERR, "VID: error formatting image for fd:%d\n", fd);
     httperror(fd, 500, NULL, NULL);

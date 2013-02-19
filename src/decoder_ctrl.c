@@ -869,8 +869,10 @@ void dctrl_info_html (void *p, char **m, size_t *o, size_t *s) {
   rprintf("<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th>"/* "<th>Decoder</th>"*/"<th>PixFmt</th><th>Hitcount</th><th>Frame#</th><th>LRU</th></tr>\n");
   rprintf("\n");
   while (cptr) {
-    char *tmp = flags2txt(cptr->flags);
-    char *fn = (cptr->flags&VOF_VALID) ? get_fn((JVD*)p, cptr->id) : NULL;
+    char *tmp, *fn;
+    if (cptr->id == 0) continue; // don't list unused root-node.
+    tmp = flags2txt(cptr->flags);
+    fn = (cptr->flags&VOF_VALID) ? get_fn((JVD*)p, cptr->id) : NULL;
     rprintf(
         "<tr><td>%d.</td><td>%i</td><td>%s</td><td>%s</td>"/*"<td>%s</td>"*/"<td>%s</td><td>i:%d,d:%d</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
         i++, cptr->id, tmp, fn?fn:"-", /* (cptr->decoder?LIBAVCODEC_IDENT:"null"), */
