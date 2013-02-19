@@ -260,6 +260,7 @@ void ics_http_handler(
     memset(&h, 0, sizeof(httpheader));
     h.ctype = "image/x-icon";
     h.length = sizeof(favicon_data);
+    h.mtime = 1361225638 ; // TODO compile time check image timestamp
     http_tx(c->fd, 200, &h, sizeof(favicon_data), favicon_data);
     c->run = 0;
   } else if (CTP("/logo.jpg")) {
@@ -267,6 +268,7 @@ void ics_http_handler(
     memset(&h, 0, sizeof(httpheader));
     h.ctype = "image/jpeg";
     h.length = LDLEN(doc_harvid_jpg);
+    h.mtime = 1361225638 ; // TODO compile time check image timestamp
     http_tx(c->fd, 200, &h, h.length, LDVAR(doc_harvid_jpg));
     c->run = 0;
   } else if (CTP("/info")) { /* /info -> /file/info !! */
