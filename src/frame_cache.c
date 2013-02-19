@@ -56,6 +56,7 @@ typedef struct videocacheline {
   UT_hash_handle hh;
 } videocacheline;
 
+/* id +w +h + fmt + frame */
 #define CLKEYLEN (offsetof(videocacheline, flags) - offsetof(videocacheline, id))
 
 /* get a new cacheline or replace and existing one

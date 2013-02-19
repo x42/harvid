@@ -29,7 +29,9 @@
 #include "ffcompat.h"
 #include "daemon_log.h"
 
-#define HASH_EMIT_KEYS 3
+#define DEFAULT_PIX_FMT (PIX_FMT_RGB24) // TODO global default
+
+//#define HASH_EMIT_KEYS 3
 #define HASH_FUNCTION HASH_SAX
 #include "uthash.h"
 
@@ -590,7 +592,7 @@ tryagain:
   pthread_mutex_unlock(&jvo->lock);
 
   if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_INFO)) == (VOF_VALID)) {
-    if (fmt == PIX_FMT_NONE) fmt = PIX_FMT_RGB24; // TODO global default
+    if (fmt == PIX_FMT_NONE) fmt = DEFAULT_PIX_FMT; // TODO global default
     if (!my_open_movie(&jvo->decoder, get_fn(jvd, jvo->id), fmt)) {
       pthread_mutex_lock(&jvo->lock);
       jvo->fmt = fmt;
