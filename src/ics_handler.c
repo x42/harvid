@@ -316,7 +316,7 @@ void ics_http_handler(
     char *dp = url_unescape(&(path[7]), 0, NULL);
     char *abspath = malloc((strlen(c->d->docroot) + strlen(dp) + 2) * sizeof(char));
     sprintf(abspath, "%s/%s", c->d->docroot, dp);
-    if (cfg_noindex) {
+    if (cfg_noindex&1) {
       httperror(c->fd, 403, NULL, NULL);
     } else if (!dp || check_path(dp)) {
       httperror(c->fd, 400, "Bad Request", "Illegal filename.");
@@ -333,6 +333,7 @@ void ics_http_handler(
       memset(&a, 0, sizeof(ics_request_args));
       parse_http_query_params(&qps, query);
       snprintf(base_url, 1024, "http://%s%s", host, path);
+      if (cfg_noindex&2) a.idx_option &= ~OPT_FLAT;
       char *msg = hdl_index_dir(c->d->docroot, base_url, dp, a.idx_option);
       SEND200CT(msg, (a.idx_option & OPT_CSV) ? "text/csv" : "text/html; charset=UTF-8");
       free(dp);

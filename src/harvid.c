@@ -57,7 +57,7 @@ int   want_verbose = 0;
 int   cfg_daemonize = 0;
 int   cfg_syslog = 0;
 int   cfg_memlock = 0;
-int   cfg_noindex = 0; // TODO commandline arg to en/disable, flatindex
+int   cfg_noindex = 0; // TODO disable idx:&1; no flatindex: &2
 int   cfg_adminmask = ADM_FLUSHCACHE;
 char *cfg_logfile = NULL;
 char *cfg_chroot = NULL;
@@ -90,6 +90,7 @@ static void usage (int status) {
 "  -g <name>,\n"
 "      --groupname <name>     assume this user-group\n"
 "  -h, --help                 display this help and exit\n"
+"  -I, --noindex              disable directory/file index\n"
 "  -l <path>,  \n"
 "      --logfile <path>       specify file for log messages\n"
 "  -M, --memlock              attempt to lock memory (prevent cache paging)\n"
@@ -125,6 +126,7 @@ static struct option const long_options[] =
   {"daemonize", no_argument, 0, 'D'},
   {"groupname", required_argument, 0, 'g'},
   {"help", no_argument, 0, 'h'},
+  {"noindex", no_argument, 0, 'I'},
   {"logfile", required_argument, 0, 'l'},
   {"memlock", no_argument, 0, 'M'},
   {"port", required_argument, 0, 'p'},
@@ -151,6 +153,7 @@ static int decode_switches (int argc, char **argv) {
          "D"	/* daemonize */
          "g:"	/* setGroup */
          "h"	/* help */
+         "I"	/* noindex */
          "l:"	/* logfile */
          "M"	/* memlock */
          "p:"	/* port */
@@ -197,6 +200,9 @@ static int decode_switches (int argc, char **argv) {
         break;
       case 'D':		/* --daemonize */
         cfg_daemonize = 1;
+        break;
+      case 'I':		/* --noindex */
+        cfg_noindex = 1;
         break;
       case 'l':		/* --logfile */
         cfg_syslog = 0;
@@ -506,6 +512,7 @@ char *hdl_server_info (CONN *c, ics_request_args *a) {
       off+=snprintf(info+off, SINFOSIZ-off, ",\"listenaddr\":\"%s\"", c->d->local_addr);
       off+=snprintf(info+off, SINFOSIZ-off, ",\"listenport\":%d", c->d->local_port);
       off+=snprintf(info+off, SINFOSIZ-off, ",\"cachesize\":%d", initial_cache_size);
+      off+=snprintf(info+off, SINFOSIZ-off, ",\"infohandlers\":[\"/info\", \"/rc\", \"/status\", \"/version\"%s\"", cfg_noindex&1 ? ",\"index\"":"");
       off+=snprintf(info+off, SINFOSIZ-off, ",\"admintasks\":[\"/check\"%s%s%s]",
           (cfg_adminmask & ADM_FLUSHCACHE) ? ",\"/flush_cache\"" : "",
           (cfg_adminmask & ADM_PURGECACHE) ? ",\"/purge_cache\"" : "",
@@ -521,6 +528,7 @@ char *hdl_server_info (CONN *c, ics_request_args *a) {
       off+=snprintf(info+off, SINFOSIZ-off, ",%s", c->d->local_addr);
       off+=snprintf(info+off, SINFOSIZ-off, ",%d", c->d->local_port);
       off+=snprintf(info+off, SINFOSIZ-off, ",%d", initial_cache_size);
+      off+=snprintf(info+off, SINFOSIZ-off, ",\"/info /rc /status /version%s\"", cfg_noindex&1 ? " index":"");
       off+=snprintf(info+off, SINFOSIZ-off, ",\"/check%s%s%s\"",
           (cfg_adminmask & ADM_FLUSHCACHE) ? " /flush_cache" : "",
           (cfg_adminmask & ADM_PURGECACHE) ? " /purge_cache" : "",
@@ -540,12 +548,14 @@ char *hdl_server_info (CONN *c, ics_request_args *a) {
       off+=snprintf(info+off, SINFOSIZ-off, "<li>ListenAddr: %s</li>\n", c->d->local_addr);
       off+=snprintf(info+off, SINFOSIZ-off, "<li>ListenPort: %d</li>\n", c->d->local_port);
       off+=snprintf(info+off, SINFOSIZ-off, "<li>CacheSize: %d</li>\n", initial_cache_size);
+      off+=snprintf(info+off, SINFOSIZ-off, "<li>File Index: %s</li>\n", cfg_noindex&1 ? "Yes" : "No");
       off+=snprintf(info+off, SINFOSIZ-off, "<li>Admin-task(s): /check%s%s%s</li>\n",
           (cfg_adminmask & ADM_FLUSHCACHE) ? " /flush_cache" : "",
           (cfg_adminmask & ADM_PURGECACHE) ? " /purge_cache" : "",
           (cfg_adminmask & ADM_SHUTDOWN)   ? " /shutdown" : ""
           );
 #ifndef NDEBUG // possibly sensitive information
+      off+=snprintf(info+off, SINFOSIZ-off, "<li>Memlock: %s</li>\n", cfg_memlock ? "Yes" : "No");
       off+=snprintf(info+off, SINFOSIZ-off, "<li>Daemonized: %s</li>\n", cfg_daemonize ? "Yes" : "No");
       off+=snprintf(info+off, SINFOSIZ-off, "<li>Chroot: %s</li>\n", cfg_chroot ? cfg_chroot : "-");
       off+=snprintf(info+off, SINFOSIZ-off, "<li>SetUid/Gid: %s/%s</li>\n",
