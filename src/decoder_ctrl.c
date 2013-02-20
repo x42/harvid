@@ -856,8 +856,8 @@ void dctrl_info_html (void *p, char **m, size_t *o, size_t *s) {
   rprintf("<tr><th>#</th><th>file-id</th><th>Filename</th><th>LRU</th></tr>\n");
   rprintf("\n");
   HASH_ITER(hh, ((JVD*)p)->vml, vm, tmp) {
-      rprintf("<tr><td>%d.</td><td>%i</td><td>%s</td><td>%"PRIlld"</td></tr>\n",
-          i++, vm->id, vm->fn?vm->fn:"(null)", (long long)vm->lru);
+    rprintf("<tr><td>%d.</td><td>%i</td><td>%s</td><td>%"PRIlld"</td></tr>\n",
+        i++, vm->id, vm->fn?vm->fn:"(null)", (long long)vm->lru);
   }
   rprintf("</table>\n");
   pthread_rwlock_unlock(&((JVD*)p)->lock_vml);
@@ -870,7 +870,10 @@ void dctrl_info_html (void *p, char **m, size_t *o, size_t *s) {
   rprintf("\n");
   while (cptr) {
     char *tmp, *fn;
-    if (cptr->id == 0) continue; // don't list unused root-node.
+    if (cptr->id == 0) {
+      cptr = cptr->next;
+      continue; // don't list unused root-node.
+    }
     tmp = flags2txt(cptr->flags);
     fn = (cptr->flags&VOF_VALID) ? get_fn((JVD*)p, cptr->id) : NULL;
     rprintf(
