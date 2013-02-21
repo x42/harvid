@@ -60,7 +60,6 @@ LOADLIBES+=`pkg-config --libs libavcodec libavformat libavutil libpng libswscale
 LOADLIBES+=-ljpeg
 LOADLIBES+=-lz -lm
 
-FLAGS+=-DICSD_RGB24
 FLAGS+=-DICSVERSION="\"$(VERSION)\"" -DICSARCH="\"$(UNAME)\""
 
 all: harvid

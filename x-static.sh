@@ -18,10 +18,11 @@ LIB1=/usr/lib/i386-linux-gnu/
 LIBF=$HOME/local/lib/
 export PKG_CONFIG_PATH=${LIBF}/pkgconfig
 
+make -C src clean logo.o
 mkdir -p tmp
-gcc -DNDEBUG -DHAVE_SWSCALE -DICSD_RGB24 -DICSVERSION=\"${VERSION}\" \
+gcc -DNDEBUG -DICSARCH=\"Linux\" -DICSVERSION=\"${VERSION}\" \
   -Wall -O2 \
-  -o tmp/$OUTFN src/*.c \
+  -o tmp/$OUTFN src/*.c src/logo.o \
 	`pkg-config --cflags libavcodec libavformat libavutil libpng libswscale` \
 	${CFLAGS} \
 	${LIBF}libavformat.a \
@@ -72,7 +73,7 @@ ldd tmp/$OUTFN
 rm -rf /tmp/$OUTFN /tmp/$OUTFN.tgz
 mkdir /tmp/$OUTFN
 cp tmp/$OUTFN /tmp/$OUTFN/harvid
-cp README /tmp/$OUTFN/
+cp README.md /tmp/$OUTFN/README
 cd /tmp/ ; tar czf /tmp/$OUTFN.tgz $OUTFN ; cd -
 rm -rf /tmp/$OUTFN
 ls -lh /tmp/$OUTFN.tgz
