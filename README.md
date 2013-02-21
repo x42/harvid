@@ -21,8 +21,8 @@ Usage
 
 harvid is a stanalone HTTP server, get its build-dependencies, run
 
-    make
-		./src/harvid
+	make
+	./src/harvid
 
 and point a web-browser at http://localhost:1554/
 
@@ -30,6 +30,13 @@ harvid can be launched as system-service (daemonized, chroot, chuid, syslog),
 and listen on specific interfaces only in case you do not want to expose
 access to your movie-collection. However, is no per request access control.
 See `harvid --help` or read the included man page for details.
+
+When used from ardour, ardour will automatically start the server when
+you open a video. Ardour searches $PATH or asks your for where it can find
+harvid. The easiest way is to simply run:
+
+	sudo make install
+
 
 Build-dependencies
 ------------------
@@ -40,6 +47,14 @@ code should be compatible and compile with [libav](https://libav.org/).
 For encoding images,
 [libpng](http://www.libpng.org/pub/png/libpng.html)
 and [libjpeg](http://libjpeg.sourceforge.net/) are required.
+
+
+Packaging Information
+---------------------
+
+A good start is to look in the `debian/` folder that comes with the source
+code (it is excluded from source archives via .gitattributes). In particular
+the file `debian/rules` which demonstrates the use of PREFIX and DESTDIR.
 
 
 Internals
