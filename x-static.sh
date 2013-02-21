@@ -77,3 +77,7 @@ cp README.md /tmp/$OUTFN/README
 cd /tmp/ ; tar czf /tmp/$OUTFN.tgz $OUTFN ; cd -
 rm -rf /tmp/$OUTFN
 ls -lh /tmp/$OUTFN.tgz
+
+test -d site/releases/ || exit
+mv /tmp/$OUTFN.tgz site/releases/
+ls -lh site/releases/$OUTFN.tgz

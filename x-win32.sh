@@ -40,3 +40,6 @@ wine "$NSISEXE" "Z:/$NSIDIR/harvid.nsi"
 
 echo "--- DONE ---"
 ls -l $NSIDIR/*exe
+
+test -d site/releases/ || exit
+cp $NSIDIR/harvid_installer-*exe site/releases/

@@ -1,4 +1,4 @@
-harvid -- HTTP Ardour Video Server
+harvid -- HTTP Ardour Video Daemon
 ==================================
 
 harvid decodes still images from movie files and serves them via HTTP.
@@ -6,6 +6,14 @@ harvid decodes still images from movie files and serves them via HTTP.
 Its intended use-case is to efficiently provide frame-accurate data and
 act as second level cache for rendering the video-timeline in
 [Ardour](http://ardour.org).
+
+
+Download
+--------
+
+Apart from the source-code and packages from your linux-distributor, binaries
+are available for OSX, Windows and 32bit Linux at
+http://x42.github.com/harvid/ .
 
 
 Usage

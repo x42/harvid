@@ -157,3 +157,14 @@ echo "calling packagemaker"
 	--title "harvid"
 
 ls -l ~/Desktop/harvid-${VERSION}.pkg
+
+# copy binary to git-pages
+: ${DEV_HOSTNAME:="soyuz.local"}
+/sbin/ping -q -c1 ${DEV_HOSTNAME} &>/dev/null \
+	  && /usr/sbin/arp -n ${DEV_HOSTNAME} &>/dev/null
+ok=$?
+if test "$ok" != 0; then
+	exit
+fi
+
+scp ~/Desktop/harvid-${VERSION}.pkg ${DEV_HOSTNAME}:data/coding/harvid/site/releases/

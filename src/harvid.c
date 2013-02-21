@@ -110,8 +110,8 @@ static void usage (int status) {
 "and above only. Available log-levels are 'mute', 'critical, 'error',\n"
 "'warning' and 'info'.\n"
 "\n"
-"Report bugs to <robin@gareus.org>.\n"
-"Website https://github.com/x42/harvid\n"
+"Report bugs to <robin@gareus.org> or https://github.com/x42/harvid/issues\n"
+"Website http://x42.github.com/harvid/\n"
 , DEFAULT_PORT
 );
   exit (status);
