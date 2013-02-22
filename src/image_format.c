@@ -132,7 +132,7 @@ static FILE *open_outfile(char *filename) {
   return fopen(filename, "w+");
 }
 
-size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf) {
+size_t format_image(uint8_t **out, int render_fmt, int misc_int, VInfo *ji, uint8_t *buf) {
 #ifdef __USE_XOPEN2K8
   size_t rs = 0;
   FILE *x = open_memstream((char**) out, &rs);
@@ -150,9 +150,13 @@ size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf) {
 
   switch (render_fmt) {
     case 1:
-      if (write_jpeg(ji, buf, JPEG_QUALITY, x))
+      {
+        if (misc_int < 10 || misc_int > 100)
+          misc_int = JPEG_QUALITY;
+      if (write_jpeg(ji, buf, misc_int, x))
         dlog(LOG_ERR, "IMF: Could not write jpeg\n");
       break;
+      }
     case 2:
       if (write_png(ji, buf, x))
         dlog(LOG_ERR, "IMF: Could not write png\n");

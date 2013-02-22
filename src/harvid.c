@@ -657,7 +657,7 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
       optr = bptr;
       break;
     default:
-      olen = format_image(&optr, a->render_fmt, &ji, bptr);
+      olen = format_image(&optr, a->render_fmt, a->misc_int, &ji, bptr);
       break;
   }
 

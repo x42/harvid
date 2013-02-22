@@ -36,6 +36,7 @@ typedef struct {
   int out_width;
   int out_height;
   int idx_option;
+  int misc_int; // currently used for jpeg quality only
 } ics_request_args;
 
 void ics_http_handler(

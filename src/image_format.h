@@ -25,7 +25,7 @@
  * @param ji input data description (width, height, stride,..)
  * @param buf raw image data to format
  */
-size_t format_image(uint8_t **out, int render_fmt, VInfo *ji, uint8_t *buf);
+size_t format_image(uint8_t **out, int render_fmt, int misc_int, VInfo *ji, uint8_t *buf);
 
 /** write image to file
  * @param ji input data description (width, height, stride,..)

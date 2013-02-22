@@ -111,20 +111,20 @@ void parse_param(struct queryparserstate *qps, char *kvp) {
   } else if (!strcmp (kvp, "flatindex")) {
     qps->a->idx_option |= OPT_FLAT;
   } else if (!strcmp (kvp, "format")) {
-         if (!strcmp(val, "jpg"))     qps->a->render_fmt = FMT_JPG;
-    else if (!strcmp(val, "jpeg"))    qps->a->render_fmt = FMT_JPG;
-    else if (!strcmp(val, "png"))     qps->a->render_fmt = FMT_PNG;
-    else if (!strcmp(val, "ppm"))     qps->a->render_fmt = FMT_PPM;
-    else if (!strcmp(val, "yuv"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUV420P;}
-    else if (!strcmp(val, "yuv420")) {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUV420P;}
-    else if (!strcmp(val, "yuv440")) {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUV440P;}
-    else if (!strcmp(val, "yuv422")) {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUYV422;}
-    else if (!strcmp(val, "uyv422")) {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_UYVY422;}
-    else if (!strcmp(val, "rgb"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_RGB24;}
-    else if (!strcmp(val, "bgr"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_BGR24;}
-    else if (!strcmp(val, "rgba"))   {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_RGBA;}
-    else if (!strcmp(val, "argb"))   {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_ARGB;}
-    else if (!strcmp(val, "bgra"))   {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_BGRA;}
+         if (!strncmp(val, "jpg",3))  {qps->a->render_fmt = FMT_JPG; qps->a->misc_int = atoi(&val[3]);}
+    else if (!strncmp(val, "jpeg",4)) {qps->a->render_fmt = FMT_JPG; qps->a->misc_int = atoi(&val[4]);}
+    else if (!strcmp(val, "png"))      qps->a->render_fmt = FMT_PNG;
+    else if (!strcmp(val, "ppm"))      qps->a->render_fmt = FMT_PPM;
+    else if (!strcmp(val, "yuv"))     {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUV420P;}
+    else if (!strcmp(val, "yuv420"))  {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUV420P;}
+    else if (!strcmp(val, "yuv440"))  {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUV440P;}
+    else if (!strcmp(val, "yuv422"))  {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_YUYV422;}
+    else if (!strcmp(val, "uyv422"))  {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_UYVY422;}
+    else if (!strcmp(val, "rgb"))     {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_RGB24;}
+    else if (!strcmp(val, "bgr"))     {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_BGR24;}
+    else if (!strcmp(val, "rgba"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_RGBA;}
+    else if (!strcmp(val, "argb"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_ARGB;}
+    else if (!strcmp(val, "bgra"))    {qps->a->render_fmt = FMT_RAW; qps->a->decode_fmt = PIX_FMT_BGRA;}
     /* info, version, rc,... format */
     else if (!strcmp(val, "html"))    qps->a->render_fmt = OUT_HTML;
     else if (!strcmp(val, "xhtml"))   qps->a->render_fmt = OUT_HTML;
@@ -150,6 +150,7 @@ static int parse_http_query(CONN *c, char *query, httpheader *h, ics_request_arg
   a->decode_fmt = PIX_FMT_RGB24;
   a->render_fmt = FMT_PNG;
   a->frame = 0;
+  a->misc_int = 0;
   a->out_width = a->out_height = -1; // auto-set
 
   parse_http_query_params(&qps, query);
