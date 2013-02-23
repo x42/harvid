@@ -47,10 +47,11 @@ git pull
 ./x-macosx.sh
 EOF
 
-rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.pkg site/releases/
+rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.pkg site/releases/ || exit
 
-sed 's/@VERSION@/'$VERSION'/g' site/index.tpl.html > site/index.html
-cd site
+sed 's/@VERSION@/'$VERSION'/g;s/@DATE@/'"`date -R`"'/g;' site/index.tpl.html > site/index.html || exit
+
+cd site || exit
 git add releases/*${VERSION}*
 git commit -a -m "release $VERSION" || exit
 git push
