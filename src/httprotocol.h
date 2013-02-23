@@ -44,6 +44,13 @@
 #define socklen_t int
 #endif
 
+#ifndef HAVE_WINDOWS
+#define CSEND(FD,MSG) write(FD, MSG, strlen(MSG))
+#else
+#define CSEND(FD,MSG) send(FD, MSG, strlen(MSG), 0)
+#endif
+
+
 /**
  * @brief HTTP header
  *

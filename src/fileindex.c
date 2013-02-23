@@ -154,17 +154,18 @@ static void parse_direntry (const char *root, const char *burl, const char *path
   free(url);
 }
 
-void parse_dir (const char *root, const char *burl, const char *path, int opt,
+int parse_dir (const int fd, const char *root, const char *burl, const char *path, int opt,
     char **m, size_t *o, size_t *s, void (*print_fn)(const int what, const char*, const char*, const char*, char**, size_t*, size_t*) ) {
   DIR  *D;
   struct dirent *dd;
   char dn[MAX_PATH];
+  int rv;
   snprintf(dn, MAX_PATH, "%s%s%s", root, SL_SEP(root), path);
 
   debugmsg(DEBUG_ICS, "IndexDir: indexing '%s'\n", dn);
   if (!(D = opendir (dn)))  {
     dlog(LOG_WARNING, "IndexDir: could not open dir '%s'\n", dn);
-    return;
+    return -1;
   }
 
   while ((dd = readdir (D))) {
@@ -185,7 +186,21 @@ void parse_dir (const char *root, const char *burl, const char *path, int opt,
         if ((opt&OPT_FLAT) == OPT_FLAT) {
           char pn[MAX_PATH];
           snprintf(pn, MAX_PATH, "%s%s%s/", path, SL_SEP(path), dd->d_name);
-          parse_dir(root, burl, pn, opt, m, o, s, print_fn);
+          if ((rv = parse_dir(fd, root, burl, pn, opt, m, o, s, print_fn))) {
+            if (rv == -1) rv = 0; // opendir failed -- continue
+            else break;
+          }
+          if (strlen(*m) > 0) {
+            int tx = CSEND(fd, (*m));
+            if (tx > 0) {
+              (*o) = 0;
+              (*m)[0] = '\0';
+            } else if (tx < 0) {
+              debugmsg(DEBUG_ICS, "abort indexing\n");
+              rv = -2;
+              break;
+            }
+          }
         } else {
           print_fn(0, burl, path, dd->d_name, m, o, s);
         }
@@ -200,13 +215,15 @@ void parse_dir (const char *root, const char *burl, const char *path, int opt,
     }
   }
   closedir(D);
+  return rv;
 }
 
-char *hdl_index_dir (const char *root, char *base_url, char *path, int opt) {
+void hdl_index_dir (int fd, const char *root, char *base_url, char *path, int opt) {
   size_t off = 0;
   size_t ss = 1024;
   char *sm = malloc(ss * sizeof(char));
   int bl = strlen(base_url) - 2;
+  sm[0] = '\0';
 
   if ((opt&OPT_CSV) == 0) {
     raprintf(sm, off, ss, DOCTYPE HTMLOPEN);
@@ -228,13 +245,14 @@ char *hdl_index_dir (const char *root, char *base_url, char *path, int opt) {
   }
 
   if ((opt&OPT_CSV) == 0) {
-    parse_dir(root, base_url, path, opt, &sm, &off, &ss, print_html);
+    parse_dir(fd, root, base_url, path, opt, &sm, &off, &ss, print_html);
     raprintf(sm, off, ss, "</p><hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION"</div>");
     raprintf(sm, off, ss, "</body>\n</html>");
   } else {
-    parse_dir(root, base_url, path, opt, &sm, &off, &ss, print_csv);
+    parse_dir(fd, root, base_url, path, opt, &sm, &off, &ss, print_csv);
   }
-  return (sm);
+  if (strlen(sm) > 0) CSEND(fd, sm);
+  free(sm);
 }
 
 // vim:sw=2 sts=2 ts=8 et:

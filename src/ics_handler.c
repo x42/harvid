@@ -39,12 +39,6 @@ extern int cfg_adminmask;
         && strncasecmp(path, CMPPATH, strlen(CMPPATH)) == 0 \
         && strcasecmp (method_str, "GET") == 0)
 
-#ifndef HAVE_WINDOWS
-#define CSEND(FD,STATUS) write(FD, STATUS, strlen(STATUS))
-#else
-#define CSEND(FD,STATUS) send(FD, STATUS, strlen(STATUS), 0)
-#endif
-
 #define SEND200(MSG) \
   send_http_status_fd(c->fd, 200); \
   send_http_header_fd(c->fd, 200, NULL); \
@@ -205,7 +199,7 @@ void  hdl_clear_cache();
 void  hdl_purge_cache();
 
 // fileindex.c
-char *hdl_index_dir (const char *root, char *base_url, const char *path, int opt);
+void hdl_index_dir (int fd, const char *root, char *base_url, const char *path, int opt);
 
 // logo.o
 
@@ -335,11 +329,10 @@ void ics_http_handler(
       parse_http_query_params(&qps, query);
       snprintf(base_url, 1024, "http://%s%s", host, path);
       if (cfg_noindex&2) a.idx_option &= ~OPT_FLAT;
-      char *msg = hdl_index_dir(c->d->docroot, base_url, dp, a.idx_option);
-      SEND200CT(msg, (a.idx_option & OPT_CSV) ? "text/csv" : "text/html; charset=UTF-8");
+      SEND200CT("", (a.idx_option & OPT_CSV) ? "text/csv" : "text/html; charset=UTF-8");
+      hdl_index_dir(c->fd, c->d->docroot, base_url, dp, a.idx_option);
       free(dp);
       free(abspath);
-      free(msg);
       free(qps.fn);
     }
     c->run = 0;

@@ -38,12 +38,6 @@
 #include "htmlconst.h"
 #include "ics_handler.h"
 
-#ifndef HAVE_WINDOWS
-#define CSEND(FD,STATUS) write(FD, STATUS, strlen(STATUS))
-#else
-#define CSEND(FD,STATUS) send(FD, STATUS, strlen(STATUS),0)
-#endif
-
 /* -=-=-=-=-=-=-=-=-=-=- HTTP helper functions */
 
 const char * send_http_status_fd (int fd, int status) {
