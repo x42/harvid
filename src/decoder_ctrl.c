@@ -664,7 +664,6 @@ tryagain:
     } else {
       pthread_mutex_lock(&jvo->lock);
       jvo->flags &= ~VOF_PENDING;
-      assert(jvo->fmt == PIX_FMT_NONE);
       assert(!jvo->decoder);
       pthread_mutex_unlock(&jvo->lock);
       release_id(jvd, jvo->id); // mark ID as invalid
