@@ -74,6 +74,7 @@ rm -rf /tmp/$OUTFN /tmp/$OUTFN.tgz
 mkdir /tmp/$OUTFN
 cp tmp/$OUTFN /tmp/$OUTFN/harvid
 cp README.md /tmp/$OUTFN/README
+cp doc/harvid.1 /tmp/$OUTFN/harvid.1
 cd /tmp/ ; tar czf /tmp/$OUTFN.tgz $OUTFN ; cd -
 rm -rf /tmp/$OUTFN
 ls -lh /tmp/$OUTFN.tgz

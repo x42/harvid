@@ -2,4 +2,5 @@
 .gitattributes export-ignore
 debian export-ignore
 build-deb.sh export-ignore
+release.sh export-ignore
 x-*.sh export-ignore
