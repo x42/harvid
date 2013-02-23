@@ -47,7 +47,7 @@ git pull
 ./x-macosx.sh
 EOF
 
-rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.pkg /site/releases/
+rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.pkg site/releases/
 
 sed 's/@VERSION@/'$VERSION'/g' site/index.tpl.html > site/index.html
 cd site
