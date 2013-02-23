@@ -11,7 +11,7 @@
 #        --enable-shared --enable-static --prefix=$HOME/local/ $@
 
 VERSION=$(git describe --tags HEAD || echo "X.X.X")
-OUTFN=harvid-static-$VERSION
+OUTFN=harvid_static-$VERSION
 
 LIB0=/usr/lib/
 LIB1=/usr/lib/i386-linux-gnu/

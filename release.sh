@@ -55,6 +55,10 @@ groff -m mandoc -Thtml doc/harvid.1 > site/harvid.1.html
 
 cd site || exit
 git add harvid.1.html
-git add releases/*${VERSION}*
-git commit -a -m "release $VERSION" || exit
-git push
+git add releases/*-${VERSION}.* || exit
+git rm -f $(ls releases/* | grep -v ${VERSION} |  tr '\n' ' ')
+git commit -a --amend -m "website $VERSION" || exit
+git reflog expire --expire=now --all
+git gc --prune=now
+git gc --aggressive --prune=now
+git push --force
