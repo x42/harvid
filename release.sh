@@ -54,6 +54,7 @@ sed 's/@VERSION@/'$VERSION'/g;s/@DATE@/'"`date -R`"'/g;' site/index.tpl.html > s
 groff -m mandoc -Thtml doc/harvid.1 > site/harvid.1.html
 
 cd site || exit
+git add harvid.1.html
 git add releases/*${VERSION}*
 git commit -a -m "release $VERSION" || exit
 git push
