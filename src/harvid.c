@@ -261,6 +261,7 @@ void *vc = NULL; // video cache
 int main (int argc, char **argv) {
   program_name = argv[0];
   struct stat sb;
+  int cfg_uid, cfg_gid;
   char *docroot = "/" ;
   debug_level = DLOG_WARNING;
 
@@ -283,9 +284,16 @@ int main (int argc, char **argv) {
     want_verbose = 0;
     want_quiet = 1;
   }
-  /* all systems go */
+
+  /* initialize */
 
   if (cfg_logfile || cfg_syslog) dlog_open(cfg_logfile);
+
+  /* resolve before doing chroot() */
+  cfg_uid = resolve_uid(cfg_username);
+  cfg_gid = resolve_gid(cfg_groupname);
+
+  if (cfg_uid < 0 || cfg_gid < 0) goto errexit;
 
   if (cfg_chroot) {
     if (do_chroot(cfg_chroot)) goto errexit;
@@ -316,8 +324,10 @@ int main (int argc, char **argv) {
 #endif
   }
 
-  dlog(DLOG_INFO, "Initialization complete. starting server.\n");
-  start_tcp_server(cfg_host, cfg_port, docroot, cfg_username, cfg_groupname, NULL);
+  /* all systems go */
+
+  dlog(DLOG_INFO, "Initialization complete. Starting server.\n");
+  start_tcp_server(cfg_host, cfg_port, docroot, cfg_uid, cfg_gid, NULL);
 
   /* cleanup */
 

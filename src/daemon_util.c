@@ -53,41 +53,59 @@ int daemonize (void) {
   return 0;
 }
 
-/* chroot and set process user and group(s) id */
-int drop_privileges(char *setgid_group, char *setuid_user) {
+int resolve_uid(const char *setuid_user) {
 #ifndef HAVE_WINDOWS
-  int uid = 0, gid = 0;
-  struct group *gr;
+  uid_t uid = 0;
   struct passwd *pw;
+  if (!setuid_user) return 0;
 
+  pw = getpwnam(setuid_user);
+  if(pw)
+    uid = pw->pw_uid;
+  else if(atoi(setuid_user)) /* numerical? */
+    uid = atoi(setuid_user);
+  else {
+    uid = -1;
+  }
+  if (uid < 0) {
+    dlog(DLOG_CRIT, "SYS: failed to lookup UID for user '%s'\n", setuid_user);
+  }
+  return uid;
+#else
+  return 0;
+#endif
+}
+
+int resolve_gid(const char *setgid_group) {
+#ifndef HAVE_WINDOWS
+  gid_t gid = 0;
+  struct group *gr;
+  if(!setgid_group) return 0;
+  gr = getgrnam(setgid_group);
+  if(gr)
+    gid = gr->gr_gid;
+  else if(atoi(setgid_group)) /* numerical? */
+    gid = atoi(setgid_group);
+  else {
+    gid = -1;
+  }
+  if (gid < 0) {
+    dlog(DLOG_CRIT, "SYS: failed to lookup GID for group '%s'\n", setgid_group);
+  }
+  return gid;
+#else
+  return 0;
+#endif
+}
+
+/* set process user and group(s) id */
+int drop_privileges(const int uid, const int gid) {
+#ifndef HAVE_WINDOWS
   if (getuid()) {
-    dlog(DLOG_WARNING, "SYS: non-suid. keeping current privileges.\n");
+    dlog(DLOG_WARNING, "SYS: non-suid. Keeping current privileges.\n");
     return 0;
   }
 
-  /* Get the integer values */
-  if(setgid_group) {
-    gr = getgrnam(setgid_group);
-    if(gr)
-      gid = gr->gr_gid;
-    else if(atoi(setgid_group)) /* numerical? */
-      gid = atoi(setgid_group);
-    else {
-      dlog(DLOG_CRIT, "SYS: failed to get GID for group %s\n", setgid_group);
-      return -1;
-    }
-  }
-  if(setuid_user) {
-    pw = getpwnam(setuid_user);
-    if(pw)
-      uid = pw->pw_uid;
-    else if(atoi(setuid_user)) /* numerical? */
-      uid = atoi(setuid_user);
-    else {
-      dlog(DLOG_CRIT, "SYS: failed to get UID for user %s\n", setuid_user);
-      return -2;
-    }
-  }
   if (gid || uid) dlog(DLOG_INFO, "SYS: drop privileges; uid:%i gid:%i -> uid:%i gid:%i\n",
       getuid(), getgid(), uid, gid);
 

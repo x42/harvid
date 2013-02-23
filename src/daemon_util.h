@@ -32,13 +32,28 @@
  */
 int daemonize (void);
 
+
+/**
+ * resolve unix-user-name or ID to integer
+ * @param setuid_user unix user name or ID
+ * @return -1 on error, uid otherwise
+ */
+int resolve_uid(const char *setuid_user);
+
+/**
+ * resolve unix-group-name or ID to integer
+ * @param setgid_group unix group name or ID
+ * @return -1 on error, gid otherwise
+ */
+int resolve_gid(const char *setgid_group);
+
 /**
  * assume a differernt user identity - drop root privileges.
- * @param setgid_group unix group name
- * @param setuid_user  unix user name
+ * @param uid unix user id
+ * @param gid unix group id
  * @return 0 if successful, negative number on error
  */
-int drop_privileges(char *setgid_group, char *setuid_user);
+int drop_privileges(const int uid, const int gid);
 
 /**
  * change root - jail the daemon to confined path on the system

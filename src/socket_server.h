@@ -46,9 +46,9 @@ typedef struct ICI {
   int num_clients; ///< current number of connected clients
   int max_clients; ///< configured max. number of connections for this server
   pthread_mutex_t lock; ///< lock to modify num_clients
-  char *username;  ///< drop privilegies, assume this userid
-  char *groupname; ///< drop privilegies, adopt this group
-  char *docroot;   ///< document root for all connections
+  int uid;         ///< drop privileges, assume this userid
+  int gid;         ///< drop privileges, adopt this group
+  const char *docroot;   ///< document root for all connections
   void *userdata;  ///< generic placeholder for usage specific data
 } ICI;
 
@@ -84,11 +84,12 @@ typedef struct CONN {
  * @param hostnl listen IP in network byte order. eg htonl(INADDR_ANY)
  * @param port TCP port to listen on
  * @param docroot configure the document-root for all connections to this server.
- * @param username specify the user-name that the server will assume. If \a username is NULL no suid is performed.
- * @param groupname the unix group of the server; \a groupname may be NULL in which case the effective group ID of the calling process will remain unchanged.
+ * @param uid specify the user-id that the server will assume. If \a uid is zero no suid is performed.
+ * @param gid the unix group of the server; \a gid may be zero in which case the effective group ID of the calling process will remain unchanged.
  * @param d user-data passed on to callbacks.
  */
-int start_tcp_server (unsigned int hostnl, unsigned short port, char *docroot, char *username, char *groupname, void *d);
+int start_tcp_server (const unsigned int hostnl, const unsigned short port,
+		const char *docroot, const int uid, const int gid, void *d);
 
 // extern function virtual prototype(s)
 /**

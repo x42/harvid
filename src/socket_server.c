@@ -322,10 +322,8 @@ static void *main_loop (void *arg) {
   server_sockaddr(d, &addr);
   if(server_bind(d, addr)) { goto daemon_end; }
 
-  if (d->username && d->groupname) {
-    if (drop_privileges(d->username, d->groupname)) { goto daemon_end; }
-  } else if (d->username || d->groupname) {
-    dlog(DLOG_ERR, "SRV: incomplete username/groupname pair. not using suid.\n");
+  if (d->uid || d->gid) {
+    if (drop_privileges(d->uid, d->gid)) { goto daemon_end; }
   }
 
   if (access(d->docroot, R_OK)) {
@@ -406,14 +404,15 @@ daemon_end:
 }
 
 // tcp server thread
-int start_tcp_server (unsigned int hostnl, unsigned short port, char *docroot, char *username, char *groupname, void *userdata) {
+int start_tcp_server (const unsigned int hostnl, const unsigned short port,
+    const char *docroot, const int uid, const int gid, void *userdata) {
   ICI *d = calloc(1, sizeof(ICI));
   pthread_mutex_init(&d->lock, NULL);
   d->run = 1;
   d->listenport = htons(port);
   d->listenaddr = hostnl;
-  d->username   = username;
-  d->groupname  = groupname;
+  d->uid        = uid;
+  d->gid        = gid;
   d->docroot    = docroot;
   d->userdata   = userdata;
   main_loop(d);
