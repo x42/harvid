@@ -359,7 +359,19 @@ static void *main_loop (void *arg) {
     int s = -1;
     if(FD_ISSET(d->fd, &rfds))
       s = accept_connection(d, &rh, &rp);
-    if (s >= 0) start_child(d, s, rh, rp);
+    else
+      d->age++;
+
+    if (s >= 0) {
+      start_child(d, s, rh, rp);
+      d->age=0;
+      continue; // no need to check age.
+    }
+
+    if (d->timeout > 0 && d->age > d->timeout) {
+      dlog(DLOG_INFO, "SRV: no request since %d seconds shutting down.\n", d->age);
+      global_shutdown = 1;
+    }
   }
 
 #ifdef CATCH_SIGNALS
@@ -405,7 +417,8 @@ daemon_end:
 
 // tcp server thread
 int start_tcp_server (const unsigned int hostnl, const unsigned short port,
-    const char *docroot, const int uid, const int gid, void *userdata) {
+    const char *docroot, const int uid, const int gid,
+    unsigned int timeout, void *userdata) {
   ICI *d = calloc(1, sizeof(ICI));
   pthread_mutex_init(&d->lock, NULL);
   d->run = 1;
@@ -414,6 +427,8 @@ int start_tcp_server (const unsigned int hostnl, const unsigned short port,
   d->uid        = uid;
   d->gid        = gid;
   d->docroot    = docroot;
+  d->age        = 0;
+  d->timeout    = timeout;
   d->userdata   = userdata;
   main_loop(d);
   return(0);

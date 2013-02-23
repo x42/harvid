@@ -58,6 +58,7 @@ int   cfg_daemonize = 0;
 int   cfg_syslog = 0;
 int   cfg_memlock = 0;
 int   cfg_noindex = 0; // TODO disable idx:&1; no flatindex: &2
+int   cfg_timeout = 0;
 int   cfg_adminmask = ADM_FLUSHCACHE;
 char *cfg_logfile = NULL;
 char *cfg_chroot = NULL;
@@ -98,6 +99,9 @@ static void usage (int status) {
 "  -P <listenaddr>            IP address to listen on (default 0.0.0.0)\n"
 "  -q, --quiet, --silent      inhibit usual output (may be used thrice)\n"
 "  -s, --syslog               send messages to syslog\n"
+"  -t <sec>, --timeout <secs>\n"
+"                             set a timeout after which the server will\n"
+"                             terminate if no new request arrives\n"
 "  -u <name>, --username <name>\n"
 "                             server will act as this user\n"
 "  -v, --verbose              print more information (may be used twice)\n"
@@ -140,6 +144,7 @@ static struct option const long_options[] =
   {"quiet", no_argument, 0, 'q'},
   {"silent", no_argument, 0, 'q'},
   {"syslog", no_argument, 0, 's'},
+  {"timeout", required_argument, 0, 'T'},
   {"username", required_argument, 0, 'u'},
   {"verbose", no_argument, 0, 'v'},
   {"version", no_argument, 0, 'V'},
@@ -166,6 +171,7 @@ static int decode_switches (int argc, char **argv) {
          "P:"	/* IP */
          "q"	/* quiet or silent */
          "s"	/* syslog */
+         "T:"	/* timeout */
          "u:"	/* setUser */
          "v"	/* verbose */
          "V",	/* version */
@@ -186,6 +192,7 @@ static int decode_switches (int argc, char **argv) {
         if (debug_level == DLOG_INFO) want_verbose = 1;
         debug_level=DLOG_INFO;
         break;
+
       case 'A':		/* --admin */
         if (strstr(optarg, "shutdown")) cfg_adminmask|=ADM_SHUTDOWN;
         if (strstr(optarg, "purge_cache")) cfg_adminmask|=ADM_PURGECACHE;
@@ -193,6 +200,14 @@ static int decode_switches (int argc, char **argv) {
         if (strstr(optarg, "!shutdown")) cfg_adminmask&=~ADM_SHUTDOWN;
         if (strstr(optarg, "!purge_cache")) cfg_adminmask&=~ADM_PURGECACHE;
         if (strstr(optarg, "!flush_cache")) cfg_adminmask&=~ADM_FLUSHCACHE;
+        break;
+      case 'c':		/* --chroot */
+        cfg_chroot = optarg;
+        break;
+      case 'C':
+        initial_cache_size = atoi(optarg);
+        if (initial_cache_size < 2 || initial_cache_size > 65535)
+          initial_cache_size = 128;
         break;
       case 'd':		/* --debug */
         if (strstr(optarg, "SRV")) debug_section|=DEBUG_SRV;
@@ -207,6 +222,9 @@ static int decode_switches (int argc, char **argv) {
       case 'D':		/* --daemonize */
         cfg_daemonize = 1;
         break;
+      case 'g':		/* --group */
+        cfg_groupname = optarg;
+        break;
       case 'I':		/* --noindex */
         cfg_noindex = 1;
         break;
@@ -218,11 +236,6 @@ static int decode_switches (int argc, char **argv) {
       case 'M':		/* --memlock */
         cfg_memlock = 1;
         break;
-      case 's':		/* --syslog */
-        cfg_syslog = 1;
-        if (cfg_logfile) free(cfg_logfile);
-        cfg_logfile = NULL;
-        break;
       case 'P':		/* --listenip */
         cfg_host = inet_addr (optarg);
         break;
@@ -232,19 +245,16 @@ static int decode_switches (int argc, char **argv) {
           cfg_port = (unsigned short) atoi(optarg);
         }
         break;
-      case 'c':		/* --chroot */
-        cfg_chroot = optarg;
+      case 's':		/* --syslog */
+        cfg_syslog = 1;
+        if (cfg_logfile) free(cfg_logfile);
+        cfg_logfile = NULL;
+        break;
+      case 'T':		/* --timeout */
+        cfg_timeout = atoi(optarg);
         break;
       case 'u':		/* --username */
         cfg_username = optarg;
-        break;
-      case 'g':		/* --group */
-        cfg_groupname = optarg;
-        break;
-      case 'C':
-        initial_cache_size = atoi(optarg);
-        if (initial_cache_size < 2 || initial_cache_size > 65535)
-          initial_cache_size = 128;
         break;
       case 'V':
         printversion();
@@ -333,7 +343,7 @@ int main (int argc, char **argv) {
   /* all systems go */
 
   dlog(DLOG_INFO, "Initialization complete. Starting server.\n");
-  start_tcp_server(cfg_host, cfg_port, docroot, cfg_uid, cfg_gid, NULL);
+  start_tcp_server(cfg_host, cfg_port, docroot, cfg_uid, cfg_gid, cfg_timeout, NULL);
 
   /* cleanup */
 

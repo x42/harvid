@@ -49,6 +49,8 @@ typedef struct ICI {
   int uid;         ///< drop privileges, assume this userid
   int gid;         ///< drop privileges, adopt this group
   const char *docroot;   ///< document root for all connections
+	unsigned int age; ///< used for timeout -- in seconds
+	unsigned int timeout; ///< if > 0 shut down serve if age reaches this value
   void *userdata;  ///< generic placeholder for usage specific data
 } ICI;
 
@@ -89,7 +91,8 @@ typedef struct CONN {
  * @param d user-data passed on to callbacks.
  */
 int start_tcp_server (const unsigned int hostnl, const unsigned short port,
-		const char *docroot, const int uid, const int gid, void *d);
+		const char *docroot, const int uid, const int gid,
+		unsigned int timeout, void *d);
 
 // extern function virtual prototype(s)
 /**
