@@ -147,16 +147,20 @@ echo "------- BUILD PACKAGE"
 cd "$TOPDIR"
 test -d $PREFIX/Resources/harvid.pmdoc || exit 1
 
+mkdir -p ~/Desktop/mydmg/
+
 SHORTVS=$(echo $VERSION | sed 's/^v\([0-9.]*\).*$/\1/')
 echo "calling packagemaker"
 /Developer/usr/bin/packagemaker \
 	-d $PREFIX/Resources/harvid.pmdoc \
 	-v --id gareus.org.sodankyla.harvid.pkg \
-	--out ~/Desktop/harvid-${VERSION}.pkg \
+	--out ~/Desktop/mydmg/harvid-${VERSION}.pkg \
 	--version $SHORTVS \
 	--title "harvid"
 
-ls -l ~/Desktop/harvid-${VERSION}.pkg
+ls -l ~/Desktop/mydmg/harvid-${VERSION}.pkg
+
+exit
 
 # copy binary to git-pages
 : ${DEV_HOSTNAME:="soyuz.local"}
@@ -167,4 +171,4 @@ if test "$ok" != 0; then
 	exit
 fi
 
-scp ~/Desktop/harvid-${VERSION}.pkg ${DEV_HOSTNAME}:data/coding/harvid/site/releases/
+scp ~/Desktop/mydmg/harvid-${VERSION}.pkg ${DEV_HOSTNAME}:data/coding/harvid/site/releases/

@@ -5,7 +5,6 @@ OSXMACHINE=priroda.local
 
 test -n "$NEWVERSION" || exit
 test -z "$(echo "$NEWVERSION" | sed 's/^[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$//')" || exit
-
 echo "commit pending changes.."
 git commit -a
 
@@ -36,10 +35,10 @@ fi
 git push origin && git push origin --tags
 git push rg42 && git push rg42 --tags
 
-VERSION=$(shell git describe --tags HEAD)
-test -z "$VERSION" || exit
+VERSION=$(git describe --tags HEAD)
+test -n "$VERSION" || exit
 
-./x-win.sh || exit
+./x-win32.sh || exit
 ./x-static.sh || exit
 ssh $OSXMACHINE << EOF
 exec /bin/bash -l
