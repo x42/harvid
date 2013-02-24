@@ -20,8 +20,8 @@ VERSION=$(git describe --tags HEAD || echo "X.X.X")
 make clean
 make CFLAGS="-DNDEBUG -O2"
 
-test -f src/harvid || exit
-file src/harvid | grep "binary with 3 architectures" &> /dev/null || exit
+test -f src/harvid || exit 1
+file src/harvid | grep --silent "binary with 3 architectures" || exit 1
 
 TOPDIR=$(pwd)
 export PREFIX=/tmp/harvid-pkg
@@ -95,34 +95,35 @@ update_executable() {
     done
 }
 
-echo "------- DEPLOY"
+echo "------- Deploy binaries"
+echo " * harvid"
 export TARGET=$TDIR/harvid
-cp -f src/harvid "$TARGET"
+cp -fv src/harvid "$TARGET" || exit 1
 strip "$TARGET"
 update_executable
 update_executable
-file "$TARGET"
+file "$TARGET" | grep --silent "binary with 3 architectures" || exit 1
 otool -arch all -L "$TARGET"
 
-echo "-------"
+echo " * ffprobe"
 export TARGET="$TDIR/ffprobe_harvid"
 lipo -create -o "$TARGET" ${FFSOURCE}ffmpeg-git*/ffprobe
 strip "$TARGET"
 update_executable
 update_executable
-file "$TARGET"
+file "$TARGET" | grep --silent "binary with 3 architectures" || exit 1
 otool -arch all -L "$TARGET"
 
-echo "-------"
+echo " * ffmpeg"
 export TARGET="$TDIR/ffmpeg_harvid"
 lipo -create -o "$TARGET" ${FFSOURCE}ffmpeg-git*/ffmpeg
 strip "$TARGET"
 update_executable
 update_executable
-file "$TARGET"
+file "$TARGET" | grep --silent "binary with 3 architectures" || exit 1
 otool -arch all -L "$TARGET"
 
-echo "-------"
+echo "------- Follow library dependencies"
 cd $LDIR && MORELIBS=`otool -arch all -L * | egrep '^[^\/]*\/usr\/local\/lib' | awk '{print $1}'` && cd - > /dev/null
 while [ "X$MORELIBS" != "X" ]; do
     for l in $MORELIBS; do
@@ -135,6 +136,8 @@ done
 
 #otool -arch all -L $LDIR/*.dylib
 
+###############################################################################
+
 
 echo "------- Install manual pages"
 cd "$TOPDIR"
@@ -143,7 +146,7 @@ cp doc/harvid.1 $PREFIX/usr/local/man/man1/
 cp ${FFSOURCE}ffmpeg-git-ppc/doc/ffmpeg.1 $PREFIX/usr/local/man/man1/ffmpeg_harvid.1
 cp ${FFSOURCE}ffmpeg-git-ppc/doc/ffprobe.1 $PREFIX/usr/local/man/man1/ffprobe_harvid.1
 
-echo "------- BUILD PACKAGE"
+echo "------- Build Package"
 cd "$TOPDIR"
 test -d $PREFIX/Resources/harvid.pmdoc || exit 1
 
@@ -160,8 +163,142 @@ echo "calling packagemaker"
 
 ls -l ~/Desktop/mydmg/harvid-${VERSION}.pkg
 
+echo "------- Preparing bundle"
+APPNAME=Harvid
+APPDIR=${APPNAME}.app
+
+mv $PREFIX/usr $PREFIX/${APPDIR}
+mv $PREFIX/${APPDIR}/local $PREFIX/${APPDIR}/Contents
+mv $PREFIX/${APPDIR}/Contents/bin $PREFIX/${APPDIR}/Contents/MacOS
+rm -rf $PREFIX/Resources/
+mkdir $PREFIX/${APPDIR}/Contents/Resources
+
+cp pkg/osx/Resources/harvid.icns $PREFIX/${APPDIR}/Contents/Resources/
+
+cat > $PREFIX/${APPDIR}/Contents/MacOS/harvid_param << EOF
+#!/usr/bin/env bash
+(sleep 3; open http://localhost:1554) &
+CWD="\`/usr/bin/dirname \"\$0\"\`"
+exec "\$CWD/harvid" -A shutdown
+EOF
+
+chmod +x $PREFIX/${APPDIR}/Contents/MacOS/harvid_param
+
+cat > $PREFIX/${APPDIR}/Contents/Info.plist << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleExecutable</key>
+	<string>harvid_param</string>
+	<key>CFBundleName</key>
+	<string>Harvid</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleSignature</key>
+	<string>~~~~</string>
+	<key>CFBundleVersion</key>
+	<string>1.0</string>
+	<key>CFBundleIconFile</key>
+	<string>harvid</string>
+  <key>CFBundleIdentifier</key>
+  <string>org.gareus.harvid</string>
+	<key>CSResourcesFileMapped</key>
+	<true/>
+	<key>LSUIElement</key>
+	<string>1</string>
+</dict>
+</plist>
+EOF
+
+ls -l $PREFIX/
+
+echo "------- Building DMG"
+
+UC_DMG=~/Desktop/mydmg/$APPNAME-${VERSION}.dmg
+VOLNAME=$APPNAME-${VERSION}
+
+MNTPATH=`mktemp -d -t ardourimg`
+TMPDMG=`mktemp -t ardour`
+ICNSTMP=`mktemp -t ardouricon`
+DMGSIZE=$[ `du -sm "$PREFIX" | cut -f 1` * 1049 / 1000 + 3 ]
+
+rm -f $UC_DMG "$TMPDMG" "${TMPDMG}.dmg" "$ICNSTMP"
+rm -rf "$MNTPATH"
+mkdir -p "$MNTPATH"
+
+TMPDMG="${TMPDMG}.dmg"
+
+hdiutil create -megabytes $DMGSIZE "$TMPDMG"
+DiskDevice=$(hdid -nomount "$TMPDMG" | grep Apple_HFS | cut -f 1 -d ' ')
+newfs_hfs -v "${VOLNAME}" "${DiskDevice}"
+mount -t hfs "${DiskDevice}" "${MNTPATH}"
+
+cp -r ${PREFIX}/${APPDIR} "${MNTPATH}" || exit
+mkdir "${MNTPATH}/.background"
+cp -vi doc/dmgbg.png "${MNTPATH}/.background/dmgbg.png"
+
+echo "setting DMG background ..."
+
+echo '
+   tell application "Finder"
+     tell disk "'${VOLNAME}'"
+           open
+           set current view of container window to icon view
+           set toolbar visible of container window to false
+           set statusbar visible of container window to false
+           set the bounds of container window to {400, 200, 800, 440}
+           set theViewOptions to the icon view options of container window
+           set arrangement of theViewOptions to not arranged
+           set icon size of theViewOptions to 64
+           set background picture of theViewOptions to file ".background:dmgbg.png"
+           make new alias file at container window to POSIX file "/Applications" with properties {name:"Applications"}
+           set position of item "'${APPDIR}'" of container window to {90, 100}
+           set position of item "Applications" of container window to {310, 100}
+           close
+           open
+           update without registering applications
+           delay 5
+           eject
+     end tell
+   end tell
+' | osascript
+
+chmod -Rf go-w "${MNTPATH}"
+sync
+
+echo "compressing Image ..."
+
+# Umount the image
+umount "${DiskDevice}"
+hdiutil eject "${DiskDevice}"
+# Create a read-only version, use zlib compression
+hdiutil convert -format UDZO "${TMPDMG}" -imagekey zlib-level=9 -o "${UC_DMG}"
+# Delete the temporary files
+rm "$TMPDMG"
+rmdir "$MNTPATH"
+
+echo "setting file icon ..."
+
+cp pkg/osx/Resources/harvid.icns ${ICNSTMP}.icns
+/usr/bin/sips -i ${ICNSTMP}.icns
+/Developer/Tools/DeRez -only icns ${ICNSTMP}.icns > ${ICNSTMP}.rsrc
+/Developer/Tools/Rez -append ${ICNSTMP}.rsrc -o "$UC_DMG"
+/Developer/Tools/SetFile -a C "$UC_DMG"
+
+rm -f ${ICNSTMP}.icns ${ICNSTMP}.rsrc
+
+echo
+echo "packaging suceeded."
+ls -l "$UC_DMG"
+
+echo "Done."
+
 exit
 
+
+
+###############################################################################
 # copy binary to git-pages
 : ${DEV_HOSTNAME:="soyuz.local"}
 /sbin/ping -q -c1 ${DEV_HOSTNAME} &>/dev/null \
