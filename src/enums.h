@@ -17,14 +17,16 @@
 #ifndef _harvid_enums_H
 #define _harvid_enums_H
 
-/* image output format */
-enum {FMT_RAW=0, FMT_JPG, FMT_PNG, FMT_PPM};
+/* ics_request_args->render_fmt */
+enum {
+  /* image output format */
+	FMT_RAW=0, FMT_JPG, FMT_PNG, FMT_PPM,
+  /* info output format */
+  OUT_HTML, OUT_JSON, OUT_PLAIN, OUT_CSV
+};
 
-/* info output format */
-enum {OUT_HTML=0, OUT_JSON, OUT_PLAIN, OUT_CSV};
-
-/* http index - binary flags */
-enum {OPT_FLAT=1, OPT_CSV=2};
+/* http index option(s) */
+enum {OPT_FLAT=1};
 
 /* cfg_adminmask - binary flags */
 enum {ADM_FLUSHCACHE=1, ADM_PURGECACHE=2, ADM_SHUTDOWN=4};

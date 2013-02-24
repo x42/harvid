@@ -35,9 +35,9 @@ extern int cfg_adminmask;
 
 /** Compare Transport Protocol request */
 #define CTP(CMPPATH) \
-        (  strncasecmp(protocol,  "HTTP/", 5) == 0 \
-        && strncasecmp(path, CMPPATH, strlen(CMPPATH)) == 0 \
-        && strcasecmp (method_str, "GET") == 0)
+  (  strncasecmp(protocol,  "HTTP/", 5) == 0 \
+  && strncasecmp(path, CMPPATH, strlen(CMPPATH)) == 0 \
+  && strcasecmp (method_str, "GET") == 0)
 
 #define SEND200(MSG) \
   send_http_status_fd(c->fd, 200); \
@@ -123,7 +123,7 @@ void parse_param(struct queryparserstate *qps, char *kvp) {
     else if (!strcmp(val, "html"))    qps->a->render_fmt = OUT_HTML;
     else if (!strcmp(val, "xhtml"))   qps->a->render_fmt = OUT_HTML;
     else if (!strcmp(val, "json"))    qps->a->render_fmt = OUT_JSON;
-    else if (!strcmp(val, "csv"))    {qps->a->render_fmt = OUT_CSV; qps->a->idx_option |= OPT_CSV;}
+    else if (!strcmp(val, "csv"))     qps->a->render_fmt = OUT_CSV;
     else if (!strcmp(val, "plain"))   qps->a->render_fmt = OUT_PLAIN;
   }
 }
@@ -199,7 +199,7 @@ void  hdl_clear_cache();
 void  hdl_purge_cache();
 
 // fileindex.c
-void hdl_index_dir (int fd, const char *root, char *base_url, const char *path, int opt);
+void hdl_index_dir (int fd, const char *root, char *base_url, const char *path, int fmt, int opt);
 
 // logo.o
 
@@ -329,8 +329,8 @@ void ics_http_handler(
       parse_http_query_params(&qps, query);
       snprintf(base_url, 1024, "http://%s%s", host, path);
       if (cfg_noindex&2) a.idx_option &= ~OPT_FLAT;
-      SEND200CT("", (a.idx_option & OPT_CSV) ? "text/csv" : "text/html; charset=UTF-8");
-      hdl_index_dir(c->fd, c->d->docroot, base_url, dp, a.idx_option);
+      SEND200CT("", CONTENT_TYPE_SWITCH(a.render_fmt));
+      hdl_index_dir(c->fd, c->d->docroot, base_url, dp, a.render_fmt, a.idx_option);
       free(dp);
       free(abspath);
       free(qps.fn);

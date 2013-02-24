@@ -63,7 +63,7 @@ char *str_escape(const char *string, int inlength, const char esc) {
   return ns;
 }
 
-static void print_html (int what, const char *burl, const char *path, const char *name, char **m, size_t *o, size_t *s) {
+static void print_html (int what, const char *burl, const char *path, const char *name, char **m, size_t *o, size_t *s, int *num) {
   switch(what) {
     case 1:
       {
@@ -79,6 +79,7 @@ static void print_html (int what, const char *burl, const char *path, const char
       rprintf("<br/>\n");
       if (u1) free(u1);
       if (u2) free(u2);
+      (*num)++;
       }
       break;
     case 0:
@@ -88,6 +89,7 @@ static void print_html (int what, const char *burl, const char *path, const char
        "[D]<a href=\"%s%s%s/\">%s</a><br/>\n",
         burl, SL_SEP(path), u2, name);
       free(u2);
+      (*num)++;
       }
       break;
     default:
@@ -95,7 +97,7 @@ static void print_html (int what, const char *burl, const char *path, const char
   }
 }
 
-static void print_csv (int what, const char *burl, const char *path, const char *name, char **m, size_t *o, size_t *s) {
+static void print_csv (int what, const char *burl, const char *path, const char *name, char **m, size_t *o, size_t *s, int *num) {
   switch(what) {
     case 1:
       {
@@ -105,6 +107,7 @@ static void print_csv (int what, const char *burl, const char *path, const char 
       c1 = str_escape(name, 0, '"');
       rprintf("F,\"%s\",\"%s%s%s\",\"%s\"\n", burl, u1, SL_SEP(path), u2, c1);
       free(u1); free(u2); free(c1);
+      (*num)++;
       }
       break;
     case 0:
@@ -114,6 +117,64 @@ static void print_csv (int what, const char *burl, const char *path, const char 
       c1 = str_escape(name, 0, '"');
       rprintf("D,\"%s%s%s\",\"%s\"\n", burl, SL_SEP(path), u2, c1);
       free(u2); free(c1);
+      (*num)++;
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+static void print_plain (int what, const char *burl, const char *path, const char *name, char **m, size_t *o, size_t *s, int *num) {
+  switch(what) {
+    case 1:
+      {
+      char *u1, *u2;
+      u1 = url_escape(path, 0);
+      u2 = url_escape(name, 0);
+      rprintf("f %s?file=%s%s%s\n", burl, u1, SL_SEP(path), u2);
+      free(u1); free(u2);
+      (*num)++;
+      }
+      break;
+    case 0:
+      {
+      char *u2;
+      u2 = url_escape(name, 0);
+      rprintf("d %s%s%s\n", burl, SL_SEP(path), u2);
+      free(u2);
+      (*num)++;
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+
+static void print_json (int what, const char *burl, const char *path, const char *name, char **m, size_t *o, size_t *s, int *num) {
+  switch(what) {
+    case 1:
+      {
+      char *u1, *u2, *c1;
+      u1 = url_escape(path, 0);
+      u2 = url_escape(name, 0);
+      c1 = str_escape(name, 0, '\\');
+      rprintf("%s{\"type\":\"file\", \"baseurl\":\"%s\", \"file\":\"%s%s%s\", \"name\":\"%s\"}",
+          (*num > 0) ? ", ":"", burl, u1, SL_SEP(path), u2, c1);
+      free(u1); free(u2); free(c1);
+      (*num)++;
+      }
+      break;
+    case 0:
+      {
+      char *u2, *c1;
+      u2 = url_escape(name, 0);
+      c1 = str_escape(name, 0, '\\');
+      rprintf("%s{\"type\":\"dir\", \"indexurl\":\"%s%s%s\", \"name\":\"%s\"}",
+          (*num > 0) ? ", ":"", burl, SL_SEP(path), u2, c1);
+      free(u2); free(c1);
+      (*num)++;
       }
       break;
     default:
@@ -123,10 +184,8 @@ static void print_csv (int what, const char *burl, const char *path, const char 
 
 
 static void parse_direntry (const char *root, const char *burl, const char *path, const char *name, int opt,
-    char **m, size_t *o, size_t *s, void (*print_fn)(const int what, const char*, const char*, const char*, char**, size_t*, size_t*) ) {
-  char *url = strdup(burl);
-  char *vurl = strstr(url, "/index"); // TODO - do once per dir.
-  if (vurl) *++vurl = 0;
+    char **m, size_t *o, size_t *s, int *num,
+    void (*print_fn)(const int what, const char*, const char*, const char*, char**, size_t*, size_t*, int *) ) {
   int l = strlen(name)-4;
   if (l > 0 && ( !strcmp(&name[l], ".avi")
               || !strcmp(&name[l], ".mov")
@@ -149,13 +208,17 @@ static void parse_direntry (const char *root, const char *burl, const char *path
               || !strcmp(&name[l], ".webm")
                )
      ) {
-    print_fn(1, url, path, name, m, o, s);
+    char *url = strdup(burl);
+    char *vurl = strstr(url, "/index"); // TODO - do once per dir.
+    if (vurl) *++vurl = 0;
+    print_fn(1, url, path, name, m, o, s, num);
+    free(url);
   }
-  free(url);
 }
 
-int parse_dir (const int fd, const char *root, const char *burl, const char *path, int opt,
-    char **m, size_t *o, size_t *s, void (*print_fn)(const int what, const char*, const char*, const char*, char**, size_t*, size_t*) ) {
+static int parse_dir (const int fd, const char *root, const char *burl, const char *path, int opt,
+    char **m, size_t *o, size_t *s, int *num,
+    void (*print_fn)(const int what, const char*, const char*, const char*, char**, size_t*, size_t*, int *) ) {
   DIR  *D;
   struct dirent *dd;
   char dn[MAX_PATH];
@@ -186,7 +249,7 @@ int parse_dir (const int fd, const char *root, const char *burl, const char *pat
         if ((opt&OPT_FLAT) == OPT_FLAT) {
           char pn[MAX_PATH];
           snprintf(pn, MAX_PATH, "%s%s%s/", path, SL_SEP(path), dd->d_name);
-          if ((rv = parse_dir(fd, root, burl, pn, opt, m, o, s, print_fn))) {
+          if ((rv = parse_dir(fd, root, burl, pn, opt, m, o, s, num, print_fn))) {
             if (rv == -1) rv = 0; // opendir failed -- continue
             else break;
           }
@@ -202,7 +265,7 @@ int parse_dir (const int fd, const char *root, const char *burl, const char *pat
             }
           }
         } else {
-          print_fn(0, burl, path, dd->d_name, m, o, s);
+          print_fn(0, burl, path, dd->d_name, m, o, s, num);
         }
       }
       else if (
@@ -210,7 +273,7 @@ int parse_dir (const int fd, const char *root, const char *burl, const char *pat
           S_ISLNK(fs.st_mode) ||
 #endif
           S_ISREG(fs.st_mode)) {
-        parse_direntry(root, burl, path, dd->d_name, opt, m, o, s, print_fn);
+        parse_direntry(root, burl, path, dd->d_name, opt, m, o, s, num, print_fn);
       }
     }
   }
@@ -218,39 +281,65 @@ int parse_dir (const int fd, const char *root, const char *burl, const char *pat
   return rv;
 }
 
-void hdl_index_dir (int fd, const char *root, char *base_url, char *path, int opt) {
+void hdl_index_dir (int fd, const char *root, char *base_url, char *path, int fmt, int opt) {
   size_t off = 0;
   size_t ss = 1024;
   char *sm = malloc(ss * sizeof(char));
   int bl = strlen(base_url) - 2;
+  int num = 0;
   sm[0] = '\0';
 
-  if ((opt&OPT_CSV) == 0) {
-    raprintf(sm, off, ss, DOCTYPE HTMLOPEN);
-    raprintf(sm, off, ss, "<title>harvid Index</title></head>\n");
-    raprintf(sm, off, ss, HTMLBODY);
-    raprintf(sm, off, ss, "<h2>harvid - Index</h2>\n<p>\n");
-    raprintf(sm, off, ss, "<p>%s</h2>\n</p>\n", path);
+  switch (fmt) {
+    case OUT_PLAIN:
+      break;
+    case OUT_JSON:
+      {
+      char *p1 = str_escape(path, 0, '\\');
+      raprintf(sm, off, ss, "{\"path\":\"%s\", \"index\":[", p1);
+      free(p1);
+      }
+      break;
+    case OUT_CSV:
+      break;
+    default:
+      raprintf(sm, off, ss, DOCTYPE HTMLOPEN);
+      raprintf(sm, off, ss, "<title>harvid Index</title></head>\n");
+      raprintf(sm, off, ss, HTMLBODY);
+      raprintf(sm, off, ss, "<h2>harvid - Index</h2>\n<p>\n");
+      raprintf(sm, off, ss, "<p>%s</h2>\n</p>\n", path);
+      break;
   }
 
   if (bl > 1) {
     while (bl > 0 && base_url[--bl] != '/');
     if (bl > 0) {  // TODO: check for '/index/'
       base_url[bl] = 0;
-      if ((opt&OPT_CSV) == 0) {
+      if (fmt == OUT_HTML) {
         raprintf(sm, off, ss, "<a href=\"%s/\">..</a><br/>\n", base_url);
       }
       base_url[bl] = '/';
     }
   }
 
-  if ((opt&OPT_CSV) == 0) {
-    parse_dir(fd, root, base_url, path, opt, &sm, &off, &ss, print_html);
-    raprintf(sm, off, ss, "</p><hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION"</div>");
-    raprintf(sm, off, ss, "</body>\n</html>");
-  } else {
-    parse_dir(fd, root, base_url, path, opt, &sm, &off, &ss, print_csv);
+  switch (fmt) {
+    case OUT_PLAIN:
+      parse_dir(fd, root, base_url, path, opt, &sm, &off, &ss, &num, print_plain);
+      raprintf(sm, off, ss, "# total: %d\n", num);
+      break;
+    case OUT_JSON:
+      parse_dir(fd, root, base_url, path, opt, &sm, &off, &ss, &num, print_json);
+      raprintf(sm, off, ss, "]}");
+      break;
+    case OUT_CSV:
+      parse_dir(fd, root, base_url, path, opt, &sm, &off, &ss, &num, print_csv);
+      break;
+    default:
+      parse_dir(fd, root, base_url, path, opt, &sm, &off, &ss, &num, print_html);
+      raprintf(sm, off, ss, "</p><hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION"</div>");
+      raprintf(sm, off, ss, "</body>\n</html>");
+      break;
   }
+
   if (strlen(sm) > 0) CSEND(fd, sm);
   free(sm);
 }
