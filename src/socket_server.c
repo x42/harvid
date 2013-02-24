@@ -337,6 +337,10 @@ static void *main_loop (void *arg) {
   signal(SIGINT, catchsig);
 #endif
 
+#ifdef USAGE_FREQUENCY_STATISTICS
+  d->stat_start = time(NULL);
+#endif
+
   while(d->run && !global_shutdown) {
     fd_set rfds;
     struct timeval tv;
@@ -357,14 +361,23 @@ static void *main_loop (void *arg) {
     char *rh = NULL;
     unsigned short rp = 0;
     int s = -1;
-    if(FD_ISSET(d->fd, &rfds))
+    if(FD_ISSET(d->fd, &rfds)) {
       s = accept_connection(d, &rh, &rp);
-    else
+    } else {
       d->age++;
+#ifdef USAGE_FREQUENCY_STATISTICS
+      /* may not be accurate, select() may skip a second once in a while */
+      d->req_stats[time(NULL) % FREQ_LEN] = 0;
+#endif
+    }
 
     if (s >= 0) {
       start_child(d, s, rh, rp);
       d->age=0;
+#ifdef USAGE_FREQUENCY_STATISTICS
+      d->stat_count++;
+      d->req_stats[time(NULL) % FREQ_LEN]++;
+#endif
       continue; // no need to check age.
     }
 

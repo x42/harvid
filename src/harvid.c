@@ -414,8 +414,24 @@ char *hdl_server_status_html (CONN *c) {
   raprintf(sm, off, ss, "<title>harvid status</title></head>\n");
   raprintf(sm, off, ss, HTMLBODY);
   raprintf(sm, off, ss, "<h2>harvid status</h2>\n");
-  raprintf(sm, off, ss, "<p>status: ok, online.</p>\n");
-  raprintf(sm, off, ss, "<p>concurrent connections: current/max-seen/limit: %d/%d/%d</p>\n", c->d->num_clients, c->d->max_clients, MAXCONNECTIONS);
+  raprintf(sm, off, ss, "<p>concurrent connections: (current / max-seen / limit) %d / %d / %d</p>\n", c->d->num_clients, c->d->max_clients, MAXCONNECTIONS);
+#ifdef USAGE_FREQUENCY_STATISTICS
+  time_t i;
+  const time_t n = time(NULL);
+  double avg1, avg5, avgA;
+  avg1 = avg5 = avgA = 0.0;
+  for (i = 0; i < FREQ_LEN; ++i) { avgA += c->d->req_stats[i]; }
+  for (i = 0; i < 60; ++i)       { avg1 += c->d->req_stats[(n-i)%FREQ_LEN]; }
+  for (i = 0; i < 300; ++i)      { avg5 += c->d->req_stats[(n-i)%FREQ_LEN]; }
+  avgA /= (double) FREQ_LEN;
+  avg1 /= 60.0;
+  avg5 /= 300.0;
+  long int uptime = (long int) (n - c->d->stat_start);
+  raprintf(sm, off, ss, "<p>requests/sec: (1min avg / 5min avg / 1h avg / all time) %.2f / %.2f / %.2f / %.3f</p>\n",
+      avg1, avg5, avgA, c->d->stat_count / difftime(n, c->d->stat_start));
+  raprintf(sm, off, ss, "<p>total requests: %d, uptime: %ld day%s, %02ld:%02ld:%02ld\n",
+      c->d->stat_count, uptime / 86400, (uptime / 86400) == 1 ? "": "s", (uptime % 86400) / 3600, (uptime % 3600) / 60, uptime %60);
+#endif
   dctrl_info_html(dc, &sm, &off, &ss);
   vcache_info_html(vc, &sm, &off, &ss);
   raprintf(sm, off, ss, HTMLFOOTER, c->d->local_addr, c->d->local_port);

@@ -31,6 +31,14 @@
 // limit number of connections per daemon
 #define MAXCONNECTIONS (120)
 
+#ifndef NDEBUG
+#define USAGE_FREQUENCY_STATISTICS 1
+#endif
+
+#if (defined USAGE_FREQUENCY_STATISTICS && !defined FREQ_LEN)
+#define FREQ_LEN (3600)
+#endif
+
 /**
  * @brief daemon
  *
@@ -52,6 +60,11 @@ typedef struct ICI {
 	unsigned int age; ///< used for timeout -- in seconds
 	unsigned int timeout; ///< if > 0 shut down serve if age reaches this value
   void *userdata;  ///< generic placeholder for usage specific data
+#ifdef USAGE_FREQUENCY_STATISTICS
+	time_t       req_stats[FREQ_LEN];
+	time_t       stat_start;
+	unsigned int stat_count;
+#endif
 } ICI;
 
 /**
