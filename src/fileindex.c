@@ -70,13 +70,13 @@ static void print_html (int what, const char *burl, const char *path, const char
       char *u1, *u2;
       u1 = url_escape(path, 0);
       u2 = url_escape(name, 0);
-      rprintf("[<b>F</b>] <a href=\"%s?frame=0&amp;file=%s%s%s\">%s</a>",
+      rprintf("<li>[<b>F</b>] <a href=\"%s?frame=0&amp;file=%s%s%s\">%s</a>",
         burl, u1, SL_SEP(path), u2, name);
       rprintf(
        " [<a href=\"%sinfo?file=%s%s&amp;format=html\">info</a>]",
         burl, u1, u2
         );
-      rprintf("<br/>\n");
+      rprintf("</li>\n");
       if (u1) free(u1);
       if (u2) free(u2);
       (*num)++;
@@ -86,7 +86,7 @@ static void print_html (int what, const char *burl, const char *path, const char
       {
       char *u2 = url_escape(name, 0);
       rprintf(
-       "[D]<a href=\"%s%s%s/\">%s</a><br/>\n",
+       "<li>[D]<a href=\"%s%s%s/\">%s</a></li>\n",
         burl, SL_SEP(path), u2, name);
       free(u2);
       (*num)++;
@@ -285,7 +285,8 @@ void hdl_index_dir (int fd, const char *root, char *base_url, char *path, int fm
   size_t off = 0;
   size_t ss = 1024;
   char *sm = malloc(ss * sizeof(char));
-  int bl = strlen(base_url) - 2;
+  const int bo = 5 + strstr(base_url, "/index") - base_url;
+  int bl = strlen(base_url) - 1;
   int num = 0;
   sm[0] = '\0';
 
@@ -304,18 +305,26 @@ void hdl_index_dir (int fd, const char *root, char *base_url, char *path, int fm
     default:
       raprintf(sm, off, ss, DOCTYPE HTMLOPEN);
       raprintf(sm, off, ss, "<title>harvid Index</title></head>\n");
+      raprintf(sm, off, ss, "<style>\nli {float:left; margin:0 .5em .5em 0em; list-style-type:none;}\n</style>\n");
+      raprintf(sm, off, ss, "</head>\n");
       raprintf(sm, off, ss, HTMLBODY);
-      raprintf(sm, off, ss, "<h2>harvid - Index</h2>\n<p>\n");
-      raprintf(sm, off, ss, "<p>%s</h2>\n</p>\n", path);
+      raprintf(sm, off, ss, "<h2>harvid - Index</h2>\n");
+      raprintf(sm, off, ss, "<p>Path: %s</h2>\n</p>\n<ul>\n", strlen(path) > 0 ? path : "<em>(docroot)</em>");
       break;
   }
 
-  if (bl > 1) {
-    while (bl > 0 && base_url[--bl] != '/');
-    if (bl > 0) {  // TODO: check for '/index/'
+  if (bl > bo) {
+    while (bl > bo && base_url[--bl] != '/') ;
+    if (bl > bo) {
       base_url[bl] = 0;
-      if (fmt == OUT_HTML) {
-        raprintf(sm, off, ss, "<a href=\"%s/\">..</a><br/>\n", base_url);
+      switch (fmt) {
+        case OUT_PLAIN:
+        case OUT_JSON:
+        case OUT_CSV:
+        break;
+        default:
+        raprintf(sm, off, ss, "<li>[D]<a href=\"%s/\">..</li>\n", base_url);
+        break;
       }
       base_url[bl] = '/';
     }
@@ -335,7 +344,8 @@ void hdl_index_dir (int fd, const char *root, char *base_url, char *path, int fm
       break;
     default:
       parse_dir(fd, root, base_url, path, opt, &sm, &off, &ss, &num, print_html);
-      raprintf(sm, off, ss, "</p><hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION"</div>");
+      raprintf(sm, off, ss, "</ul><div style=\"clear:both;\"></div>\n<p>Total Entries: %d</p>\n", num);
+      raprintf(sm, off, ss, "<hr/><div style=\"text-align:center; color:#888;\">"SERVERVERSION"</div>");
       raprintf(sm, off, ss, "</body>\n</html>");
       break;
   }
