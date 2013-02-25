@@ -695,7 +695,7 @@ tryagain:
 
   pthread_mutex_unlock(&jvo->lock);
 
-  dlog(DLOG_WARNING, "DCTL: decoder object was busy.\n");
+  debugmsg(DEBUG_DCTL, "DCTL: decoder object was busy.\n");
   goto tryagain;
 
   BUSYDEC(jvd)
@@ -844,28 +844,42 @@ static char *flags2txt(int f) {
   return rv;
 }
 
-void dctrl_info_html (void *p, char **m, size_t *o, size_t *s) {
+void dctrl_info_html (void *p, char **m, size_t *o, size_t *s, int tbl) {
   JVOBJECT *cptr = ((JVD*)p)->jvo;
   int i = 1;
 
   VidMap *vm, *tmp;
   pthread_rwlock_rdlock(&((JVD*)p)->lock_vml);
-  rprintf("<h3>File Mapping:</h3>\n");
-  rprintf("<table style=\"text-align:center;width:100%%\">\n");
-  rprintf("<tr><th>#</th><th>file-id</th><th>Filename</th><th>LRU</th></tr>\n");
+  if (tbl&1) {
+    rprintf("<h3>File/ID Mapping:</h3>\n");
+    rprintf("<table style=\"text-align:center;width:100%%\">\n");
+  } else {
+    if (tbl&2) {
+      rprintf("<table style=\"text-align:center;width:100%%\">\n");
+    }
+    rprintf("<tr><td colspan=\"8\" class=\"title left line\"><h3>File Mapping:</h3></td></tr>\n");
+  }
+  rprintf("<tr><th>#</th><th>file-id</th><th></th><th>Filename</th><th></th><th></th><th></th><th>LRU</th></tr>\n");
   rprintf("\n");
   HASH_ITER(hh, ((JVD*)p)->vml, vm, tmp) {
-    rprintf("<tr><td>%d.</td><td>%i</td><td>%s</td><td>%"PRIlld"</td></tr>\n",
+    rprintf("<tr><td>%d.</td><td>%i</td><td></td><td colspan=\"4\" class=\"left\">%s</td><td>%"PRIlld"</td></tr>\n",
         i++, vm->id, vm->fn?vm->fn:"(null)", (long long)vm->lru);
   }
-  rprintf("</table>\n");
+  if (tbl&4) {
+    rprintf("</table>\n");
+  }
   pthread_rwlock_unlock(&((JVD*)p)->lock_vml);
 
   i = 1;
-  rprintf("<h3>Decoder Objects:</h3>\n");
-  rprintf("<p>busy: %d%s</p>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
-  rprintf("<table style=\"text-align:center;width:100%%\">\n");
-  rprintf("<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th>"/* "<th>Decoder</th>"*/"<th>PixFmt</th><th>Hitcount</th><th>Frame#</th><th>LRU</th></tr>\n");
+  if(tbl&4) {
+    rprintf("<h3>Decoder Objects:</h3>\n");
+    rprintf("<p>busy: %d%s</p>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
+    rprintf("<table style=\"text-align:center;width:100%%\">\n");
+  } else {
+    rprintf("<tr><td colspan=\"8\" class=\"title left\"><h3>Decoder Objects:</h3>\n");
+    rprintf("<tr><td colspan=\"8\" class=\"left line\">busy: %d%s</td></tr>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
+  }
+  rprintf("<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th><th>Hitcount</th><th>PixFmt</th><th>Frame#</th><th>LRU</th></tr>\n");
   rprintf("\n");
   while (cptr) {
     char *tmp, *fn;
@@ -876,13 +890,16 @@ void dctrl_info_html (void *p, char **m, size_t *o, size_t *s) {
     tmp = flags2txt(cptr->flags);
     fn = (cptr->flags&VOF_VALID) ? get_fn((JVD*)p, cptr->id) : NULL;
     rprintf(
-        "<tr><td>%d.</td><td>%i</td><td>%s</td><td>%s</td>"/*"<td>%s</td>"*/"<td>%s</td><td>i:%d,d:%d</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
+        "<tr><td>%d.</td><td>%i</td><td>%s</td><td class=\"left\">%s</td><td>i:%d,d:%d</td><td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
         i++, cptr->id, tmp, fn?fn:"-", /* (cptr->decoder?LIBAVCODEC_IDENT:"null"), */
-        ff_fmt_to_text(cptr->fmt), cptr->hitcount_info, cptr->hitcount_decoder, cptr->frame, (long long)cptr->lru);
+        cptr->hitcount_info, cptr->hitcount_decoder,
+        ff_fmt_to_text(cptr->fmt), cptr->frame, (long long)cptr->lru);
     free(tmp);
     cptr = cptr->next;
   }
-  rprintf("</table>\n");
+  if(tbl&8) {
+    rprintf("</table>\n");
+  }
 }
 
 // vim:sw=2 sts=2 ts=8 et:

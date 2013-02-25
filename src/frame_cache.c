@@ -53,6 +53,7 @@ typedef struct videocacheline {
   time_t lru;     // east recently used time
   //int hitcount  //  -- unused; least-frequently used idea
   uint8_t *b;     //< data buffer pointer
+  int alloc_size; //< allocated buffer size (status info)
   UT_hash_handle hh;
 } videocacheline;
 
@@ -155,7 +156,8 @@ static void realloccl_buf(videocacheline *cptr, int w, int h, int fmt) {
     return; // already allocated
 
   free(cptr->b);
-  cptr->b = calloc(picture_bytesize(fmt, w, h), sizeof(uint8_t));
+  cptr->alloc_size = picture_bytesize(fmt, w, h);
+  cptr->b = calloc(cptr->alloc_size, sizeof(uint8_t));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -333,27 +335,39 @@ static char *flags2txt(int f) {
   return rv;
 }
 
-void vcache_info_html(void *p, char **m, size_t *o, size_t *s) {
+void vcache_info_html(void *p, char **m, size_t *o, size_t *s, int tbl) {
   int i = 1;
   videocacheline *cptr, *tmp;
+  uint64_t total_bytes = 0;
 
-  rprintf("<h3>Cache Info:</h3>\n");
-  rprintf("<p>Size: max. %i entries.\n", ((xjcd*)p)->cfg_cachesize);
-  rprintf("Hits: %d, Misses: %d</p>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
-  rprintf("<table style=\"text-align:center;width:100%%\">\n");
-  rprintf("<tr><th>#</th><th>file-id</th><th>Flags</th><th>W</th><th>H</th><th>Buffer</th><th>Frame#</th><th>LRU</th></tr>\n");
+  if (tbl&1) {
+    rprintf("<h3>Video Frame Cache:</h3>\n");
+    rprintf("<p>Size: max. %i entries.\n", ((xjcd*)p)->cfg_cachesize);
+    rprintf("Hits: %d, Misses: %d</p>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
+    rprintf("<table style=\"text-align:center;width:100%%\">\n");
+  } else {
+    rprintf("<tr><td colspan=\"8\" class=\"title left\"><h3>Cache Info:</h3></td></tr>\n");
+    rprintf("<tr><td colspan=\"8\" class=\"left line\">max. %d entries.\n", ((xjcd*)p)->cfg_cachesize);
+    rprintf("Hits: %d, Misses: %d</td></tr>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
+  }
+  rprintf("<tr><th>#</th><th>file-id</th><th>Flags</th><th></th><th>Geometry</th><th>Buffer</th><th>Frame#</th><th>LRU</th></tr>\n");
   /* walk comlete tree */
   pthread_rwlock_rdlock(&((xjcd*)p)->lock);
   HASH_ITER(hh, ((xjcd*)p)->vcache, cptr, tmp) {
     char *tmp = flags2txt(cptr->flags);
     rprintf(
-        "<tr><td>%d.</td><td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
-        i, cptr->id, tmp, cptr->w, cptr->h, (cptr->b ? ff_fmt_to_text(cptr->fmt) : "null"), cptr->frame, (long long) cptr->lru);
+        "<tr><td>%d.</td><td>%d</td><td>%s</td><td>%d bytes</td><td>%dx%d</td><td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
+        i, cptr->id, tmp, cptr->alloc_size, cptr->w, cptr->h,
+        (cptr->b ? ff_fmt_to_text(cptr->fmt) : "null"), cptr->frame, (long long) cptr->lru);
     free(tmp);
+    total_bytes += cptr->alloc_size;
     i++;
   }
+  rprintf("<tr><td colspan=\"8\" class=\"left\">total %"PRIu64" bytes allocated.\n", total_bytes);
   pthread_rwlock_unlock(&((xjcd*)p)->lock);
-  rprintf("</table>\n");
+  if (tbl&2) {
+    rprintf("</table>\n");
+  }
 }
 
 // vim:sw=2 sts=2 ts=8 et:

@@ -427,13 +427,13 @@ char *hdl_server_status_html (CONN *c) {
   avg1 /= 60.0;
   avg5 /= 300.0;
   long int uptime = (long int) (n - c->d->stat_start);
-  raprintf(sm, off, ss, "<p>requests/sec: (1min avg / 5min avg / 1h avg / all time) %.2f / %.2f / %.2f / %.3f</p>\n",
-      avg1, avg5, avgA, c->d->stat_count / difftime(n, c->d->stat_start));
-  raprintf(sm, off, ss, "<p>total requests: %d, uptime: %ld day%s, %02ld:%02ld:%02ld\n",
+  raprintf(sm, off, ss, "<p>Total requests: %d, uptime: %ld day%s, %02ld:%02ld:%02ld\n",
       c->d->stat_count, uptime / 86400, (uptime / 86400) == 1 ? "": "s", (uptime % 86400) / 3600, (uptime % 3600) / 60, uptime %60);
+  raprintf(sm, off, ss, "<p>Requests/sec: (1min avg / 5min avg / 1h avg / all time) %.2f / %.2f / %.2f / %.3f</p>\n",
+      avg1, avg5, avgA, c->d->stat_count / difftime(n, c->d->stat_start));
 #endif
-  dctrl_info_html(dc, &sm, &off, &ss);
-  vcache_info_html(vc, &sm, &off, &ss);
+  dctrl_info_html(dc, &sm, &off, &ss, 2);
+  vcache_info_html(vc, &sm, &off, &ss, 2);
   raprintf(sm, off, ss, HTMLFOOTER, c->d->local_addr, c->d->local_port);
   raprintf(sm, off, ss, "</body>\n</html>");
   return (sm);

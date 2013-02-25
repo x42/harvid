@@ -52,7 +52,7 @@ unsigned short dctrl_get_id(void *vc, void *p, const char *fn);
  * @param o pointer current offset in m
  * @param s pointer max length of message.
  */
-void dctrl_info_html(void *p, char **m, size_t *o, size_t *s);
+void dctrl_info_html(void *p, char **m, size_t *o, size_t *s, int tbl);
 /**
  * request VInfo video-info for given decoder-object
  * @param p  pointer to a decoder-control object
