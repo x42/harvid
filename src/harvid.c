@@ -677,10 +677,14 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
   vid = dctrl_get_id(vc, dc, a->file_name);
   jvi_init(&ji);
 
+  if (a->frame < 0) a->frame = 0; // return error instead?
+  if (a->out_width < 0 || a->out_width > 16384) a->out_width = 0;
+  if (a->out_height < 0 || a->out_height > 16384) a->out_height = 0;
+
   /* get canonical output width/height and corresponding buffersize */
-  if (dctrl_get_info_scale(dc, vid, &ji, a->out_width, a->out_height, a->decode_fmt)) {
-    dlog(DLOG_WARNING, "VID: no decoder available (overload or invalid file). n", fd);
-    httperror(fd, 503, "Service Unavailable", "<p>No decoder is available. Either the server is overloaded or the file is invalid (no video track, unknown codec,..)</p>");
+  if (dctrl_get_info_scale(dc, vid, &ji, a->out_width, a->out_height, a->decode_fmt) || ji.buffersize < 1) {
+    dlog(DLOG_WARNING, "VID: no decoder available (overload or invalid file).\n", fd);
+    httperror(fd, 503, "Service Unavailable", "<p>No decoder is available. Either the server is overloaded or the file is invalid (no video track, unknown codec, invalid geometry,..)</p>");
     return 0;
   }
 

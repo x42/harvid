@@ -93,12 +93,14 @@ static const AVRational c1_Q = { 1, 1 };
 //--------------------------------------------
 
 int picture_bytesize(int render_fmt, int w, int h) {
-  return avpicture_get_size(render_fmt, w, h);
+  const int bs = avpicture_get_size(render_fmt, w, h);
+  if (bs < 0) return 0;
+  return bs;
 }
 
 static int ff_getbuffersize(void *ptr, size_t *s) {
   ffst *ff = (ffst*)ptr;
-  const int ps = avpicture_get_size(ff->render_fmt, ff->out_width, ff->out_height);
+  const int ps = picture_bytesize(ff->render_fmt, ff->out_width, ff->out_height);
   if (s) *s = ps;
   return ps;
 }
@@ -234,7 +236,7 @@ static void ff_caononical_size(void *ptr) {
 }
 
 static void ff_init_moviebuffer(void *ptr) {
-  size_t numBytes;
+  size_t numBytes = 0;
   ffst *ff = (ffst*)ptr;
 
   ff_caononical_size(ptr);
@@ -252,7 +254,7 @@ static void ff_init_moviebuffer(void *ptr) {
   ff->buf_width = ff->out_width;
   ff->buf_height = ff->out_height;
   if (!ff->buffer) {
-    fprintf(stderr, "out of memory\n"); // XXX
+    fprintf(stderr, "out of memory (trying to allocate %d bytes)\n", numBytes); // XXX
     exit(1);
   }
   assert(ff->pFrameFMT);
@@ -757,7 +759,7 @@ void ff_get_info_canonical(void *ptr, VInfo *i, int w, int h) {
   i->out_width = w;
   i->out_height = h;
   ff_caononicalize_size2(ptr, &i->out_width, &i->out_height);
-  i->buffersize = avpicture_get_size(ff->render_fmt, i->out_width, i->out_height);
+  i->buffersize = picture_bytesize(ff->render_fmt, i->out_width, i->out_height);
 }
 
 void ff_create(void **ff) {
