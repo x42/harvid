@@ -392,14 +392,18 @@ char *hdl_homepage_html (CONN *c) {
   if (cfg_adminmask)
     off+=snprintf(msg+off, HPSIZE-off, "</ul>\n</div>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<div style=\"clear:both;\"></div><hr/>\n");
-  off+=snprintf(msg+off, HPSIZE-off, "<p style=\"text-align:justify;\">The default request handler decodes images and requires a <code>?frame=NUM&amp;file=PATH</code> URL query or post parameters. Video frames are counted starting at zero. Default options are <code>w=0&amp;h=0&amp;format=png</code> which serves the image in pre-scaled to its effective size as png image. If either only <em>width</em> or <em>height</em> is specified with a value greater than 15, the other is calculated according to the movie's effective aspect-ratio however the minimum size is 16x16. A geometry smaller than 16x16 will return the image in its original size.</p>\n");
-  off+=snprintf(msg+off, HPSIZE-off, "<p>Available query parameters: frame, w, h, file, format.</p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p style=\"text-align:justify;\">The default request handler decodes images and requires a <code>?frame=NUM&amp;file=PATH</code> URL query or post parameters. Video frames are counted starting at zero. Default options are <code>w=0&amp;h=0&amp;format=png</code> which serves the image pre-scaled to its effective size as png.<br/>If either only <em>width</em> or <em>height</em> is specified with a value greater than 15, the other is calculated according to the movie's effective aspect-ratio. However the minimum size is 16x16, requesting geometries smaller than 16x16 will return the image in its original size.</p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p>The <code>/info/</code> request handler requires a <code>?file=PATH</code> query parameter and optionally takes a <code>format</code> (default is html). All other handlers (/status, /rc, /version, /admin/) take no arguments.</p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p>Available query parameters: <code>frame</code>, <code>w</code>, <code>h</code>, <code>file</code>, <code>format</code>.</p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p>Frame (frame-number), w (width) and h (height) are unsigned integers.</p>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<p>Supported image output pixel formats:</p>\n");
-  off+=snprintf(msg+off, HPSIZE-off, "<ul>\n<li>Encoded: jpg, jpeg, png, ppm</li>\n");
-  off+=snprintf(msg+off, HPSIZE-off, "<li>Raw RGB: rgb, bgr, rgba, argb, bgra</li>\n");
-  off+=snprintf(msg+off, HPSIZE-off, "<li>Raw YUV: yuv, yuv420, yuv440, yuv422, uyv422</li>\n</ul>\n");
-  off+=snprintf(msg+off, HPSIZE-off, "<p>Supported info output formats: html, xhtml, json, csv, plain.</p>\n");
-  off+=snprintf(msg+off, HPSIZE-off, "<p style=\"text-align:center\"><a href=\"https://github.com/x42/harvid\">harvid @ GitHub</a></p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<ul>\n<li><em>Encoded</em>: jpg, jpeg, png, ppm</li>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<li><em>Raw RGB</em>: rgb, bgr, rgba, argb, bgra</li>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<li><em>Raw YUV</em>: yuv, yuv420, yuv440, yuv422, uyv422</li>\n</ul>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p>Available info output formats:</p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<ul>\n<li><em>Human Readable</em>: html, xhtml</li>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<li><em>Machine Readable</em>: json, csv, plain</li>\n</ul>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p style=\"text-align:center\"><a href=\"http://x42.github.com/harvid/\">harvid @ GitHub</a></p>\n");
   off+=snprintf(msg+off, HPSIZE-off, "</div>\n");
   off+=snprintf(msg+off, HPSIZE-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
   off+=snprintf(msg+off, HPSIZE-off, "\n</body>\n</html>");
@@ -411,10 +415,13 @@ char *hdl_server_status_html (CONN *c) {
   size_t off = 0;
   char *sm = malloc(ss * sizeof(char));
   raprintf(sm, off, ss, DOCTYPE HTMLOPEN);
-  raprintf(sm, off, ss, "<title>harvid status</title></head>\n");
+  raprintf(sm, off, ss, "<title>harvid status</title>\n");
+  raprintf(sm, off, ss, "<style>\ntd.title{text-decoration:underline;} td.left{text-align:left;} td.line{border-bottom: 1px solid black;} td h3 {margin: 1em 0 0 0;}\n</style>\n");
+  raprintf(sm, off, ss, "</head>\n");
   raprintf(sm, off, ss, HTMLBODY);
   raprintf(sm, off, ss, "<h2>harvid status</h2>\n");
-  raprintf(sm, off, ss, "<p>concurrent connections: (current / max-seen / limit) %d / %d / %d</p>\n", c->d->num_clients, c->d->max_clients, MAXCONNECTIONS);
+  raprintf(sm, off, ss, "<!--status: ok, online.-->\n"); // ardour3 reads this
+  raprintf(sm, off, ss, "<p>Concurrent connections: (current / max-seen / limit) %d / %d / %d</p>\n", c->d->num_clients, c->d->max_clients, MAXCONNECTIONS);
 #ifdef USAGE_FREQUENCY_STATISTICS
   time_t i;
   const time_t n = time(NULL);
