@@ -311,23 +311,25 @@ static int accept_connection(ICI *d, char **remotehost, unsigned short *rport) {
   return(s);
 }
 
-static void *main_loop (void *arg) {
+static int main_loop (void *arg) {
   ICI *d = arg;
   struct sockaddr_in addr;
+  int rv = 0;
 #ifndef HAVE_WINDOWS
   signal(SIGPIPE, SIG_IGN);
 #endif
 
-  if ((d->fd = create_server_socket()) < 0) { goto daemon_end; }
+  if ((d->fd = create_server_socket()) < 0) {rv = -1; goto daemon_end;}
   server_sockaddr(d, &addr);
-  if(server_bind(d, addr)) { goto daemon_end; }
+  if(server_bind(d, addr)) {rv = -1; goto daemon_end;}
 
   if (d->uid || d->gid) {
-    if (drop_privileges(d->uid, d->gid)) { goto daemon_end; }
+    if (drop_privileges(d->uid, d->gid)) {rv = -1; goto daemon_end;}
   }
 
   if (access(d->docroot, R_OK)) {
     dlog(DLOG_CRIT, "SRV: can not read document-root (permission denied)\n");
+    rv = -1;
     goto daemon_end;
   }
 
@@ -352,10 +354,12 @@ static void *main_loop (void *arg) {
     // select() returns 0 on timeout, -1 on error.
     if((select(d->fd+1, &rfds, NULL, NULL, &tv))<0) {
       dlog(DLOG_WARNING, "SRV: unable to select the socket: %s\n", strerror(errno));
-      if (errno != EINTR)
+      if (errno != EINTR) {
+        rv = -1;
         goto daemon_end;
-      else
+      } else {
         continue;
+      }
     }
 
     char *rh = NULL;
@@ -425,7 +429,7 @@ daemon_end:
   if (d->local_addr) free(d->local_addr);
   pthread_mutex_destroy(&d->lock);
   free(d);
-  return(NULL);
+  return(rv);
 }
 
 // tcp server thread
@@ -443,8 +447,7 @@ int start_tcp_server (const unsigned int hostnl, const unsigned short port,
   d->age        = 0;
   d->timeout    = timeout;
   d->userdata   = userdata;
-  main_loop(d);
-  return(0);
+  return main_loop(d);
 }
 
 // vim:sw=2 sts=2 ts=8 et:

@@ -280,6 +280,7 @@ int main (int argc, char **argv) {
   int cfg_uid, cfg_gid;
   char *docroot = "/" ;
   debug_level = DLOG_WARNING;
+  int exitstatus = 0;
 
   // TODO read rc file
 
@@ -309,19 +310,20 @@ int main (int argc, char **argv) {
   cfg_uid = resolve_uid(cfg_username);
   cfg_gid = resolve_gid(cfg_groupname);
 
-  if (cfg_uid < 0 || cfg_gid < 0) goto errexit;
+  if (cfg_uid < 0 || cfg_gid < 0) {exitstatus = -1; goto errexit;}
 
   if (cfg_chroot) {
-    if (do_chroot(cfg_chroot)) goto errexit;
+    if (do_chroot(cfg_chroot)) {exitstatus = -1; goto errexit;}
   }
 
   if (stat(docroot, &sb) || !S_ISDIR(sb.st_mode)) {
     dlog(DLOG_CRIT, "document-root is not a directory\n");
+    exitstatus = -1;
     goto errexit;
   }
 
   if (cfg_daemonize) {
-    if (daemonize()) goto errexit;
+    if (daemonize()) {exitstatus = -1; goto errexit;}
   }
 
   ff_initialize();
@@ -343,7 +345,7 @@ int main (int argc, char **argv) {
   /* all systems go */
 
   dlog(DLOG_INFO, "Initialization complete. Starting server.\n");
-  start_tcp_server(cfg_host, cfg_port, docroot, cfg_uid, cfg_gid, cfg_timeout, NULL);
+  exitstatus = start_tcp_server(cfg_host, cfg_port, docroot, cfg_uid, cfg_gid, cfg_timeout, NULL);
 
   /* cleanup */
 
@@ -352,7 +354,7 @@ int main (int argc, char **argv) {
   vcache_destroy(&vc);
 errexit:
   dlog_close();
-  return(0);
+  return(exitstatus);
 }
 
 //  -=-=-=-=-=-=- video server callbacks -=-=-=-=-=-=-
