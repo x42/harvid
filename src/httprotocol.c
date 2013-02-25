@@ -88,7 +88,7 @@ void send_http_header_fd(int fd , int s, httpheader *h) {
 #ifdef HAVE_WINDOWS
     off += snprintf(hd+off, HTHSIZE-off, "Content-Length:%lu\r\n", (unsigned long) h->length);
 #else
-    off += snprintf(hd+off, HTHSIZE-off, "Content-Length:%zd\r\n", h->length);
+    off += snprintf(hd+off, HTHSIZE-off, "Content-Length:%zu\r\n", h->length);
 #endif
   if (h && h->retryafter)
     off += snprintf(hd+off, HTHSIZE-off, "Retry-After:%s\r\n", h->retryafter);
