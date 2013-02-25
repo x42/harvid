@@ -177,8 +177,14 @@ cp pkg/osx/Resources/harvid.icns $PREFIX/${APPDIR}/Contents/Resources/
 
 cat > $PREFIX/${APPDIR}/Contents/MacOS/harvid_param << EOF
 #!/usr/bin/env bash
-(sleep 3; open http://localhost:1554) &
 CWD="\`/usr/bin/dirname \"\$0\"\`"
+
+/usr/bin/osascript -e '
+  tell application "Finder"
+    display dialog "harvid is a system service without graphical user interface. Visit http://localhost:1554 to interact with it." buttons["OK"]
+  end tell'
+
+(sleep 3; open http://localhost:1554) &
 exec "\$CWD/harvid" -A shutdown
 EOF
 
