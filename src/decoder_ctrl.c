@@ -857,7 +857,7 @@ void dctrl_info_html (void *p, char **m, size_t *o, size_t *s, int tbl) {
     if (tbl&2) {
       rprintf("<table style=\"text-align:center;width:100%%\">\n");
     }
-    rprintf("<tr><td colspan=\"8\" class=\"title left\"><h3>File Mapping:</h3></td></tr>\n");
+    rprintf("<tr><td colspan=\"8\" class=\"left\"><h3>File Mapping:</h3></td></tr>\n");
     rprintf("<tr><td colspan=\"8\" class=\"left line\">max available: %d</td></tr>\n", ((JVD*)p)->cache_size);
   }
   rprintf("<tr><th>#</th><th>file-id</th><th></th><th>Filename</th><th></th><th></th><th></th><th>LRU</th></tr>\n");
@@ -881,7 +881,7 @@ void dctrl_info_html (void *p, char **m, size_t *o, size_t *s, int tbl) {
     rprintf("<p>max available: %d, busy: %d%s</p>\n", ((JVD*)p)->max_objects, ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
     rprintf("<table style=\"text-align:center;width:100%%\">\n");
   } else {
-    rprintf("<tr><td colspan=\"8\" class=\"title left\"><h3>Decoder Objects:</h3>\n");
+    rprintf("<tr><td colspan=\"8\" class=\"left\"><h3>Decoder Objects:</h3></td></tr>\n");
     rprintf("<tr><td colspan=\"8\" class=\"left line\">max available: %d, busy: %d%s</td></tr>\n",
         ((JVD*)p)->max_objects, ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
   }

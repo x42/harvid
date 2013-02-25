@@ -347,7 +347,7 @@ void vcache_info_html(void *p, char **m, size_t *o, size_t *s, int tbl) {
     rprintf("cache-hits: %d, cache-misses: %d</p>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
     rprintf("<table style=\"text-align:center;width:100%%\">\n");
   } else {
-    rprintf("<tr><td colspan=\"8\" class=\"title left\"><h3>Cache Info:</h3></td></tr>\n");
+    rprintf("<tr><td colspan=\"8\" class=\"left\"><h3>Cache Info:</h3></td></tr>\n");
     rprintf("<tr><td colspan=\"8\" class=\"left line\">max available: %d\n", ((xjcd*)p)->cfg_cachesize);
     rprintf(", cache-hits: %d, cache-misses: %d</td></tr>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
   }
@@ -381,7 +381,7 @@ void vcache_info_html(void *p, char **m, size_t *o, size_t *s, int tbl) {
     sprintf(bsize, "%.2f %s", total_bytes / 1073741824.0, "Gi");
   }
 
-  rprintf("<tr><td colspan=\"8\" class=\"left\">cache size: %sB in memory\n", bsize);
+  rprintf("<tr><td colspan=\"8\" class=\"left\">cache size: %sB in memory</td></tr>\n", bsize);
   pthread_rwlock_unlock(&((xjcd*)p)->lock);
   if (tbl&2) {
     rprintf("</table>\n");

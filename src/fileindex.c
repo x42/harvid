@@ -304,12 +304,12 @@ void hdl_index_dir (int fd, const char *root, char *base_url, char *path, int fm
       break;
     default:
       raprintf(sm, off, ss, DOCTYPE HTMLOPEN);
-      raprintf(sm, off, ss, "<title>harvid Index</title></head>\n");
-      raprintf(sm, off, ss, "<style>\nli {float:left; margin:0 .5em .5em 0em; list-style-type:none;}\n</style>\n");
+      raprintf(sm, off, ss, "<title>harvid Index</title>\n");
+      raprintf(sm, off, ss, "<style type=\"text/css\">\nli {float:left; margin:0 .5em .5em 0em; list-style-type:none;}\n</style>\n");
       raprintf(sm, off, ss, "</head>\n");
       raprintf(sm, off, ss, HTMLBODY);
       raprintf(sm, off, ss, "<h2>harvid - Index</h2>\n");
-      raprintf(sm, off, ss, "<p>Path: %s</h2>\n</p>\n<ul>\n", strlen(path) > 0 ? path : "<em>(docroot)</em>");
+      raprintf(sm, off, ss, "<p>Path: %s</p>\n<ul>\n", strlen(path) > 0 ? path : "<em>(docroot)</em>");
       break;
   }
 
