@@ -849,38 +849,45 @@ void dctrl_info_html (void *p, char **m, size_t *o, size_t *s, int tbl) {
   int i = 1;
 
   VidMap *vm, *tmp;
-  pthread_rwlock_rdlock(&((JVD*)p)->lock_vml);
   if (tbl&1) {
     rprintf("<h3>File/ID Mapping:</h3>\n");
+    rprintf("<p>max available: %d</p>\n", ((JVD*)p)->cache_size);
     rprintf("<table style=\"text-align:center;width:100%%\">\n");
   } else {
     if (tbl&2) {
       rprintf("<table style=\"text-align:center;width:100%%\">\n");
     }
-    rprintf("<tr><td colspan=\"8\" class=\"title left line\"><h3>File Mapping:</h3></td></tr>\n");
+    rprintf("<tr><td colspan=\"8\" class=\"title left\"><h3>File Mapping:</h3></td></tr>\n");
+    rprintf("<tr><td colspan=\"8\" class=\"left line\">max available: %d</td></tr>\n", ((JVD*)p)->cache_size);
   }
   rprintf("<tr><th>#</th><th>file-id</th><th></th><th>Filename</th><th></th><th></th><th></th><th>LRU</th></tr>\n");
   rprintf("\n");
+  pthread_rwlock_rdlock(&((JVD*)p)->lock_vml);
   HASH_ITER(hh, ((JVD*)p)->vml, vm, tmp) {
     rprintf("<tr><td>%d.</td><td>%i</td><td></td><td colspan=\"4\" class=\"left\">%s</td><td>%"PRIlld"</td></tr>\n",
-        i++, vm->id, vm->fn?vm->fn:"(null)", (long long)vm->lru);
-  }
-  if (tbl&4) {
-    rprintf("</table>\n");
+        i, vm->id, vm->fn?vm->fn:"(null)", (long long)vm->lru);
+    i++;
   }
   pthread_rwlock_unlock(&((JVD*)p)->lock_vml);
+  if (tbl&4) {
+    rprintf("</table>\n");
+  } else {
+    rprintf("<tr><td colspan=\"8\" class=\"dline\"></td></tr>\n");
+  }
 
   i = 1;
   if(tbl&4) {
     rprintf("<h3>Decoder Objects:</h3>\n");
-    rprintf("<p>busy: %d%s</p>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
+    rprintf("<p>max available: %d, busy: %d%s</p>\n", ((JVD*)p)->max_objects, ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
     rprintf("<table style=\"text-align:center;width:100%%\">\n");
   } else {
     rprintf("<tr><td colspan=\"8\" class=\"title left\"><h3>Decoder Objects:</h3>\n");
-    rprintf("<tr><td colspan=\"8\" class=\"left line\">busy: %d%s</td></tr>\n", ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
+    rprintf("<tr><td colspan=\"8\" class=\"left line\">max available: %d, busy: %d%s</td></tr>\n",
+        ((JVD*)p)->max_objects, ((JVD*)p)->busycnt, ((JVD*)p)->purge_in_progress?" (purge queued)":"");
   }
   rprintf("<tr><th>#</th><th>file-id</th><th>Flags</th><th>Filename</th><th>Hitcount</th><th>PixFmt</th><th>Frame#</th><th>LRU</th></tr>\n");
   rprintf("\n");
+  pthread_rwlock_rdlock(&((JVD*)p)->lock_jdh);
   while (cptr) {
     char *tmp, *fn;
     if (cptr->id == 0) {
@@ -891,14 +898,18 @@ void dctrl_info_html (void *p, char **m, size_t *o, size_t *s, int tbl) {
     fn = (cptr->flags&VOF_VALID) ? get_fn((JVD*)p, cptr->id) : NULL;
     rprintf(
         "<tr><td>%d.</td><td>%i</td><td>%s</td><td class=\"left\">%s</td><td>i:%d,d:%d</td><td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
-        i++, cptr->id, tmp, fn?fn:"-", /* (cptr->decoder?LIBAVCODEC_IDENT:"null"), */
+        i, cptr->id, tmp, fn?fn:"-", /* (cptr->decoder?LIBAVCODEC_IDENT:"null"), */
         cptr->hitcount_info, cptr->hitcount_decoder,
         ff_fmt_to_text(cptr->fmt), cptr->frame, (long long)cptr->lru);
     free(tmp);
     cptr = cptr->next;
+    i++;
   }
+  pthread_rwlock_unlock(&((JVD*)p)->lock_jdh);
   if(tbl&8) {
     rprintf("</table>\n");
+  } else {
+    rprintf("<tr><td colspan=\"8\" class=\"dline\"></td></tr>\n");
   }
 }
 

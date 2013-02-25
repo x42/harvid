@@ -339,18 +339,19 @@ void vcache_info_html(void *p, char **m, size_t *o, size_t *s, int tbl) {
   int i = 1;
   videocacheline *cptr, *tmp;
   uint64_t total_bytes = 0;
+  char bsize[32];
 
   if (tbl&1) {
     rprintf("<h3>Video Frame Cache:</h3>\n");
-    rprintf("<p>Size: max. %i entries.\n", ((xjcd*)p)->cfg_cachesize);
-    rprintf("Hits: %d, Misses: %d</p>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
+    rprintf("<p>max available: %i\n", ((xjcd*)p)->cfg_cachesize);
+    rprintf("cache-hits: %d, cache-misses: %d</p>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
     rprintf("<table style=\"text-align:center;width:100%%\">\n");
   } else {
     rprintf("<tr><td colspan=\"8\" class=\"title left\"><h3>Cache Info:</h3></td></tr>\n");
-    rprintf("<tr><td colspan=\"8\" class=\"left line\">max. %d entries.\n", ((xjcd*)p)->cfg_cachesize);
-    rprintf("Hits: %d, Misses: %d</td></tr>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
+    rprintf("<tr><td colspan=\"8\" class=\"left line\">max available: %d\n", ((xjcd*)p)->cfg_cachesize);
+    rprintf(", cache-hits: %d, cache-misses: %d</td></tr>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
   }
-  rprintf("<tr><th>#</th><th>file-id</th><th>Flags</th><th></th><th>Geometry</th><th>Buffer</th><th>Frame#</th><th>LRU</th></tr>\n");
+  rprintf("<tr><th>#</th><th>file-id</th><th>Flags</th><th>Allocated Bytes</th><th>Geometry</th><th>Buffer</th><th>Frame#</th><th>LRU</th></tr>\n");
   /* walk comlete tree */
   pthread_rwlock_rdlock(&((xjcd*)p)->lock);
   HASH_ITER(hh, ((xjcd*)p)->vcache, cptr, tmp) {
@@ -363,7 +364,24 @@ void vcache_info_html(void *p, char **m, size_t *o, size_t *s, int tbl) {
     total_bytes += cptr->alloc_size;
     i++;
   }
-  rprintf("<tr><td colspan=\"8\" class=\"left\">total %"PRIu64" bytes allocated.\n", total_bytes);
+
+  if ((tbl&1) == 0) {
+    rprintf("<tr><td colspan=\"8\" class=\"dline\"></td></tr>\n");
+  }
+
+  if (total_bytes < 1024) {
+    sprintf(bsize, "%.0f %s", total_bytes / 1.0, "");
+  } else if (total_bytes < 1024000 ) {
+    sprintf(bsize, "%.1f %s", total_bytes / 1024.0, "Ki");
+  } else if (total_bytes < 10485760) {
+    sprintf(bsize, "%.1f %s", total_bytes / 1048576.0, "Mi");
+  } else if (total_bytes < 1048576000) {
+    sprintf(bsize, "%.2f %s", total_bytes / 1048576.0, "Mi");
+  } else {
+    sprintf(bsize, "%.2f %s", total_bytes / 1073741824.0, "Gi");
+  }
+
+  rprintf("<tr><td colspan=\"8\" class=\"left\">cache size: %sB in memory\n", bsize);
   pthread_rwlock_unlock(&((xjcd*)p)->lock);
   if (tbl&2) {
     rprintf("</table>\n");

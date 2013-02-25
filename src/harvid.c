@@ -416,7 +416,7 @@ char *hdl_server_status_html (CONN *c) {
   char *sm = malloc(ss * sizeof(char));
   raprintf(sm, off, ss, DOCTYPE HTMLOPEN);
   raprintf(sm, off, ss, "<title>harvid status</title>\n");
-  raprintf(sm, off, ss, "<style>\ntd.title{text-decoration:underline;} td.left{text-align:left;} td.line{border-bottom: 1px solid black;} td h3 {margin: 1em 0 0 0;}\n</style>\n");
+  raprintf(sm, off, ss, "<style>\ntd.title{text-decoration:underline;} td.left{text-align:left;} td.line{border-bottom: 1px solid black;} td.dline{border-top: 3px double black;} td h3 {margin: 1em 0 0 0;}\n</style>\n");
   raprintf(sm, off, ss, "</head>\n");
   raprintf(sm, off, ss, HTMLBODY);
   raprintf(sm, off, ss, "<h2>harvid status</h2>\n");
@@ -434,10 +434,10 @@ char *hdl_server_status_html (CONN *c) {
   avg1 /= 60.0;
   avg5 /= 300.0;
   long int uptime = (long int) (n - c->d->stat_start);
-  raprintf(sm, off, ss, "<p>Total requests: %d, uptime: %ld day%s, %02ld:%02ld:%02ld\n",
-      c->d->stat_count, uptime / 86400, (uptime / 86400) == 1 ? "": "s", (uptime % 86400) / 3600, (uptime % 3600) / 60, uptime %60);
   raprintf(sm, off, ss, "<p>Requests/sec: (1min avg / 5min avg / 1h avg / all time) %.2f / %.2f / %.2f / %.3f</p>\n",
       avg1, avg5, avgA, c->d->stat_count / difftime(n, c->d->stat_start));
+  raprintf(sm, off, ss, "<p>Total requests: %d, uptime: %ld day%s, %02ld:%02ld:%02ld\n",
+      c->d->stat_count, uptime / 86400, (uptime / 86400) == 1 ? "": "s", (uptime % 86400) / 3600, (uptime % 3600) / 60, uptime %60);
 #endif
   dctrl_info_html(dc, &sm, &off, &ss, 2);
   vcache_info_html(vc, &sm, &off, &ss, 2);
