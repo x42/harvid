@@ -1,7 +1,9 @@
 #!/bin/bash
 
+#environment variables
+: ${OSXMACHINE:=priroda.local}
+
 NEWVERSION=$1
-OSXMACHINE=priroda.local
 
 if test -n "$(echo "$NEWVERSION" | sed 's/^[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$//')"; then
 	NEWVERSION=""
@@ -52,19 +54,20 @@ fi
 VERSION=$(git describe --tags HEAD)
 test -n "$VERSION" || exit
 
-echo "building win32 ..."
-./x-win32.sh || exit
-echo "building linux static ..."
-./x-static.sh || exit
-echo "building osx package on $OSXMACHINE ..."
 
 /bin/ping -q -c1 ${OSXMACHINE} &>/dev/null \
 	&& /usr/sbin/arp -n ${OSXMACHINE} &>/dev/null
 ok=$?
 if test "$ok" != 0; then
-	echo "host can not be reached"
+	echo "OSX build host can not be reached."
 	exit
 fi
+
+echo "building win32 ..."
+./x-win32.sh || exit
+echo "building linux static ..."
+./x-static.sh || exit
+echo "building osx package on $OSXMACHINE ..."
 
 ssh $OSXMACHINE << EOF
 exec /bin/bash -l

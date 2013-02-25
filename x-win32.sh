@@ -6,11 +6,11 @@
 # x-compiled ffmpeg, libpng, pthread,.. with
 # 'configure prefix=~/.wine/drive_c/x-prefix host=i586-mingw32msvc-gcc ...'
 
+#environment variables
+: ${WINEROOT=$HOME/.wine/drive_c/x-prefix}
+: ${NSISEXE=$HOME/.wine/drive_c/Program\ Files/NSIS/makensis.exe}
+
 VERSION=$(git describe --tags HEAD || echo "X.X.X")
-WINEROOT=$HOME/.wine/drive_c/x-prefix
-NSISEXE=$HOME/.wine/drive_c/Program\ Files/NSIS/makensis.exe
-
-
 NSIDIR=/tmp/harvid-build-nsi/
 
 make clean
