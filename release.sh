@@ -83,6 +83,7 @@ if test "$ok" != 0; then
 fi
 
 rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.pkg site/releases/ || exit
+rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.dmg site/releases/ || exit
 
 echo "preparing website"
 
