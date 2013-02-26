@@ -4,3 +4,5 @@ debian export-ignore
 build-deb.sh export-ignore
 release.sh export-ignore
 x-*.sh export-ignore
+pkg export-ignore
+doc/dmgbg.png export-ignore
