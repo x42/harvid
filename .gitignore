@@ -9,3 +9,5 @@ tmp/
 pkg/osx/usr
 src/harvid.dSYM/
 site
+
+update_site.sh
