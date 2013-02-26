@@ -394,8 +394,8 @@ char *hdl_homepage_html (CONN *c) {
   if (cfg_adminmask)
     off+=snprintf(msg+off, HPSIZE-off, "</ul>\n</div>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<div style=\"clear:both;\"></div><hr/>\n");
-  off+=snprintf(msg+off, HPSIZE-off, "<p style=\"text-align:justify;\">The default request handler decodes images and requires a <code>?frame=NUM&amp;file=PATH</code> URL query or post parameters. Video frames are counted starting at zero. Default options are <code>w=0&amp;h=0&amp;format=png</code> which serves the image pre-scaled to its effective size as png.<br/>If either only <em>width</em> or <em>height</em> is specified with a value greater than 15, the other is calculated according to the movie's effective aspect-ratio. However the minimum size is 16x16, requesting geometries smaller than 16x16 will return the image in its original size.</p>\n");
-  off+=snprintf(msg+off, HPSIZE-off, "<p>The <code>/info/</code> request handler requires a <code>?file=PATH</code> query parameter and optionally takes a <code>format</code> (default is html). All other handlers (/status, /rc, /version, /admin/) take no arguments.</p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p style=\"text-align:justify;\">The default request handler decodes images and requires a <code>?frame=NUM&amp;file=PATH</code> URL query or post parameters. Video frames are counted starting at zero. Default options are <code>w=0&amp;h=0&amp;format=png</code> which serves the image pre-scaled to its effective size as png.</p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p>The <code>/info</code> request handler requires a <code>?file=PATH</code> query parameter and optionally takes a <code>format</code> (default is html). All other handlers (/status, /rc, /version, /admin/) take no arguments.</p>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<p>Available query parameters: <code>frame</code>, <code>w</code>, <code>h</code>, <code>file</code>, <code>format</code>.</p>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<p>Frame (frame-number), w (width) and h (height) are unsigned integers.</p>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<p>Supported image output pixel formats:</p>\n");
@@ -405,6 +405,8 @@ char *hdl_homepage_html (CONN *c) {
   off+=snprintf(msg+off, HPSIZE-off, "<p>Available info output formats:</p>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<ul>\n<li><em>Human Readable</em>: html, xhtml</li>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<li><em>Machine Readable</em>: json, csv, plain</li>\n</ul>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p style=\"text-align:justify;\">The jpg (and jpeg) <em>format</em> parameter can be postfixed number to specify the jpeg quality. e.g. <code>&format=jpeg90</code>. The default is 75. Note that 'jpg' is just an alias for 'jpeg', and 'html' is an alias for 'xhtml'.</p>\n");
+  off+=snprintf(msg+off, HPSIZE-off, "<p style=\"text-align:justify;\">If either only <em>width</em> or <em>height</em> is specified with a value greater than 15, the other is calculated according to the movie's effective aspect-ratio. However the minimum size is 16x16, requesting geometries smaller than 16x16 will return the image in its original size.</p>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<p style=\"text-align:center\"><a href=\"http://x42.github.com/harvid/\">harvid @ GitHub</a></p>\n");
   off+=snprintf(msg+off, HPSIZE-off, "</div>\n");
   off+=snprintf(msg+off, HPSIZE-off, HTMLFOOTER, c->d->local_addr, c->d->local_port);
