@@ -19,23 +19,31 @@ http://x42.github.com/harvid/ .
 Usage
 -----
 
-harvid is a stanalone HTTP server, get its build-dependencies, run
+harvid is a stanalone HTTP server, all interaction takes place via HTTP.
+After launching it, simply point a web-browser at http://localhost:1554/
+
+The OSX bundle and window installer come with a shortcut link to launch
+the server. On Linux or with the OSX package, harvid is usually started
+from a terminal by simply typing `harvid`&lt;enter&gt;.
+
+harvid can also be run directly from the source folder without installing
+it. Get its build-dependencies (see below), run
 
 	make
 	./src/harvid
-
-and point a web-browser at http://localhost:1554/
-
-harvid can be launched as system-service (daemonized, chroot, chuid, syslog),
-and listen on specific interfaces only in case you do not want to expose
-access to your movie-collection. However, is no per request access control.
-See `harvid --help` or read the included man page for details.
 
 When used from ardour, ardour will automatically start the server when
 you open a video. Ardour searches $PATH or asks your for where it can find
 harvid. The easiest way is to simply run:
 
 	sudo make install
+
+harvid can be launched as system-service (daemonized, chroot, chuid, syslog),
+and listen on specific interfaces only in case you do not want to expose
+access to your movie-collection. However, is no per request access control.
+
+For available options see `harvid --help` or the included man page which
+is also available online at http://x42.github.com/harvid/harvid.1.html
 
 
 Build-dependencies
