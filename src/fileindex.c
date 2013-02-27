@@ -63,7 +63,8 @@ char *str_escape(const char *string, int inlength, const char esc) {
   return ns;
 }
 
-static void print_html (int what, const char *burl, const char *path, const char *name, char **m, size_t *o, size_t *s, int *num) {
+static void print_html (int what, const char *burl, const char *path, const char *name, time_t mtime,
+    char **m, size_t *o, size_t *s, int *num) {
   switch(what) {
     case 1:
       {
@@ -97,7 +98,8 @@ static void print_html (int what, const char *burl, const char *path, const char
   }
 }
 
-static void print_csv (int what, const char *burl, const char *path, const char *name, char **m, size_t *o, size_t *s, int *num) {
+static void print_csv (int what, const char *burl, const char *path, const char *name, time_t mtime,
+    char **m, size_t *o, size_t *s, int *num) {
   switch(what) {
     case 1:
       {
@@ -125,7 +127,8 @@ static void print_csv (int what, const char *burl, const char *path, const char 
   }
 }
 
-static void print_plain (int what, const char *burl, const char *path, const char *name, char **m, size_t *o, size_t *s, int *num) {
+static void print_plain (int what, const char *burl, const char *path, const char *name, time_t mtime,
+    char **m, size_t *o, size_t *s, int *num) {
   switch(what) {
     case 1:
       {
@@ -152,7 +155,8 @@ static void print_plain (int what, const char *burl, const char *path, const cha
 }
 
 
-static void print_json (int what, const char *burl, const char *path, const char *name, char **m, size_t *o, size_t *s, int *num) {
+static void print_json (int what, const char *burl, const char *path, const char *name, time_t mtime,
+    char **m, size_t *o, size_t *s, int *num) {
   switch(what) {
     case 1:
       {
@@ -183,9 +187,10 @@ static void print_json (int what, const char *burl, const char *path, const char
 }
 
 
-static void parse_direntry (const char *root, const char *burl, const char *path, const char *name, int opt,
+static void parse_direntry (const char *root, const char *burl, const char *path, const char *name, 
+    time_t mtime, int opt,
     char **m, size_t *o, size_t *s, int *num,
-    void (*print_fn)(const int what, const char*, const char*, const char*, char**, size_t*, size_t*, int *) ) {
+    void (*print_fn)(const int what, const char*, const char*, const char*, time_t, char**, size_t*, size_t*, int *) ) {
   int l = strlen(name)-4;
   if (l > 0 && ( !strcmp(&name[l], ".avi")
               || !strcmp(&name[l], ".mov")
@@ -211,14 +216,14 @@ static void parse_direntry (const char *root, const char *burl, const char *path
     char *url = strdup(burl);
     char *vurl = strstr(url, "/index"); // TODO - do once per dir.
     if (vurl) *++vurl = 0;
-    print_fn(1, url, path, name, m, o, s, num);
+    print_fn(1, url, path, name, mtime, m, o, s, num);
     free(url);
   }
 }
 
 static int parse_dir (const int fd, const char *root, const char *burl, const char *path, int opt,
     char **m, size_t *o, size_t *s, int *num,
-    void (*print_fn)(const int what, const char*, const char*, const char*, char**, size_t*, size_t*, int *) ) {
+    void (*print_fn)(const int what, const char*, const char*, const char*, time_t, char**, size_t*, size_t*, int *) ) {
   DIR  *D;
   struct dirent *dd;
   char dn[MAX_PATH];
@@ -265,7 +270,7 @@ static int parse_dir (const int fd, const char *root, const char *burl, const ch
             }
           }
         } else {
-          print_fn(0, burl, path, dd->d_name, m, o, s, num);
+          print_fn(0, burl, path, dd->d_name, fs.st_mtime, m, o, s, num);
         }
       }
       else if (
@@ -273,7 +278,7 @@ static int parse_dir (const int fd, const char *root, const char *burl, const ch
           S_ISLNK(fs.st_mode) ||
 #endif
           S_ISREG(fs.st_mode)) {
-        parse_direntry(root, burl, path, dd->d_name, opt, m, o, s, num, print_fn);
+        parse_direntry(root, burl, path, dd->d_name, fs.st_mtime, opt, m, o, s, num, print_fn);
       }
     }
   }
