@@ -24,6 +24,7 @@ if test -n "$NEWVERSION"; then
 	git commit -a
 
 	dch --newversion "${NEWVERSION}-1" --distribution unstable || exit
+	vi ChangeLog
 	make VERSION="v${NEWVERSION}" clean man || exit
 
 	git status -s
@@ -36,7 +37,7 @@ if test -n "$NEWVERSION"; then
 		exit 1
 	fi
 
-	git commit -a -m "finalize changelog"
+	git commit -m "finalize changelog" debian/changelog ChangeLog doc/harvid.1
 	git tag "v${NEWVERSION}"
 
 	echo -n "git push and build? [Y/n] "
