@@ -107,7 +107,7 @@ static void print_csv (int what, const char *burl, const char *path, const char 
       u1 = url_escape(path, 0);
       u2 = url_escape(name, 0);
       c1 = str_escape(name, 0, '"');
-      rprintf("F,\"%s\",\"%s%s%s\",\"%s\"\n", burl, u1, SL_SEP(path), u2, c1);
+      rprintf("F,\"%s\",\"%s%s%s\",\"%s\",%"PRIlld"\n", burl, u1, SL_SEP(path), u2, c1, (long long) mtime);
       free(u1); free(u2); free(c1);
       (*num)++;
       }
@@ -117,7 +117,7 @@ static void print_csv (int what, const char *burl, const char *path, const char 
       char *u2, *c1;
       u2 = url_escape(name, 0);
       c1 = str_escape(name, 0, '"');
-      rprintf("D,\"%s%s%s\",\"%s\"\n", burl, SL_SEP(path), u2, c1);
+      rprintf("D,\"%s%s%s\",\"%s\",%"PRIlld"\n", burl, SL_SEP(path), u2, c1, (long long) mtime);
       free(u2); free(c1);
       (*num)++;
       }
@@ -164,8 +164,8 @@ static void print_json (int what, const char *burl, const char *path, const char
       u1 = url_escape(path, 0);
       u2 = url_escape(name, 0);
       c1 = str_escape(name, 0, '\\');
-      rprintf("%s{\"type\":\"file\", \"baseurl\":\"%s\", \"file\":\"%s%s%s\", \"name\":\"%s\"}",
-          (*num > 0) ? ", ":"", burl, u1, SL_SEP(path), u2, c1);
+      rprintf("%s{\"type\":\"file\", \"baseurl\":\"%s\", \"file\":\"%s%s%s\", \"name\":\"%s\", \"mtime\":%"PRIlld"}",
+          (*num > 0) ? ", ":"", burl, u1, SL_SEP(path), u2, c1, (long long) mtime);
       free(u1); free(u2); free(c1);
       (*num)++;
       }
@@ -175,8 +175,8 @@ static void print_json (int what, const char *burl, const char *path, const char
       char *u2, *c1;
       u2 = url_escape(name, 0);
       c1 = str_escape(name, 0, '\\');
-      rprintf("%s{\"type\":\"dir\", \"indexurl\":\"%s%s%s\", \"name\":\"%s\"}",
-          (*num > 0) ? ", ":"", burl, SL_SEP(path), u2, c1);
+      rprintf("%s{\"type\":\"dir\", \"indexurl\":\"%s%s%s\", \"name\":\"%s\", \"mtime\":%"PRIlld"}",
+          (*num > 0) ? ", ":"", burl, SL_SEP(path), u2, c1, (long long) mtime);
       free(u2); free(c1);
       (*num)++;
       }
