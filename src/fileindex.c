@@ -117,7 +117,7 @@ static void print_csv (int what, const char *burl, const char *path, const char 
       char *u2, *c1;
       u2 = url_escape(name, 0);
       c1 = str_escape(name, 0, '"');
-      rprintf("D,\"%s%s%s\",\"%s\",%"PRIlld"\n", burl, SL_SEP(path), u2, c1, (long long) mtime);
+      rprintf("D,\"%s%s%s/\",\"%s\",%"PRIlld"\n", burl, SL_SEP(path), u2, c1, (long long) mtime);
       free(u2); free(c1);
       (*num)++;
       }
@@ -144,7 +144,7 @@ static void print_plain (int what, const char *burl, const char *path, const cha
       {
       char *u2;
       u2 = url_escape(name, 0);
-      rprintf("d %s%s%s\n", burl, SL_SEP(path), u2);
+      rprintf("d %s%s%s/\n", burl, SL_SEP(path), u2);
       free(u2);
       (*num)++;
       }
@@ -175,7 +175,7 @@ static void print_json (int what, const char *burl, const char *path, const char
       char *u2, *c1;
       u2 = url_escape(name, 0);
       c1 = str_escape(name, 0, '\\');
-      rprintf("%s{\"type\":\"dir\", \"indexurl\":\"%s%s%s\", \"name\":\"%s\", \"mtime\":%"PRIlld"}",
+      rprintf("%s{\"type\":\"dir\", \"indexurl\":\"%s%s%s/\", \"name\":\"%s\", \"mtime\":%"PRIlld"}",
           (*num > 0) ? ", ":"", burl, SL_SEP(path), u2, c1, (long long) mtime);
       free(u2); free(c1);
       (*num)++;

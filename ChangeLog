@@ -2,6 +2,7 @@
 * update README and built-in documentation on homepage
 * exclude packaging related files from source tar balls
 * add mtime to file-index
+* fileindex: add trailing slash to directory URLs
 
 2013-02-25 (v0.5.1) Robin Gareus <robin@gareus.org>
 * valid HTML
