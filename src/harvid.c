@@ -649,8 +649,8 @@ char *hdl_server_version (CONN *c, ics_request_args *a) {
       off+=snprintf(info+off, SINFOSIZ-off, "}");
       break;
     case OUT_CSV:
-      off+=snprintf(info+off, SINFOSIZ-off, "\"%s\",\"%s\",\"%s\",\"%s\"\n",
-          SERVERVERSION, LIBAVFORMAT_IDENT, LIBAVCODEC_IDENT, LIBAVUTIL_IDENT);
+      off+=snprintf(info+off, SINFOSIZ-off, "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
+          ICSVERSION, SERVERVERSION, LIBAVFORMAT_IDENT, LIBAVCODEC_IDENT, LIBAVUTIL_IDENT);
       break;
     default: // HTML
       off+=snprintf(info+off, SINFOSIZ-off, DOCTYPE HTMLOPEN);
