@@ -1,3 +1,60 @@
+2013-02-28 (unreleased) Robin Gareus <robin@gareus.org>
+* update README and built-in documentation on homepage
+* exclude packaging related files from source tar balls
+* add mtime to file-index
+
+2013-02-25 (v0.5.1) Robin Gareus <robin@gareus.org>
+* valid HTML
+* new OSX icon
+
+2013-02-25 (v0.5.0) Robin Gareus <robin@gareus.org>
+* support for OSX bundle
+* renice status page html
+* cope with invalid input data (negative frames, invalid width/height,..)
+* server process exit status
+* update release/build scripts
+
+2013-02-24 (v0.4.6) Robin Gareus <robin@gareus.org>
+* usage frequecy statistics (debug mode only)
+* optional server exit-on-idle timeout (prepare launchd, systemd)
+* export file-index as CSV and JSON
+
+2013-02-23 (v0.4.5) Robin Gareus <robin@gareus.org>
+* allow to set JPEG quality
+* fix chroot + chuid/gid lookup and execution order
+* incremental file-index output
+* dynamically sized output buffering for info pages
+
+2013-02-23 (v0.4.X) Robin Gareus <robin@gareus.org>
+* prepare website - binary releases
+* release and build scripts
+* man page formatting
+
+2013-02-20 (v0.4.0) Robin Gareus <robin@gareus.org>
+* replace linear lists with hash-table - fast lookup
+* implement "empty frame" rendering
+* add support for memlock
+
+2013-02-16 (v0.3.0) Robin Gareus <robin@gareus.org>
+* valid HTML
+* update --help and manual page
+* add support for CSV info format
+* sanity check options on startup
+* add support to choose pixel format dynamically
+* new banner/logo image
+* remove cruft from decoder and frame-cache code
+
+2013-02-14 (v0.2.0) Robin Gareus <robin@gareus.org>
+* server ID and built-in version,rc query handlers
+* portability and x-compile setup
+* proper shutdown on signal
+* ffmpeg concurrency improvements
+* separate file<>ID mapping
+* rework decoder control, reduce footprint of locked section
+* reference count decoder locks, non-blocking info calls
+* clean up logging and log-levels
+* flexible cache flusing and purging strategies
+
 2013-02-11 (v0.1.0) Robin Gareus <robin@gareus.org>
 * more refactoring, add CSV index
 
