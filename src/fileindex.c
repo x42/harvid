@@ -191,27 +191,35 @@ static void parse_direntry (const char *root, const char *burl, const char *path
     time_t mtime, int opt,
     char **m, size_t *o, size_t *s, int *num,
     void (*print_fn)(const int what, const char*, const char*, const char*, time_t, char**, size_t*, size_t*, int *) ) {
-  int l = strlen(name)-4;
-  if (l > 0 && ( !strcmp(&name[l], ".avi")
-              || !strcmp(&name[l], ".mov")
-              || !strcmp(&name[l], ".ogg")
-              || !strcmp(&name[l], ".ogv")
-              || !strcmp(&name[l], ".mpg")
-              || !strcmp(&name[l], ".mov")
-              || !strcmp(&name[l], ".mp4")
-              || !strcmp(&name[l], ".mkv")
-              || !strcmp(&name[l], ".vob")
-              || !strcmp(&name[l], ".asf")
-              || !strcmp(&name[l], ".avs")
-              || !strcmp(&name[l], ".dts")
-              || !strcmp(&name[l], ".flv")
-              || !strcmp(&name[l], ".m4v")
-              || !strcmp(&name[l], ".matroska")
-              || !strcmp(&name[l], ".h264")
-              || !strcmp(&name[l], ".dv")
-              || !strcmp(&name[l], ".dirac")
-              || !strcmp(&name[l], ".webm")
-               )
+  const int l3 = strlen(name) - 3;
+  const int l4 = l3 - 1;
+  const int l5 = l4 - 1;
+  const int l6 = l5 - 1;
+  const int l9 = l6 - 3;
+  if ((l4 > 0 && ( !strcmp(&name[l4], ".avi")
+                || !strcmp(&name[l4], ".mov")
+                || !strcmp(&name[l4], ".ogg")
+                || !strcmp(&name[l4], ".ogv")
+                || !strcmp(&name[l4], ".mpg")
+                || !strcmp(&name[l4], ".mov")
+                || !strcmp(&name[l4], ".mp4")
+                || !strcmp(&name[l4], ".mkv")
+                || !strcmp(&name[l4], ".vob")
+                || !strcmp(&name[l4], ".asf")
+                || !strcmp(&name[l4], ".avs")
+                || !strcmp(&name[l4], ".dts")
+                || !strcmp(&name[l4], ".flv")
+                || !strcmp(&name[l4], ".m4v")
+        )) ||
+      (l5 > 0 && ( !strcmp(&name[l4], ".h264")
+                || !strcmp(&name[l4], ".webm")
+        )) ||
+      (l6 > 0 && ( !strcmp(&name[l4], ".dirac")
+        )) ||
+      (l9 > 0 && ( !strcmp(&name[l4], ".matroska")
+        )) ||
+      (l3 > 0 && ( !strcmp(&name[l4], ".dv")
+        ))
      ) {
     char *url = strdup(burl);
     char *vurl = strstr(url, "/index"); // TODO - do once per dir.
