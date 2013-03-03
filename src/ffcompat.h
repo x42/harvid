@@ -33,10 +33,6 @@
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
 
-#if LIBAVUTIL_VERSION_INT > AV_VERSION_INT(51, 50, 0)
-#define SAMPLE_FMT_S16 AV_SAMPLE_FMT_S16
-#endif
-
 #if LIBAVUTIL_VERSION_INT < AV_VERSION_INT(50, 0, 0)
 #define AVMEDIA_TYPE_AUDIO CODEC_TYPE_AUDIO
 #endif
