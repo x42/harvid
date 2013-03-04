@@ -14,6 +14,7 @@ ARCHINCLUDES=
 ARCHLIBES=
 
 CONFIGTEMP=conf.out
+IS_OSX=
 
 ifeq ($(ARCH),mingw)
   CC=i686-w64-mingw32-gcc
@@ -31,8 +32,10 @@ else
   ARCHFLAGS+=-isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
   ARCHFLAGS+=-headerpad_max_install_names
   ARCHFLAGS+=-sectcreate __DATA __doc_harvid_jpg ../doc/harvid.jpg
+  ARCHFLAGS+=-sectcreate __DATA __doc_seek_js ../doc/seek.js
   LOGODEP=
   ECHO=echo
+  ISOSX=1
   else
   ARCHLIBES=-lrt -lpthread
   endif
@@ -85,15 +88,28 @@ HARVID_SRC = \
   image_format.c \
   timecode.c
 
+ifneq ($(SEEK),)
+  FLAGS+=-DWITH_SEEK_UI
+  HARVID_SRC+=htmlseek.c
+  ifeq ($(ISOSX),1)
+    ARCHFLAGS+=-sectcreate __DATA __doc_seek_js ../doc/seek.js
+  else
+    LOGODEP+=seek.o
+  endif
+endif
+
 logo.o: ../doc/harvid.jpg
 	$(LD) -r -b binary -o logo.o ../doc/harvid.jpg
+
+seek.o: ../doc/seek.js
+	$(LD) -r -b binary -o seek.o ../doc/seek.js
 
 harvid: $(HARVID_SRC) $(HARVID_H) $(LOGODEP)
 	export PKG_CONFIG_PATH=$(PKG_CONFIG_PATH);\
 	$(CC) -o $(@) $(CFLAGS) $(FLAGS) $(HARVID_SRC) $(LOGODEP) $(LDFLAGS) $(LOADLIBES)
 
 clean:
-	rm -f harvid logo.o cscope.* tags
+	rm -f harvid logo.o seek.o cscope.* tags
 
 man: harvid
 	help2man -N -n 'video server' -o ../doc/harvid.1 ./harvid

@@ -193,6 +193,7 @@ int   hdl_decode_frame (int fd, httpheader *h, ics_request_args *a);
 char *hdl_homepage_html (CONN *c);
 char *hdl_server_status_html (CONN *c);
 char *hdl_file_info (CONN *c, ics_request_args *a);
+char *hdl_file_seek (CONN *c, ics_request_args *a);
 char *hdl_server_info (CONN *c, ics_request_args *a);
 char *hdl_server_version (CONN *c, ics_request_args *a);
 void  hdl_clear_cache();
@@ -234,6 +235,10 @@ void hdl_index_dir (int fd, const char *root, char *base_url, const char *path, 
 
 EXTLD(doc_harvid_jpg)
 
+#ifdef WITH_SEEK_UI
+EXTLD(doc_seek_js)
+#endif
+
 /////////////////////////////////////////////////////////////////////
 
 /** main http request handler / dispatch requests */
@@ -266,6 +271,36 @@ void ics_http_handler(
     h.mtime = 1361225638 ; // TODO compile time check image timestamp
     http_tx(c->fd, 200, &h, h.length, LDVAR(doc_harvid_jpg));
     c->run = 0;
+#ifdef WITH_SEEK_UI
+  } else if (CTP("/seek.js")) {
+    httpheader h;
+    memset(&h, 0, sizeof(httpheader));
+    h.ctype = "application/javascript";
+    h.length = LDLEN(doc_seek_js);
+    h.mtime = 1361225638 ; // TODO compile time check image timestamp
+    http_tx(c->fd, 200, &h, h.length, LDVAR(doc_seek_js));
+    c->run = 0;
+  } else if (CTP("/seek")) {
+    ics_request_args a;
+    memset(&a, 0, sizeof(ics_request_args));
+    int rv = parse_http_query(c, query, NULL, &a);
+    if (rv < 0) {
+      ;
+    } else if (rv&2) {
+      char *info = hdl_file_seek(c, &a);
+      if (info) {
+        SEND200(info);
+        free(info);
+      } else {
+        httperror(c->fd, 503, "Service Unavailable", "<p>No decoder is available. Either the server is overloaded or the file is invalid (no video track, unknown codec,..)</p>");
+      }
+    } else {
+      httperror(c->fd, 400, "Bad Request", "<p>Insufficient query parameters.</p>");
+    }
+    if (a.file_name) free(a.file_name);
+    if (a.file_qurl) free(a.file_qurl);
+    c->run = 0;
+#endif
   } else if (CTP("/info")) { /* /info -> /file/info !! */
     ics_request_args a;
     memset(&a, 0, sizeof(ics_request_args));
@@ -281,7 +316,7 @@ void ics_http_handler(
         httperror(c->fd, 503, "Service Unavailable", "<p>No decoder is available. Either the server is overloaded or the file is invalid (no video track, unknown codec,..)</p>");
       }
     } else {
-      httperror(c->fd, 400, "Bad Request", "<p>Insufficient parse query parameters.</p>");
+      httperror(c->fd, 400, "Bad Request", "<p>Insufficient query parameters.</p>");
     }
     if (a.file_name) free(a.file_name);
     if (a.file_qurl) free(a.file_qurl);
@@ -384,7 +419,7 @@ void ics_http_handler(
     } else if (rv == 3) {
       hdl_decode_frame(c->fd, &h, &a);
     } else {
-      httperror(c->fd, 400, "Bad Request", "<p>Insufficient parse query parameters.</p>");
+      httperror(c->fd, 400, "Bad Request", "<p>Insufficient query parameters.</p>");
     }
     if (a.file_name) free(a.file_name);
     if (a.file_qurl) free(a.file_qurl);
