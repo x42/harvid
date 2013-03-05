@@ -15,17 +15,15 @@ function updateText (elemid, val) {
   document.getElementById(elemid).replaceChild(tn, document.getElementById(elemid).firstChild);
 }
 
-function smode(mode) {
-  if (mode == 1) {
+function smode(m) {
+  if (m == 1) {
     hide('stepper_setup');
     show('stepper_active');
-    numsteps=parseInt(document.getElementById('numsteps').value, 10);
-    if (numsteps > 100 || numsteps < 1) numsteps = 15;
+    document.getElementById('slider').onmousemove = movestep;
   } else {
     show('stepper_setup');
     hide('stepper_active');
-    document.getElementById('numsteps').value = numsteps;
-    numsteps=0;
+    document.getElementById('slider').onmousemove = null;
   }
 }
 
@@ -39,7 +37,7 @@ function PadDigits(n, totalDigits) {
 }
 
 function setslider(frame) {
-  var val = Math.ceil(500 * frame / lastframe);
+  var val = Math.ceil(500.0 * frame / lastframe);
   document.getElementById('knob').style.width=val+'px';
 }
 
@@ -58,25 +56,13 @@ function settc(frame) {
 function seek(i, f) {
   if (curframe == f) return;
   curframe = f;
-  document.getElementById('sframe').src=base_url+'?file='+i+'&frame='+f+'&w=-1&h=300&format=jpeg';
+  document.getElementById('sframe').src=base_url+'?file='+i+'&frame='+f+'&w=-1&h=300&format=jpeg60';
 }
 
 function movestep(e) {
-  if (numsteps < 1) return;
   var mouse_x = e.clientX;
   var xoff = document.getElementById('slider').offsetLeft;
-  var frame = Math.floor((Math.floor((mouse_x - xoff) / (501/numsteps))+.5) * lastframe / numsteps);
-  if (frame == curframe) return;
-  setslider(frame);
-  settc(frame);
-  seek(fileid, frame);
-}
-
-function moveknob(e) {
-  if (numsteps > 0) return;
-  var mouse_x = e.clientX;
-  var xoff = document.getElementById('slider').offsetLeft;
-  var frame = Math.floor((mouse_x-xoff) * lastframe / 501);
+  var frame = Math.floor((mouse_x-xoff) * lastframe / 500);
   if (frame == curframe) return;
   setslider(frame);
   settc(frame);

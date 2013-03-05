@@ -71,8 +71,11 @@ static void print_html (int what, const char *burl, const char *path, const char
       char *u1, *u2;
       u1 = url_escape(path, 0);
       u2 = url_escape(name, 0);
-      rprintf("<li>[<b>F</b>] <a href=\"%s?frame=0&amp;file=%s%s%s\">%s</a>",
-        burl, u1, SL_SEP(path), u2, name);
+#ifdef WITH_SEEK_UI
+      rprintf("<li>[<b>F</b>] <a href=\"%sseek?frame=0&amp;file=%s%s%s\">%s</a>", burl, u1, SL_SEP(path), u2, name);
+#else
+      rprintf("<li>[<b>F</b>] <a href=\"%s?frame=0&amp;file=%s%s%s\">%s</a>", burl, u1, SL_SEP(path), u2, name);
+#endif
       rprintf(
        " [<a href=\"%sinfo?file=%s%s&amp;format=html\">info</a>]",
         burl, u1, u2

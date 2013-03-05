@@ -493,8 +493,11 @@ static char *file_info_html (CONN *c, ics_request_args *a, VInfo *ji) {
   off+=snprintf(im+off, FIHSIZ-off, CENTERDIV);
   off+=snprintf(im+off, FIHSIZ-off, "<h2>File info</h2>\n\n");
   tmp = url_escape(a->file_qurl, 0);
-  off+=snprintf(im+off, FIHSIZ-off, "<p>File: <a href=\"/?frame=0&amp;file=%s\">%s</a></p><ul>\n",
-      tmp, a->file_qurl); free(tmp);
+#ifdef WITH_SEEK_UI
+  off+=snprintf(im+off, FIHSIZ-off, "<p>File: <a href=\"/seek?frame=0&amp;file=%s\">%s</a></p><ul>\n", tmp, a->file_qurl); free(tmp);
+#else
+  off+=snprintf(im+off, FIHSIZ-off, "<p>File: <a href=\"/?frame=0&amp;file=%s\">%s</a></p><ul>\n", tmp, a->file_qurl); free(tmp);
+#endif
   off+=snprintf(im+off, FIHSIZ-off, "<li>Geometry: %ix%i</li>\n", ji->movie_width, ji->movie_height);
   off+=snprintf(im+off, FIHSIZ-off, "<li>Aspect-Ratio: %.3f</li>\n", ji->movie_aspect);
   off+=snprintf(im+off, FIHSIZ-off, "<li>Framerate: %.2f</li>\n", timecode_rate_to_double(&ji->framerate));
