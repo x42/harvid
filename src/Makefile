@@ -32,7 +32,6 @@ else
   ARCHFLAGS+=-isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
   ARCHFLAGS+=-headerpad_max_install_names
   ARCHFLAGS+=-sectcreate __DATA __doc_harvid_jpg ../doc/harvid.jpg
-  ARCHFLAGS+=-sectcreate __DATA __doc_seek_js ../doc/seek.js
   LOGODEP=
   ECHO=echo
   ISOSX=1
