@@ -40,7 +40,7 @@ static void timecode_sample_to_time (TimecodeTime * const t, TimecodeRate const 
 
     t->subframe =  rint(r->subframes * ((double)sample * fps_d / samplerate - (double)frameNumber));
 
-    if (t->subframe == r->subframes) {
+    if (t->subframe == r->subframes && r->subframes != 0) {
             t->subframe = 0;
             frameNumber++;
     }
@@ -69,7 +69,7 @@ static void timecode_sample_to_time (TimecodeTime * const t, TimecodeRate const 
 
     timecode_frames_left = (int64_t) floor (timecode_frames_left_exact);
 
-    if (t->subframe == r->subframes) {
+    if (t->subframe == r->subframes && r->subframes != 0) {
       t->subframe = 0;
       timecode_frames_left++;
     }
