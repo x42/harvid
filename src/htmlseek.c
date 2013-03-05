@@ -70,7 +70,7 @@ char *hdl_file_seek (CONN *c, ics_request_args *a) {
 "    <td id=\"hour\">00</td><td>:</td>\n" \
 "    <td id=\"min\">00</td><td>:</td>\n" \
 "    <td id=\"sec\">00</td><td>.</td>\n" \
-"    <td id=\"frames\">00</td>\n" \
+"    <td id=\"frame\">00</td>\n" \
 "  </tr>\n" \
 "  </table>\n" \
 "\n" \

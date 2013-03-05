@@ -41,16 +41,26 @@ function setslider(frame) {
   document.getElementById('knob').style.width=val+'px';
 }
 
-function settc(frame) {
-  var s = Math.floor(frame/fps);
-  var hour = Math.floor(s/3600);
-  var min = Math.floor(s/60)%60;
-  var sec = Math.floor(s%60);
-  var frames = Math.floor(frame%fps);
-  updateText('frames', PadDigits(frames, 2));
-  updateText('sec', PadDigits(sec, 2));
-  updateText('min', PadDigits(min, 2));
-  updateText('hour', PadDigits(hour, 2));
+function settc(f) {
+  var fpsi = Math.ceil(fps);
+  var hour,min,sec,frame, s;
+  if (Math.floor(fps * 100) == 2997) {
+    var D = Math.floor(f / 17982);
+    var M = f % 17982;
+    var n = f + 18 * D + 2 * Math.floor((M - 2) / 1798);
+    s = Math.floor(n/30);
+    frame = Math.floor(n%30);
+  } else {
+    s = Math.floor(f/fpsi);
+    frame = Math.floor(f%fpsi);
+  }
+  hour  = Math.floor(s/3600);
+  min   = Math.floor(s/60)%60;
+  sec   = Math.floor(s%60);
+  updateText('frame', PadDigits(frame, 2));
+  updateText('sec',   PadDigits(sec, 2));
+  updateText('min',   PadDigits(min, 2));
+  updateText('hour',  PadDigits(hour, 2));
 }
 
 function seek(i, f) {
@@ -62,7 +72,7 @@ function seek(i, f) {
 function movestep(e) {
   var mouse_x = e.clientX;
   var xoff = document.getElementById('slider').offsetLeft;
-  var frame = Math.floor((mouse_x-xoff) * lastframe / 500);
+  var frame = Math.floor((1+mouse_x-xoff) * lastframe / 500);
   if (frame == curframe) return;
   setslider(frame);
   settc(frame);
