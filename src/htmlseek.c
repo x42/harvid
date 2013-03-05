@@ -34,7 +34,7 @@ char *hdl_file_seek (CONN *c, ics_request_args *a) {
 "  var fileid='%s';\n" \
 "--></script>",
     timecode_rate_to_double(&ji.framerate),
-    ji.frames, a->file_qurl);
+    ji.frames - 1, a->file_qurl);
 
   off+=snprintf(im+off, FIHSIZ-off, "</head>\n");
   off+=snprintf(im+off, FIHSIZ-off, HTMLBODY);
@@ -50,7 +50,7 @@ char *hdl_file_seek (CONN *c, ics_request_args *a) {
 "<div style=\"height:320px;\"><img src=\"\" alt=\"\" id=\"sframe\" style=\"border:4px solid black\"/></div>\n" \
 "<div>\n" \
 " <div style=\"width:560px; margin:2em auto .5em auto; padding:0.5em; border:3px double black;\">\n" \
-"  <div style=\"position:relative; width:500px; height:1em; background-color:#cccccc; cursor:crosshair; margin:.25em auto; float:left;\" id=\"slider\">\n" \
+"  <div style=\"position:relative; width:501px; height:1em; background-color:#cccccc; cursor:crosshair; margin:.25em auto; float:left;\" id=\"slider\">\n" \
 "    <div style=\"position:absolute; top:0px; left:0px; width:25px; z-index:95; height:1em; background-color:#666; cursor:text;\" id=\"knob\"></div>\n" \
 "  </div>\n" \
 "\n" \
