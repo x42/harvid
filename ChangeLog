@@ -1,3 +1,7 @@
+2013-03-05 (unreleased) Robin Gareus <robin@gareus.org>
+* fix compiler warning
+* add compile-time optional html/JS seek interface
+
 2013-03-02 (v0.5.2) Robin Gareus <robin@gareus.org>
 * update README and built-in documentation on homepage
 * exclude packaging related files from source tar balls
