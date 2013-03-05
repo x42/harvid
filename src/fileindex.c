@@ -235,7 +235,7 @@ static int parse_dir (const int fd, const char *root, const char *burl, const ch
   DIR  *D;
   struct dirent *dd;
   char dn[MAX_PATH];
-  int rv;
+  int rv = 0;
   snprintf(dn, MAX_PATH, "%s%s%s", root, SL_SEP(root), path);
 
   debugmsg(DEBUG_ICS, "IndexDir: indexing '%s'\n", dn);
