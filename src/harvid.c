@@ -702,6 +702,18 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
     return 0;
   }
 
+#if 0
+  /* TODO try encoded cache if a->render_fmt != FMT_RAW */
+  if (a->render_fmt != FMT_RAW
+      && (optr = icache_get_buffer(XXX, vid, a->frame, a->decode_fmt, ji.out_width, ji.out_height, &olen, &cptr))
+      && olen > 0 ) {
+    http_tx(fd, 200, h, olen, optr);
+    //icache_release_buffer(XXX, cptr);
+    jvi_free(&ji);
+    return (0);
+  }
+#endif
+
   /* get frame from cache */
   bptr = vcache_get_buffer(vc, dc, vid, a->frame, ji.out_width, ji.out_height, a->decode_fmt, &cptr);
 
@@ -741,8 +753,11 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
     }
     http_tx(fd, 200, h, olen, optr);
     if (a->render_fmt != FMT_RAW) {
-      // TODO cache formatted image
+#if 0 // TODO cache formatted image
+      icache_add_buffer(XXX, vid, a->frame, a->decode_fmt, ji.out_width, ji.out_height, optr, olen, );
+#else
       free(optr); // free formatted image
+#endif
     }
   } else {
     dlog(DLOG_ERR, "VID: error formatting image for fd:%d\n", fd);
