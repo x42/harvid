@@ -1,4 +1,5 @@
 var curframe=-1;
+var mode=0;
 var base_url="/";
 
 function show(foo) {
@@ -53,16 +54,19 @@ function seek(i, f) {
 
 function setslider(frame) {
   var val = 1 + Math.round(500.0 * frame / lastframe);
-	if (val < 1 || val > 501) return;
+  if (val < 1 || val > 501) return;
   document.getElementById('knob').style.width = val+'px';
 }
 
 function movestep(e) {
   var mouse_x = e.clientX;
   var xoff = document.getElementById('slider').offsetLeft;
-	var spos = mouse_x - xoff;
-	if (spos < 0 ) spos = 0;
-	if (spos > 500 ) spos = 500;
+  var spos = mouse_x - xoff;
+  if (mode == 1) {
+    spos = Math.floor(spos/5) * 5;
+  }
+  if (spos < 0 ) spos = 0;
+  if (spos > 500 ) spos = 500;
   var frame = Math.round(spos * lastframe / 500.0);
   if (frame == curframe) return;
   setslider(frame);
@@ -74,10 +78,12 @@ function smode(m) {
   if (m == 1) {
     hide('stepper_setup');
     show('stepper_active');
+    mode = 1;
     document.getElementById('slider').onmousemove = movestep;
   } else {
     show('stepper_setup');
     hide('stepper_active');
+    mode = 0;
     document.getElementById('slider').onmousemove = null;
   }
 }
