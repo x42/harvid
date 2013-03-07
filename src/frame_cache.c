@@ -304,7 +304,8 @@ void vcache_release_buffer(void *p, void *cptr) {
     assert(cl->refcnt >= 0);
     cl->flags &= ~CLF_INUSE;
   }
-  // TODO relete cacheline IFF !CLF_VALID (decode failed)
+  // TODO delete cacheline IFF !CLF_VALID (decode failed) ?!
+  // TODO delete cacheline If marked as encoded.
   pthread_rwlock_unlock(&cc->lock);
 }
 
@@ -342,7 +343,7 @@ void vcache_info_html(void *p, char **m, size_t *o, size_t *s, int tbl) {
   char bsize[32];
 
   if (tbl&1) {
-    rprintf("<h3>Video Frame Cache:</h3>\n");
+    rprintf("<h3>Raw Video Frame Cache:</h3>\n");
     rprintf("<p>max available: %i\n", ((xjcd*)p)->cfg_cachesize);
     rprintf("cache-hits: %d, cache-misses: %d</p>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
     rprintf("<table style=\"text-align:center;width:100%%\">\n");

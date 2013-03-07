@@ -333,7 +333,7 @@ int main (int argc, char **argv) {
   vcache_create(&vc);
   vcache_resize(&vc, initial_cache_size);
   icache_create(&ic);
-  icache_resize(&ic, initial_cache_size/4); // TODO
+  icache_resize(ic, initial_cache_size*4);
   dctrl_create(&dc, 64, initial_cache_size);
 
   if (cfg_memlock) {
@@ -449,7 +449,7 @@ char *hdl_server_status_html (CONN *c) {
       c->d->stat_count, uptime / 86400, (uptime / 86400) == 1 ? "": "s", (uptime % 86400) / 3600, (uptime % 3600) / 60, uptime %60);
 #endif
   dctrl_info_html(dc, &sm, &off, &ss, 2);
-  vcache_info_html(vc, &sm, &off, &ss, 2);
+  vcache_info_html(vc, &sm, &off, &ss, 0);
   icache_info_html(ic, &sm, &off, &ss, 2);
   raprintf(sm, off, ss, HTMLFOOTER, c->d->local_addr, c->d->local_port);
   raprintf(sm, off, ss, "</body>\n</html>");
@@ -710,7 +710,7 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
 
   /* try encoded cache if a->render_fmt != FMT_RAW */
   if (a->render_fmt != FMT_RAW) {
-     optr = icache_get_buffer(ic, vid, a->frame, a->decode_fmt, ji.out_width, ji.out_height, &olen, &cptr);
+     optr = icache_get_buffer(ic, vid, a->frame, a->render_fmt, a->misc_int, ji.out_width, ji.out_height, &olen, &cptr);
   }
 
   if (olen == 0) {
@@ -756,9 +756,13 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
 
     if (bptr && a->render_fmt != FMT_RAW) {
       // image was read from video cache end encoded
-      if (icache_add_buffer(ic, vid, a->frame, a->decode_fmt, ji.out_width, ji.out_height, optr, olen)) {
+      if (icache_add_buffer(ic, vid, a->frame, a->render_fmt, a->misc_int, ji.out_width, ji.out_height, optr, olen)) {
         // image was not added to cache, unreference the buffer
         free(optr); // free formatted image
+      } else if (0 /* todo make option */) {
+        /* delete raw frame when encoded frame was cached */
+        //vcache_clear(vc, vid); // all for this video
+        //vcache_mark_buffer(vc, cptr); // TODO
       }
     }
   } else {
@@ -777,12 +781,12 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
 
 void hdl_clear_cache() {
   vcache_clear(vc, -1);
-  icache_clear(ic, -1);
+  icache_clear(ic);
 }
 
 void hdl_purge_cache() {
   vcache_clear(vc, -1);
-  icache_clear(ic, -1);
+  icache_clear(ic);
   dctrl_cache_clear(vc, dc, 2, -1);
 }
 

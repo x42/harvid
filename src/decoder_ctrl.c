@@ -440,7 +440,7 @@ static void clearvid(JVD* jvd, void *vc) {
   VidMap *vm, *tmp;
   pthread_rwlock_wrlock(&jvd->lock_vml);
   HASH_ITER(hh, jvd->vml, vm, tmp) {
-    HASH_DEL(jvd->vml,vm);
+    HASH_DEL(jvd->vml, vm);
     HASH_DELETE(hr, jvd->vmr, vm);
     if (vc) vcache_clear(vc, vm->id);
     clearjvo(jvd, 3, vm->id, -1, &jvd->lock_jvo);
