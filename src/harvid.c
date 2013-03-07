@@ -33,6 +33,7 @@
 #include "image_format.h"
 #include "ffdecoder.h"
 #include "frame_cache.h"
+#include "image_cache.h"
 #include "enums.h"
 
 #include "ffcompat.h"
@@ -272,7 +273,8 @@ static int decode_switches (int argc, char **argv) {
 #include "ffcompat.h"
 
 void *dc = NULL; // decoder control
-void *vc = NULL; // video cache
+void *vc = NULL; // video frame cache
+void *ic = NULL; // encoded image cache
 
 int main (int argc, char **argv) {
   program_name = argv[0];
@@ -330,6 +332,8 @@ int main (int argc, char **argv) {
 
   vcache_create(&vc);
   vcache_resize(&vc, initial_cache_size);
+  icache_create(&ic);
+  icache_resize(&ic, initial_cache_size/4); // TODO
   dctrl_create(&dc, 64, initial_cache_size);
 
   if (cfg_memlock) {
@@ -352,6 +356,7 @@ int main (int argc, char **argv) {
   ff_cleanup();
   dctrl_destroy(&dc);
   vcache_destroy(&vc);
+  icache_destroy(&ic);
 errexit:
   dlog_close();
   return(exitstatus);
@@ -445,6 +450,7 @@ char *hdl_server_status_html (CONN *c) {
 #endif
   dctrl_info_html(dc, &sm, &off, &ss, 2);
   vcache_info_html(vc, &sm, &off, &ss, 2);
+  icache_info_html(ic, &sm, &off, &ss, 2);
   raprintf(sm, off, ss, HTMLFOOTER, c->d->local_addr, c->d->local_port);
   raprintf(sm, off, ss, "</body>\n</html>");
   return (sm);
@@ -685,8 +691,8 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
   unsigned short vid;
   void *cptr = NULL;
   uint8_t *optr = NULL;
-  long int olen = 0;
-  uint8_t *bptr;
+  size_t olen = 0;
+  uint8_t *bptr = NULL;
 
   vid = dctrl_get_id(vc, dc, a->file_name);
   jvi_init(&ji);
@@ -702,39 +708,34 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
     return 0;
   }
 
-#if 0
-  /* TODO try encoded cache if a->render_fmt != FMT_RAW */
-  if (a->render_fmt != FMT_RAW
-      && (optr = icache_get_buffer(XXX, vid, a->frame, a->decode_fmt, ji.out_width, ji.out_height, &olen, &cptr))
-      && olen > 0 ) {
-    http_tx(fd, 200, h, olen, optr);
-    //icache_release_buffer(XXX, cptr);
-    jvi_free(&ji);
-    return (0);
-  }
-#endif
-
-  /* get frame from cache */
-  bptr = vcache_get_buffer(vc, dc, vid, a->frame, ji.out_width, ji.out_height, a->decode_fmt, &cptr);
-
-  if (!bptr) {
-    dlog(DLOG_ERR, "VID: error decoding video file for fd:%d\n", fd);
-    httperror(fd, 500, NULL, NULL);
-    return 0;
+  /* try encoded cache if a->render_fmt != FMT_RAW */
+  if (a->render_fmt != FMT_RAW) {
+     optr = icache_get_buffer(ic, vid, a->frame, a->decode_fmt, ji.out_width, ji.out_height, &olen, &cptr);
   }
 
-  switch (a->render_fmt) {
-    case FMT_RAW:
-      olen = ji.buffersize;
-      optr = bptr;
-      break;
-    default:
-      olen = format_image(&optr, a->render_fmt, a->misc_int, &ji, bptr);
-      break;
+  if (olen == 0) {
+    /* get frame from cache - or decode it into the cache */
+    bptr = vcache_get_buffer(vc, dc, vid, a->frame, ji.out_width, ji.out_height, a->decode_fmt, &cptr);
+
+    if (!bptr) {
+      dlog(DLOG_ERR, "VID: error decoding video file for fd:%d\n", fd);
+      httperror(fd, 500, NULL, NULL);
+      return 0;
+    }
+
+    switch (a->render_fmt) {
+      case FMT_RAW:
+        olen = ji.buffersize;
+        optr = bptr;
+        break;
+      default:
+        olen = format_image(&optr, a->render_fmt, a->misc_int, &ji, bptr);
+        break;
+    }
   }
 
   if(olen > 0 && optr) {
-    debugmsg(DEBUG_ICS, "VID: sending %li bytes to fd:%d.\n", olen, fd);
+    debugmsg(DEBUG_ICS, "VID: sending %li bytes to fd:%d.\n", (long int) olen, fd);
     switch (a->render_fmt) {
       case FMT_RAW:
         h->ctype = "image/raw";
@@ -752,28 +753,36 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
         h->ctype = "image/unknown";
     }
     http_tx(fd, 200, h, olen, optr);
-    if (a->render_fmt != FMT_RAW) {
-#if 0 // TODO cache formatted image
-      icache_add_buffer(XXX, vid, a->frame, a->decode_fmt, ji.out_width, ji.out_height, optr, olen, );
-#else
-      free(optr); // free formatted image
-#endif
+
+    if (bptr && a->render_fmt != FMT_RAW) {
+      // image was read from video cache end encoded
+      if (icache_add_buffer(ic, vid, a->frame, a->decode_fmt, ji.out_width, ji.out_height, optr, olen)) {
+        // image was not added to cache, unreference the buffer
+        free(optr); // free formatted image
+      }
     }
   } else {
     dlog(DLOG_ERR, "VID: error formatting image for fd:%d\n", fd);
     httperror(fd, 500, NULL, NULL);
   }
-  vcache_release_buffer(vc, cptr);
+
+  if (bptr)
+    vcache_release_buffer(vc, cptr);
+  else
+    icache_release_buffer(ic, cptr);
+
   jvi_free(&ji);
   return (0);
 }
 
 void hdl_clear_cache() {
   vcache_clear(vc, -1);
+  icache_clear(ic, -1);
 }
 
 void hdl_purge_cache() {
   vcache_clear(vc, -1);
+  icache_clear(ic, -1);
   dctrl_cache_clear(vc, dc, 2, -1);
 }
 

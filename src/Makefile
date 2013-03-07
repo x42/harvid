@@ -69,7 +69,8 @@ all: harvid
 HARVID_H = \
   daemon_log.h daemon_util.h \
   socket_server.h \
-  vinfo.h frame_cache.h ffdecoder.h \
+  vinfo.h frame_cache.h image_cache.h\
+  ffdecoder.h \
   decoder_ctrl.h \
   ffcompat.h \
   enums.h \
@@ -83,7 +84,8 @@ HARVID_SRC = \
   daemon_log.c daemon_util.c \
   fileindex.c httprotocol.c ics_handler.c \
   socket_server.c vinfo.c \
-  decoder_ctrl.c frame_cache.c ffdecoder.c \
+  decoder_ctrl.c frame_cache.c image_cache.c \
+  ffdecoder.c \
   image_format.c \
   timecode.c
 
