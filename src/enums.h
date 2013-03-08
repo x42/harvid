@@ -31,4 +31,6 @@ enum {OPT_FLAT=1};
 /* cfg_adminmask - binary flags */
 enum {ADM_FLUSHCACHE=1, ADM_PURGECACHE=2, ADM_SHUTDOWN=4};
 
+enum {USR_INDEX=1, USR_FLATINDEX=2, USR_KEEPRAW=4, USR_WEBSEEK=8};
+
 #endif

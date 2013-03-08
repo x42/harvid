@@ -39,6 +39,8 @@
 # endif
 #endif
 
+extern int cfg_usermask;
+
 char *url_escape(const char *string, int inlength); // from httprotocol.c
 
 char *str_escape(const char *string, int inlength, const char esc) {
@@ -71,11 +73,13 @@ static void print_html (int what, const char *burl, const char *path, const char
       char *u1, *u2;
       u1 = url_escape(path, 0);
       u2 = url_escape(name, 0);
-#ifdef WITH_SEEK_UI
-      rprintf("<li>[<b>F</b>] <a href=\"%sseek?frame=0&amp;file=%s%s%s\">%s</a>", burl, u1, SL_SEP(path), u2, name);
-#else
-      rprintf("<li>[<b>F</b>] <a href=\"%s?frame=0&amp;file=%s%s%s\">%s</a>", burl, u1, SL_SEP(path), u2, name);
-#endif
+
+      if (cfg_usermask & USR_WEBSEEK) {
+        rprintf("<li>[<b>F</b>] <a href=\"%sseek?frame=0&amp;file=%s%s%s\">%s</a>", burl, u1, SL_SEP(path), u2, name);
+      } else {
+        rprintf("<li>[<b>F</b>] <a href=\"%s?frame=0&amp;file=%s%s%s\">%s</a>", burl, u1, SL_SEP(path), u2, name);
+      }
+
       rprintf(
        " [<a href=\"%sinfo?file=%s%s&amp;format=html\">info</a>]",
         burl, u1, u2

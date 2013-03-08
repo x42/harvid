@@ -58,9 +58,8 @@ int   want_verbose = 0;
 int   cfg_daemonize = 0;
 int   cfg_syslog = 0;
 int   cfg_memlock = 0;
-int   cfg_noindex = 0; // TODO disable idx:&1; no flatindex: &2
 int   cfg_timeout = 0;
-int   cfg_keepencoded = 0;
+int   cfg_usermask = USR_INDEX;
 int   cfg_adminmask = ADM_FLUSHCACHE;
 char *cfg_logfile = NULL;
 char *cfg_chroot = NULL;
@@ -93,7 +92,11 @@ static void usage (int status) {
 "  -g <name>, --groupname <name>\n"
 "                             assume this user-group\n"
 "  -h, --help                 display this help and exit\n"
-"  -I, --noindex              disable directory/file index\n"
+"  -F <feat>, --features <feat>\n"
+"                             space separated list of optional features.\n"
+"                             An exclamation-mark before a features disables it.\n"
+"                             default: 'index';\n"
+"                             available: index, seek, flatindex, keepraw\n"
 "  -l <path>, --logfile <path>\n"
 "                             specify file for log messages\n"
 "  -M, --memlock              attempt to lock memory (prevent cache paging)\n"
@@ -117,6 +120,16 @@ static void usage (int status) {
 "and above only. Available log-levels are 'mute', 'critical, 'error',\n"
 "'warning' and 'info'.\n"
 "\n"
+"The --features option allows to enable and disable http-handlers /seek and\n"
+"/index as well as tweak related behaviour. The 'flatindex' option concerns\n"
+"/index&flatindex=1 which recursively indexes all video file. It is disabled\n"
+"by defaults since a recursive search of the default docroot / can takes a\n"
+"very long time.\n"
+"When requesting png or jpeg images harvid decodes a raw RGB frame and then\n"
+"encodes it again. If 'keepraw' feature is enabled, both the raw RGB and\n"
+"encoded image are kept in cache. The default is to invaldate the RGB frame\n"
+"after encoding the image.\n"
+"\n"
 "Examples:\n"
 "harvid -A '!flush_cache purge_cache shutdown' -C 256 /tmp/\n"
 "\n"
@@ -138,7 +151,7 @@ static struct option const long_options[] =
   {"daemonize", no_argument, 0, 'D'},
   {"groupname", required_argument, 0, 'g'},
   {"help", no_argument, 0, 'h'},
-  {"noindex", no_argument, 0, 'I'},
+  {"features", required_argument, 0, 'F'},
   {"logfile", required_argument, 0, 'l'},
   {"memlock", no_argument, 0, 'M'},
   {"port", required_argument, 0, 'p'},
@@ -166,7 +179,7 @@ static int decode_switches (int argc, char **argv) {
          "D"	/* daemonize */
          "g:"	/* setGroup */
          "h"	/* help */
-         "I"	/* noindex */
+         "F:"	/* interaction */
          "l:"	/* logfile */
          "M"	/* memlock */
          "p:"	/* port */
@@ -224,11 +237,18 @@ static int decode_switches (int argc, char **argv) {
       case 'D':		/* --daemonize */
         cfg_daemonize = 1;
         break;
+      case 'F':		/* --features */
+        if (strstr(optarg, "index"))      cfg_usermask |=  USR_INDEX;
+        if (strstr(optarg, "seek"))       cfg_usermask |=  USR_WEBSEEK;
+        if (strstr(optarg, "flatindex"))  cfg_usermask |=  USR_FLATINDEX;
+        if (strstr(optarg, "keepraw"))    cfg_usermask |=  USR_KEEPRAW;
+        if (strstr(optarg, "!index"))     cfg_usermask &= ~USR_INDEX;
+        if (strstr(optarg, "!seek"))      cfg_usermask |=  USR_WEBSEEK;
+        if (strstr(optarg, "!flatindex")) cfg_usermask &= ~USR_FLATINDEX;
+        if (strstr(optarg, "!keepraw"))   cfg_usermask &= ~USR_KEEPRAW;
+        break;
       case 'g':		/* --group */
         cfg_groupname = optarg;
-        break;
-      case 'I':		/* --noindex */
-        cfg_noindex = 1;
         break;
       case 'l':		/* --logfile */
         cfg_syslog = 0;
@@ -381,7 +401,7 @@ char *hdl_homepage_html (CONN *c) {
   off+=snprintf(msg+off, HPSIZE-off, CENTERDIV);
   off+=snprintf(msg+off, HPSIZE-off, "<div style=\"float:left;margin:0 2em;\"><h2>Built-in handlers</h2>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<ul>");
-  if (!cfg_noindex) {
+  if (cfg_usermask & USR_INDEX) {
     off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"index/\">File Index</a></li>\n");
   }
   off+=snprintf(msg+off, HPSIZE-off, "<li><a href=\"status/\">Server Status</a></li>\n");
@@ -500,11 +520,11 @@ static char *file_info_html (CONN *c, ics_request_args *a, VInfo *ji) {
   off+=snprintf(im+off, FIHSIZ-off, CENTERDIV);
   off+=snprintf(im+off, FIHSIZ-off, "<h2>File info</h2>\n\n");
   tmp = url_escape(a->file_qurl, 0);
-#ifdef WITH_SEEK_UI
-  off+=snprintf(im+off, FIHSIZ-off, "<p>File: <a href=\"/seek?frame=0&amp;file=%s\">%s</a></p><ul>\n", tmp, a->file_qurl); free(tmp);
-#else
-  off+=snprintf(im+off, FIHSIZ-off, "<p>File: <a href=\"/?frame=0&amp;file=%s\">%s</a></p><ul>\n", tmp, a->file_qurl); free(tmp);
-#endif
+  if (cfg_usermask & USR_WEBSEEK) {
+    off+=snprintf(im+off, FIHSIZ-off, "<p>File: <a href=\"/seek?frame=0&amp;file=%s\">%s</a></p><ul>\n", tmp, a->file_qurl); free(tmp);
+  } else {
+    off+=snprintf(im+off, FIHSIZ-off, "<p>File: <a href=\"/?frame=0&amp;file=%s\">%s</a></p><ul>\n", tmp, a->file_qurl); free(tmp);
+  }
   off+=snprintf(im+off, FIHSIZ-off, "<li>Geometry: %ix%i</li>\n", ji->movie_width, ji->movie_height);
   off+=snprintf(im+off, FIHSIZ-off, "<li>Aspect-Ratio: %.3f</li>\n", ji->movie_aspect);
   off+=snprintf(im+off, FIHSIZ-off, "<li>Framerate: %.2f</li>\n", timecode_rate_to_double(&ji->framerate));
@@ -575,7 +595,8 @@ char *hdl_server_info (CONN *c, ics_request_args *a) {
       off+=snprintf(info+off, SINFOSIZ-off, ",\"listenaddr\":\"%s\"", c->d->local_addr);
       off+=snprintf(info+off, SINFOSIZ-off, ",\"listenport\":%d", c->d->local_port);
       off+=snprintf(info+off, SINFOSIZ-off, ",\"cachesize\":%d", initial_cache_size);
-      off+=snprintf(info+off, SINFOSIZ-off, ",\"infohandlers\":[\"/info\", \"/rc\", \"/status\", \"/version\"%s\"", cfg_noindex&1 ? ",\"index\"":"");
+      off+=snprintf(info+off, SINFOSIZ-off, ",\"infohandlers\":[\"/info\", \"/rc\", \"/status\", \"/version\"%s\"",
+          cfg_usermask & USR_INDEX ? ",\"index\"":"");
       off+=snprintf(info+off, SINFOSIZ-off, ",\"admintasks\":[\"/check\"%s%s%s]",
           (cfg_adminmask & ADM_FLUSHCACHE) ? ",\"/flush_cache\"" : "",
           (cfg_adminmask & ADM_PURGECACHE) ? ",\"/purge_cache\"" : "",
@@ -591,7 +612,8 @@ char *hdl_server_info (CONN *c, ics_request_args *a) {
       off+=snprintf(info+off, SINFOSIZ-off, ",%s", c->d->local_addr);
       off+=snprintf(info+off, SINFOSIZ-off, ",%d", c->d->local_port);
       off+=snprintf(info+off, SINFOSIZ-off, ",%d", initial_cache_size);
-      off+=snprintf(info+off, SINFOSIZ-off, ",\"/info /rc /status /version%s\"", cfg_noindex&1 ? " index":"");
+      off+=snprintf(info+off, SINFOSIZ-off, ",\"/info /rc /status /version%s\"",
+          cfg_usermask & USR_INDEX ? " index":"");
       off+=snprintf(info+off, SINFOSIZ-off, ",\"/check%s%s%s\"",
           (cfg_adminmask & ADM_FLUSHCACHE) ? " /flush_cache" : "",
           (cfg_adminmask & ADM_PURGECACHE) ? " /purge_cache" : "",
@@ -611,7 +633,7 @@ char *hdl_server_info (CONN *c, ics_request_args *a) {
       off+=snprintf(info+off, SINFOSIZ-off, "<li>ListenAddr: %s</li>\n", c->d->local_addr);
       off+=snprintf(info+off, SINFOSIZ-off, "<li>ListenPort: %d</li>\n", c->d->local_port);
       off+=snprintf(info+off, SINFOSIZ-off, "<li>CacheSize: %d</li>\n", initial_cache_size);
-      off+=snprintf(info+off, SINFOSIZ-off, "<li>File Index: %s</li>\n", cfg_noindex&1 ? "Yes" : "No");
+      off+=snprintf(info+off, SINFOSIZ-off, "<li>File Index: %s</li>\n", cfg_usermask & USR_INDEX ? "Yes" : "No");
       off+=snprintf(info+off, SINFOSIZ-off, "<li>Admin-task(s): /check%s%s%s</li>\n",
           (cfg_adminmask & ADM_FLUSHCACHE) ? " /flush_cache" : "",
           (cfg_adminmask & ADM_PURGECACHE) ? " /purge_cache" : "",
@@ -760,7 +782,7 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
       if (icache_add_buffer(ic, vid, a->frame, a->render_fmt, a->misc_int, ji.out_width, ji.out_height, optr, olen)) {
         /* image was not added to image cache -> unreference the buffer */
         free(optr);
-      } else if (! cfg_keepencoded) {
+      } else if (! (cfg_usermask & USR_KEEPRAW)) {
         /* delete raw frame when encoded frame was cached */
         vcache_invalidate_buffer(vc, cptr);
       }

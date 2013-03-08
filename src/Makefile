@@ -6,7 +6,7 @@ PREFIX ?= /usr/local
 bindir ?= $(PREFIX)/bin
 mandir ?= $(PREFIX)/share/man/man1
 
-LOGODEP=logo.o
+LOGODEP=logo.o seek.o
 ECHO=echo -e
 
 ARCHFLAGS=
@@ -32,6 +32,7 @@ else
   ARCHFLAGS+=-isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
   ARCHFLAGS+=-headerpad_max_install_names
   ARCHFLAGS+=-sectcreate __DATA __doc_harvid_jpg ../doc/harvid.jpg
+  ARCHFLAGS+=-sectcreate __DATA __doc_seek_js ../doc/seek.js
   LOGODEP=
   ECHO=echo
   ISOSX=1
@@ -82,22 +83,13 @@ HARVID_H = \
 HARVID_SRC = \
   harvid.c \
   daemon_log.c daemon_util.c \
-  fileindex.c httprotocol.c ics_handler.c \
+  fileindex.c htmlseek.c \
+  httprotocol.c ics_handler.c \
   socket_server.c vinfo.c \
   decoder_ctrl.c frame_cache.c image_cache.c \
   ffdecoder.c \
   image_format.c \
   timecode.c
-
-ifneq ($(SEEK),)
-  FLAGS+=-DWITH_SEEK_UI
-  HARVID_SRC+=htmlseek.c
-  ifeq ($(ISOSX),1)
-    ARCHFLAGS+=-sectcreate __DATA __doc_seek_js ../doc/seek.js
-  else
-    LOGODEP+=seek.o
-  endif
-endif
 
 logo.o: ../doc/harvid.jpg
 	$(LD) -r -b binary -o logo.o ../doc/harvid.jpg

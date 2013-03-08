@@ -30,7 +30,7 @@
 #include "htmlconst.h"
 #include "enums.h"
 
-extern int cfg_noindex;
+extern int cfg_usermask;
 extern int cfg_adminmask;
 
 /** Compare Transport Protocol request */
@@ -234,10 +234,7 @@ void hdl_index_dir (int fd, const char *root, char *base_url, const char *path, 
 #endif
 
 EXTLD(doc_harvid_jpg)
-
-#ifdef WITH_SEEK_UI
 EXTLD(doc_seek_js)
-#endif
 
 /////////////////////////////////////////////////////////////////////
 
@@ -271,8 +268,7 @@ void ics_http_handler(
     h.mtime = 1361225638 ; // TODO compile time check image timestamp
     http_tx(c->fd, 200, &h, h.length, LDVAR(doc_harvid_jpg));
     c->run = 0;
-#ifdef WITH_SEEK_UI
-  } else if (CTP("/seek.js")) {
+  } else if ((cfg_usermask & USR_WEBSEEK) && CTP("/seek.js")) {
     httpheader h;
     memset(&h, 0, sizeof(httpheader));
     h.ctype = "application/javascript";
@@ -280,7 +276,7 @@ void ics_http_handler(
     h.mtime = 1361225638 ; // TODO compile time check image timestamp
     http_tx(c->fd, 200, &h, h.length, LDVAR(doc_seek_js));
     c->run = 0;
-  } else if (CTP("/seek")) {
+  } else if ((cfg_usermask & USR_WEBSEEK) && CTP("/seek")) {
     ics_request_args a;
     memset(&a, 0, sizeof(ics_request_args));
     int rv = parse_http_query(c, query, NULL, &a);
@@ -300,7 +296,6 @@ void ics_http_handler(
     if (a.file_name) free(a.file_name);
     if (a.file_qurl) free(a.file_qurl);
     c->run = 0;
-#endif
   } else if (CTP("/info")) { /* /info -> /file/info !! */
     ics_request_args a;
     memset(&a, 0, sizeof(ics_request_args));
@@ -346,7 +341,7 @@ void ics_http_handler(
     char *dp = url_unescape(&(path[7]), 0, NULL);
     char *abspath = malloc((strlen(c->d->docroot) + strlen(dp) + 2) * sizeof(char));
     sprintf(abspath, "%s/%s", c->d->docroot, dp);
-    if (cfg_noindex&1) {
+    if (! (cfg_usermask & USR_INDEX)) {
       httperror(c->fd, 403, NULL, NULL);
     } else if (!dp || check_path(dp)) {
       httperror(c->fd, 400, "Bad Request", "Illegal filename.");
@@ -363,7 +358,7 @@ void ics_http_handler(
       memset(&a, 0, sizeof(ics_request_args));
       parse_http_query_params(&qps, query);
       snprintf(base_url, 1024, "http://%s%s", host, path);
-      if (cfg_noindex&2) a.idx_option &= ~OPT_FLAT;
+      if (! (cfg_usermask & USR_FLATINDEX)) a.idx_option &= ~OPT_FLAT;
       SEND200CT("", CONTENT_TYPE_SWITCH(a.render_fmt));
       hdl_index_dir(c->fd, c->d->docroot, base_url, dp, a.render_fmt, a.idx_option);
       free(dp);
@@ -375,21 +370,21 @@ void ics_http_handler(
     if (strncasecmp(path,  "/admin/check", 12) == 0) {
       SEND200("ok\n");
     } else if (strncasecmp(path,  "/admin/flush_cache", 18) == 0) {
-      if (cfg_adminmask&ADM_FLUSHCACHE) {
+      if (cfg_adminmask & ADM_FLUSHCACHE) {
         hdl_clear_cache();
         SEND200(OK200MSG("cache flushed\n"));
       } else {
         httperror(c->fd, 403, NULL, NULL);
       }
     } else if (strncasecmp(path,  "/admin/purge_cache", 18) == 0) {
-      if (cfg_adminmask&ADM_PURGECACHE) {
+      if (cfg_adminmask & ADM_PURGECACHE) {
         hdl_purge_cache();
         SEND200(OK200MSG("cache purged\n"));
       } else {
         httperror(c->fd, 403, NULL, NULL);
       }
     } else if (strncasecmp(path,  "/admin/shutdown", 15) == 0) {
-      if (cfg_adminmask&ADM_SHUTDOWN) {
+      if (cfg_adminmask & ADM_SHUTDOWN) {
         SEND200(OK200MSG("shutdown queued\n"));
         c->d->run = 0;
       } else {
