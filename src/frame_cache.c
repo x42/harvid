@@ -349,6 +349,10 @@ static char *flags2txt(int f) {
     rv = (char*) realloc(rv, (off+8) * sizeof(char));
     off += sprintf(rv+off, "in-use ");
   }
+  if (f&CLF_RELEASE) {
+    rv = (char*) realloc(rv, (off+8) * sizeof(char));
+    off += sprintf(rv+off, "to-free ");
+  }
   return rv;
 }
 
@@ -364,7 +368,7 @@ void vcache_info_html(void *p, char **m, size_t *o, size_t *s, int tbl) {
     rprintf("cache-hits: %d, cache-misses: %d</p>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
     rprintf("<table style=\"text-align:center;width:100%%\">\n");
   } else {
-    rprintf("<tr><td colspan=\"8\" class=\"left\"><h3>Cache Info:</h3></td></tr>\n");
+    rprintf("<tr><td colspan=\"8\" class=\"left\"><h3>Raw Video Frame Cache:</h3></td></tr>\n");
     rprintf("<tr><td colspan=\"8\" class=\"left line\">max available: %d\n", ((xjcd*)p)->cfg_cachesize);
     rprintf(", cache-hits: %d, cache-misses: %d</td></tr>\n", ((xjcd*)p)->cache_hits, ((xjcd*)p)->cache_miss);
   }
