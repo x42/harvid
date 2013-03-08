@@ -56,11 +56,14 @@ static int write_jpeg(VInfo *ji, uint8_t *buffer, int quality, FILE *x) {
   cjpeg.image_width  = ji->out_width;
   cjpeg.image_height = ji->out_height;
   cjpeg.input_components = 3;
+  //cjpeg.smoothing_factor = 0; // 0..100
   cjpeg.in_color_space = JCS_RGB;
 
   jpeg_set_defaults (&cjpeg);
   jpeg_set_quality (&cjpeg, quality, TRUE);
-  cjpeg.dct_method = JDCT_FASTEST;
+  cjpeg.dct_method = quality > 90? JDCT_DEFAULT : JDCT_FASTEST;
+
+  jpeg_simple_progression(&cjpeg);
 
   jpeg_stdio_dest (&cjpeg, x);
   jpeg_start_compress (&cjpeg, TRUE);
@@ -151,7 +154,7 @@ size_t format_image(uint8_t **out, int render_fmt, int misc_int, VInfo *ji, uint
   switch (render_fmt) {
     case 1:
       {
-        if (misc_int < 10 || misc_int > 100)
+        if (misc_int < 5 || misc_int > 100)
           misc_int = JPEG_QUALITY;
       if (write_jpeg(ji, buf, misc_int, x))
         dlog(LOG_ERR, "IMF: Could not write jpeg\n");
