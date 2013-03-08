@@ -249,12 +249,12 @@ void icache_info_html(void *p, char **m, size_t *o, size_t *s, int tbl) {
   char bsize[32];
 
   if (tbl&1) {
-    rprintf("<h3>Encoded Image Frame Cache:</h3>\n");
+    rprintf("<h3>Encoded Image Cache:</h3>\n");
     rprintf("<p>max available: %i\n", ((ICC*)p)->cfg_cachesize);
     rprintf("cache-hits: %d, cache-misses: %d</p>\n", ((ICC*)p)->cache_hits, ((ICC*)p)->cache_miss);
     rprintf("<table style=\"text-align:center;width:100%%\">\n");
   } else {
-    rprintf("<tr><td colspan=\"8\" class=\"left\"><h3>Image Cache Info:</h3></td></tr>\n");
+    rprintf("<tr><td colspan=\"8\" class=\"left\"><h3>Encoded Image Cache :</h3></td></tr>\n");
     rprintf("<tr><td colspan=\"8\" class=\"left line\">max available: %d\n", ((ICC*)p)->cfg_cachesize);
     rprintf(", cache-hits: %d, cache-misses: %d</td></tr>\n", ((ICC*)p)->cache_hits, ((ICC*)p)->cache_miss);
   }
