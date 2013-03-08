@@ -60,6 +60,7 @@ int   cfg_syslog = 0;
 int   cfg_memlock = 0;
 int   cfg_noindex = 0; // TODO disable idx:&1; no flatindex: &2
 int   cfg_timeout = 0;
+int   cfg_keepencoded = 0;
 int   cfg_adminmask = ADM_FLUSHCACHE;
 char *cfg_logfile = NULL;
 char *cfg_chroot = NULL;
@@ -755,14 +756,13 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
     http_tx(fd, 200, h, olen, optr);
 
     if (bptr && a->render_fmt != FMT_RAW) {
-      // image was read from video cache end encoded
+      /* image was read from raw frame cache end encoded just now */
       if (icache_add_buffer(ic, vid, a->frame, a->render_fmt, a->misc_int, ji.out_width, ji.out_height, optr, olen)) {
-        // image was not added to cache, unreference the buffer
-        free(optr); // free formatted image
-      } else if (0 /* todo make option */) {
+        /* image was not added to image cache -> unreference the buffer */
+        free(optr);
+      } else if (! cfg_keepencoded) {
         /* delete raw frame when encoded frame was cached */
-        //vcache_clear(vc, vid); // all for this video
-        //vcache_mark_buffer(vc, cptr); // TODO
+        vcache_invalidate_buffer(vc, cptr);
       }
     }
   } else {
