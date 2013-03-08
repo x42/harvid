@@ -41,6 +41,7 @@
 #define CLF_DECODING 1 //< decoder is active
 #define CLF_INUSE 2    //< currently being served
 #define CLF_VALID 4    //< cacheline is valid (has decoded frame)
+#define CLF_RELEASE 8  //<invalidate this cacheline once it's no longer in use
 
 typedef struct videocacheline {
   int id;         // file ID from VidMap
@@ -303,9 +304,24 @@ void vcache_release_buffer(void *p, void *cptr) {
   if (--cl->refcnt < 1) {
     assert(cl->refcnt >= 0);
     cl->flags &= ~CLF_INUSE;
+
+    if (cl->flags & CLF_RELEASE) {
+      HASH_DEL(cc->vcache, cl);
+      assert(cl->refcnt == 0);
+      free(cl->b);
+      free(cl);
+    }
   }
   // TODO delete cacheline IFF !CLF_VALID (decode failed) ?!
-  // TODO delete cacheline If marked as encoded.
+  pthread_rwlock_unlock(&cc->lock);
+}
+
+void vcache_invalidate_buffer(void *p, void *cptr) {
+  xjcd *cc = (xjcd*) p;
+  videocacheline *cl = (videocacheline *)cptr;
+  if (!cptr) return;
+  pthread_rwlock_wrlock(&cc->lock);
+  cl->flags |= CLF_RELEASE;
   pthread_rwlock_unlock(&cc->lock);
 }
 
