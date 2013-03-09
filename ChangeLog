@@ -1,6 +1,8 @@
-2013-03-05 (unreleased) Robin Gareus <robin@gareus.org>
-* fix compiler warning
-* add compile-time optional html/JS seek interface
+2013-03-09 (v0.6.0) Robin Gareus <robin@gareus.org>
+* image-cache for encoded images (jpg, png)
+* add html/JS seek interface
+* fix SMPTE duration print - subframes == 0
+* fix compiler warnings
 
 2013-03-02 (v0.5.2) Robin Gareus <robin@gareus.org>
 * update README and built-in documentation on homepage
