@@ -263,8 +263,13 @@ void icache_info_html(void *p, char **m, size_t *o, size_t *s, int tbl) {
   pthread_rwlock_rdlock(&((ICC*)p)->lock);
   HASH_ITER(hh, ((ICC*)p)->icache, cptr, tmp) {
     char *tmp = flags2txt(cptr->flags);
-    rprintf("<tr><td>%d.</td><td>%d</td><td>%s</td><td>%d bytes</td><td>%dx%d</td>",
+#ifdef HAVE_WINDOWS
+    rprintf("<tr><td>%d.</td><td>%d</td><td>%s</td><td>%lu bytes</td><td>%dx%d</td>",
         i, cptr->id, tmp, cptr->s, cptr->w, cptr->h);
+#else
+    rprintf("<tr><td>%d.</td><td>%d</td><td>%s</td><td>%zu bytes</td><td>%dx%d</td>",
+        i, cptr->id, tmp, cptr->s, cptr->w, cptr->h);
+#endif
 
     if (cptr->fmt == 1) {
       rprintf("<td>%s Q:%d</td>", fmt_to_text(cptr->fmt), cptr->fmt_opt);
