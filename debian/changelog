@@ -1,5 +1,5 @@
-harvid (0.6.0-1) unstable; urgency=low
+harvid (0.6.1-1) unstable; urgency=low
 
   * Initial release (Closes: #NNNNNN)
 
- -- Robin Gareus <robin@gareus.org>  Sat, 09 Mar 2013 13:25:33 +0100
+ -- Robin Gareus <robin@gareus.org>  Sat, 09 Mar 2013 14:09:03 +0100
