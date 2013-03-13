@@ -43,7 +43,7 @@ endif
 
 
 ifeq ($(shell pkg-config --exists libavcodec libavformat libswscale || echo no), no)
-  $(error "http://ffmpeg.org is required - install libavcode-dev, libswcale-dev, etc")
+  $(error "http://ffmpeg.org is required - install libavcodec-dev, libswscale-dev, etc")
 endif
 
 ifeq ($(shell pkg-config --exists libpng || echo no), no)
@@ -51,7 +51,7 @@ ifeq ($(shell pkg-config --exists libpng || echo no), no)
 endif
 
 ifeq ($(shell $(ECHO) "\#include <stdio.h>\n\#include <jpeglib.h>\nint main() { struct jpeg_error_mgr jerr; jpeg_std_error(&jerr); return 0; }" | $(CC) -pipe -x c -o $(CONFIGTEMP) $(ARCHINCLUDES) $(LDFLAGS) - -ljpeg 2>/dev/null || echo no; $(RM) -f $(CONFIGTEMP)), no)
-  $(error "libjpeg is required - install libjpeg-dev")
+  $(error "libjpeg is required - install libjpeg-dev, libjpeg8-dev or libjpeg62-dev")
 endif
 
 
