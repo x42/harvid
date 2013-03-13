@@ -7,7 +7,7 @@ bindir ?= $(PREFIX)/bin
 mandir ?= $(PREFIX)/share/man/man1
 
 LOGODEP=logo.o seek.o
-ECHO=echo -e
+ECHO=$(shell which echo) -e
 
 ARCHFLAGS=
 ARCHINCLUDES=
