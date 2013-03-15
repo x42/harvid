@@ -19,7 +19,7 @@ http://x42.github.com/harvid/ .
 Usage
 -----
 
-harvid is a stanalone HTTP server, all interaction takes place via HTTP.
+harvid is a standalone HTTP server, all interaction takes place via HTTP.
 After launching it, simply point a web-browser at http://localhost:1554/
 
 The OSX bundle and window installer come with a shortcut link to launch
@@ -69,7 +69,7 @@ Internals
 ---------
 
 harvid is highly concurrent makes use of all available CPUs. It will
-spawn multiple decoder backends, keep them available for a reasonable
+spawn multiple decoder processes, keep them available for a reasonable
 time and also cache the video-decoder's output for recurring requests.
 
 
