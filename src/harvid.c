@@ -80,7 +80,7 @@ static void usage (int status) {
   printf ("Usage: %s [OPTION] [document-root]\n", program_name);
   printf ("\n"
 "Options:\n"
-"  -a <cmdlist>, --admin <cmdlist>\n"
+"  -A <cmdlist>, --admin <cmdlist>\n"
 "                             space separated list of allowed admin commands.\n"
 "                             An exclamation-mark before a command disables it.\n"
 "                             default: 'flush_cache';\n"
