@@ -1,3 +1,8 @@
+2013-03-19 (v0.6.2) Robin Gareus <robin@gareus.org>
+* distinguish decoder-failure (500) and no-decoder thread avail (503/try again)
+* fix libjpeg detection (bashish echo)
+* fix various typos (makefile, manpage)
+
 2013-03-09 (v0.6.1) Robin Gareus <robin@gareus.org>
 * fix static build
 * 32/64bit print size_t fix
