@@ -66,6 +66,7 @@ char *cfg_chroot = NULL;
 char *cfg_username = NULL;
 char *cfg_groupname = NULL;
 int   initial_cache_size = 128;
+int   max_decoder_threads = 8;
 unsigned short  cfg_port = DEFAULT_PORT;
 unsigned int    cfg_host = 0; /* = htonl(INADDR_ANY) */
 
@@ -355,7 +356,7 @@ int main (int argc, char **argv) {
   vcache_resize(&vc, initial_cache_size);
   icache_create(&ic);
   icache_resize(ic, initial_cache_size*4);
-  dctrl_create(&dc, 64, initial_cache_size);
+  dctrl_create(&dc, max_decoder_threads, initial_cache_size);
 
   if (cfg_memlock) {
 #ifndef HAVE_WINDOWS
@@ -556,9 +557,15 @@ static char *file_info_raw (CONN *c, ics_request_args *a, VInfo *ji) {
 char *hdl_file_info (CONN *c, ics_request_args *a) {
   VInfo ji;
   unsigned short vid;
+  int err = 0;
   vid = dctrl_get_id(vc, dc, a->file_name);
   jvi_init(&ji);
-  if (dctrl_get_info(dc, vid, &ji)) {
+  if ((err=dctrl_get_info(dc, vid, &ji))) {
+    if (err == 503) {
+      httperror(c->fd, 503, "Service Temporarily Unavailable", "<p>No decoder is available. The server is currently busy or overloaded.</p>");
+    } else {
+      httperror(c->fd, 500, "Service Unavailable", "<p>No decoder is available: File is invalid (no video track, unknown codec, invalid geometry,..)</p>");
+    }
     return NULL;
   }
   switch (a->render_fmt) {
@@ -716,6 +723,7 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
   uint8_t *optr = NULL;
   size_t olen = 0;
   uint8_t *bptr = NULL;
+  int err = 0;
 
   vid = dctrl_get_id(vc, dc, a->file_name);
   jvi_init(&ji);
@@ -725,9 +733,14 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
   if (a->out_height < 0 || a->out_height > 16384) a->out_height = 0;
 
   /* get canonical output width/height and corresponding buffersize */
-  if (dctrl_get_info_scale(dc, vid, &ji, a->out_width, a->out_height, a->decode_fmt) || ji.buffersize < 1) {
-    dlog(DLOG_WARNING, "VID: no decoder available (overload or invalid file).\n", fd);
-    httperror(fd, 503, "Service Unavailable", "<p>No decoder is available. Either the server is overloaded or the file is invalid (no video track, unknown codec, invalid geometry,..)</p>");
+  if ((err=dctrl_get_info_scale(dc, vid, &ji, a->out_width, a->out_height, a->decode_fmt)) || ji.buffersize < 1) {
+    if (err == 503) {
+      dlog(DLOG_WARNING, "VID: no decoder available (server overload).\n", fd);
+      httperror(fd, 503, "Service Temporarily Unavailable", "<p>No decoder is available. The server is currently busy or overloaded.</p>");
+    } else {
+      dlog(DLOG_WARNING, "VID: no decoder available (invalid file or unsupported codec).\n", fd);
+      httperror(fd, 500, "Service Unavailable", "<p>No decoder is available: File is invalid (no video track, unknown codec, invalid geometry,..)</p>");
+    }
     return 0;
   }
 
@@ -742,7 +755,7 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
 
     if (!bptr) {
       dlog(DLOG_ERR, "VID: error decoding video file for fd:%d\n", fd);
-      httperror(fd, 500, NULL, NULL);
+      httperror(fd, 500, "Service Unavailable", "<p>No decoder is available: File is invalid (no video track, unknown codec, invalid geometry,..)</p>");
       return 0;
     }
 

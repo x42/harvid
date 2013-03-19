@@ -191,6 +191,7 @@ static void fc_flush_cache (xjcd *cc) {
 static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, short w, short h, int fmt, unsigned short vid) {
   /* check if the requested frame is cached */
   videocacheline *rv = testclwh(cc->vcache, &cc->lock, frame, w, h, fmt, vid);
+  int ds;
   if (rv) {
     pthread_rwlock_wrlock(&cc->lock); // rdlock should suffice here
     /* check if it has been recently invalidated by another thread */
@@ -230,16 +231,27 @@ static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, short w, sho
   realloccl_buf(rv, w, h, fmt);
 
   /* fill cacheline with data - decode video */
-  if (dctrl_decode(dc, vid, frame, rv->b, w, h, fmt)) {
-    /* we don't cache decode-errors */
+  if ((ds=dctrl_decode(dc, vid, frame, rv->b, w, h, fmt))) {
+    dlog(DLOG_WARNING, "CACHE: decode failed (%d).\n",ds);
+    /* ds == -1 -> decode error; black frame will be rendered
+     * ds == 503 -> no decoder avail.
+     * ds == 500 -> invalid codec/format
+     * (should not happen here - dctrl_get_info sorts that out)
+     */
     pthread_rwlock_wrlock(&cc->lock); // rdlock should suffice here
+    /* we don't cache decode-errors */
     rv->flags &= ~CLF_VALID;
     rv->flags &= ~CLF_DECODING;
-    rv->flags |= CLF_INUSE;
-    rv->refcnt++;
+    if (ds > 0) {
+      /* no decoder available */
+      rv = NULL;
+    } else {
+      /* decoder available but decoding failed (EOF, invalid geometry...)*/
+      rv->flags |= CLF_INUSE;
+      rv->refcnt++;
+    }
     pthread_rwlock_unlock(&cc->lock);
-    dlog(DLOG_WARNING, "CACHE: decode failed.\n");
-    return (rv); // this is OK, a black frame will have been rendered
+    return (rv);
   }
 
   rv->lru = time(NULL);

@@ -14,9 +14,15 @@ extern void *vc; // video cache
 char *hdl_file_seek (CONN *c, ics_request_args *a) {
   VInfo ji;
   unsigned short vid;
+	int err = 0;
   vid = dctrl_get_id(vc, dc, a->file_name);
   jvi_init(&ji);
-  if (dctrl_get_info(dc, vid, &ji)) {
+  if ((err=dctrl_get_info(dc, vid, &ji))) {
+    if (err == 503) {
+      httperror(c->fd, 503, "Service Temporarily Unavailable", "<p>No decoder is available. The server is currently busy or overloaded.</p>");
+    } else {
+      httperror(c->fd, 500, "Service Unavailable", "<p>No decoder is available: File is invalid (no video track, unknown codec, invalid geometry,..)</p>");
+    }
     return NULL;
   }
   char *im = malloc(FIHSIZ * sizeof(char));
@@ -92,3 +98,5 @@ char *hdl_file_seek (CONN *c, ics_request_args *a) {
   jvi_free(&ji);
   return (im);
 }
+
+// vim:sw=2 sts=2 ts=8 et:

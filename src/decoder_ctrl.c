@@ -607,9 +607,10 @@ static int release_video_object(JVD *jvd, char *fn) {
 
 
 // lookup or create new decoder for file ID
-static void * dctrl_get_decoder(void *p, unsigned short id, int fmt, int64_t frame) {
+static void * dctrl_get_decoder(void *p, unsigned short id, int fmt, int64_t frame, int *err) {
   JVD *jvd = (JVD*)p;
   JVOBJECT *jvo = NULL;
+  *err = 0;
   BUSYADD(jvd)
 
   /* create hash for info lookups, reference first decoder for each id
@@ -628,78 +629,76 @@ static void * dctrl_get_decoder(void *p, unsigned short id, int fmt, int64_t fra
     }
   }
 
-tryagain:
-  debugmsg(DEBUG_DCTL, "DCTL: get_decoder fileid=%i\n", id);
+  while (1) {
+    debugmsg(DEBUG_DCTL, "DCTL: get_decoder fileid=%i\n", id);
 
-  if (!jvo) {
-    int timeout = 40; // new_video_object() delays 5ms at a time.
-    do {
-      jvo = testjvd(jvd->jvo, id, fmt, frame);
-      if (!jvo) jvo = new_video_object(jvd, id, fmt);
-    } while (--timeout > 0 && !jvo);
-  }
+    if (!jvo) {
+      int timeout = 40; // new_video_object() delays 5ms at a time.
+      do {
+        jvo = testjvd(jvd->jvo, id, fmt, frame);
+        if (!jvo) jvo = new_video_object(jvd, id, fmt);
+      } while (--timeout > 0 && !jvo);
+    }
 
-  if (!jvo) {
-    dlog(DLOG_ERR, "DCTL: no decoder object available.\n");
-    BUSYDEC(jvd)
-    return(NULL);
-  }
-
-  pthread_mutex_lock(&jvo->lock);
-  if ((jvo->flags&(VOF_PENDING))) {
-    pthread_mutex_unlock(&jvo->lock);
-    goto tryagain;
-  }
-  jvo->flags |= VOF_PENDING;
-  pthread_mutex_unlock(&jvo->lock);
-
-  if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_INFO)) == (VOF_VALID)) {
-    if (fmt == PIX_FMT_NONE) fmt = DEFAULT_PIX_FMT;
-    if (!my_open_movie(&jvo->decoder, get_fn(jvd, jvo->id), fmt)) {
-      pthread_mutex_lock(&jvo->lock);
-      jvo->fmt = fmt;
-      jvo->flags |= VOF_OPEN;
-      jvo->flags &= ~VOF_PENDING;
-      pthread_mutex_unlock(&jvo->lock);
-    } else {
-      pthread_mutex_lock(&jvo->lock);
-      jvo->flags &= ~VOF_PENDING;
-      assert(!jvo->decoder);
-      pthread_mutex_unlock(&jvo->lock);
-      release_id(jvd, jvo->id); // mark ID as invalid
-      dlog(DLOG_ERR, "DCTL: opening of movie file failed.\n");
+    if (!jvo) {
+      dlog(DLOG_ERR, "DCTL: no decoder object available.\n");
       BUSYDEC(jvd)
+      *err = 503; // try again
       return(NULL);
     }
-  }
 
-  pthread_mutex_lock(&jvo->lock);
-  jvo->flags &= ~VOF_PENDING;
-  if (frame < 0) {
-    /* we only need info -> decoder may be in use */
-    if ((jvo->flags&(VOF_OPEN|VOF_VALID)) == (VOF_VALID|VOF_OPEN)) {
-      jvo->infolock_refcnt++;
-      jvo->flags |= VOF_INFO;
+    pthread_mutex_lock(&jvo->lock);
+    if ((jvo->flags&(VOF_PENDING))) {
       pthread_mutex_unlock(&jvo->lock);
-      BUSYDEC(jvd)
-      return(jvo);
+      continue;
     }
-  } else {
-    if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID)) == (VOF_VALID|VOF_OPEN)) {
-      jvo->flags |= VOF_USED;
-      pthread_mutex_unlock(&jvo->lock);
-      BUSYDEC(jvd)
-      return(jvo);
+    jvo->flags |= VOF_PENDING;
+    pthread_mutex_unlock(&jvo->lock);
+
+    if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_INFO)) == (VOF_VALID)) {
+      if (fmt == PIX_FMT_NONE) fmt = DEFAULT_PIX_FMT;
+      if (!my_open_movie(&jvo->decoder, get_fn(jvd, jvo->id), fmt)) {
+        pthread_mutex_lock(&jvo->lock);
+        jvo->fmt = fmt;
+        jvo->flags |= VOF_OPEN;
+        jvo->flags &= ~VOF_PENDING;
+        pthread_mutex_unlock(&jvo->lock);
+      } else {
+        pthread_mutex_lock(&jvo->lock);
+        jvo->flags &= ~VOF_PENDING;
+        assert(!jvo->decoder);
+        pthread_mutex_unlock(&jvo->lock);
+        release_id(jvd, jvo->id); // mark ID as invalid
+        dlog(DLOG_ERR, "DCTL: opening of movie file failed.\n");
+        BUSYDEC(jvd)
+        *err = 500; // failed to open format/codec
+        return(NULL); // XXX -> 500/inval
+      }
     }
+
+    pthread_mutex_lock(&jvo->lock);
+    jvo->flags &= ~VOF_PENDING;
+    if (frame < 0) {
+      /* we only need info -> decoder may be in use */
+      if ((jvo->flags&(VOF_OPEN|VOF_VALID)) == (VOF_VALID|VOF_OPEN)) {
+        jvo->infolock_refcnt++;
+        jvo->flags |= VOF_INFO;
+        pthread_mutex_unlock(&jvo->lock);
+        BUSYDEC(jvd)
+        return(jvo);
+      }
+    } else {
+      if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID)) == (VOF_VALID|VOF_OPEN)) {
+        jvo->flags |= VOF_USED;
+        pthread_mutex_unlock(&jvo->lock);
+        BUSYDEC(jvd)
+        return(jvo);
+      }
+    }
+
+    pthread_mutex_unlock(&jvo->lock);
+    debugmsg(DEBUG_DCTL, "DCTL: decoder object was busy.\n");
   }
-
-  pthread_mutex_unlock(&jvo->lock);
-
-  debugmsg(DEBUG_DCTL, "DCTL: decoder object was busy.\n");
-  goto tryagain;
-
-  BUSYDEC(jvd)
-  return(NULL);
 }
 
 static void dctrl_release_decoder(void *dec) {
@@ -774,10 +773,11 @@ unsigned short dctrl_get_id(void *vc, void *p, const char *fn) {
 
 
 int dctrl_decode(void *p, unsigned short id, int64_t frame, uint8_t *b, int w, int h, int fmt) {
-  void *dec = dctrl_get_decoder(p, id, fmt, frame);
+  int err = 0;
+  void *dec = dctrl_get_decoder(p, id, fmt, frame, &err);
   if (!dec) {
     dlog(DLOG_WARNING, "DCTL: no decoder available.\n");
-    return -1;
+    return err;
   }
   int rv = xdctrl_decode(dec, frame, b, w, h);
   dctrl_release_decoder(dec);
@@ -785,8 +785,9 @@ int dctrl_decode(void *p, unsigned short id, int64_t frame, uint8_t *b, int w, i
 }
 
 int dctrl_get_info(void *p, unsigned short id, VInfo *i) {
-  JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, PIX_FMT_NONE, -1);
-  if (!jvo) return -1;
+  int err = 0;
+  JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, PIX_FMT_NONE, -1, &err);
+  if (!jvo) return err;
   my_get_info(jvo->decoder, i);
   jvo->hitcount_info++;
   dctrl_release_infolock(jvo);
@@ -794,8 +795,9 @@ int dctrl_get_info(void *p, unsigned short id, VInfo *i) {
 }
 
 int dctrl_get_info_scale(void *p, unsigned short id, VInfo *i, int w, int h, int fmt) {
-  JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, fmt, -1);
-  if (!jvo) return -1;
+  int err = 0;
+  JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, fmt, -1, &err);
+  if (!jvo) return err;
   my_get_info_canonical(jvo->decoder, i, w, h);
   jvo->hitcount_info++;
   dctrl_release_infolock(jvo);

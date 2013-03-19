@@ -287,8 +287,6 @@ void ics_http_handler(
       if (info) {
         SEND200(info);
         free(info);
-      } else {
-        httperror(c->fd, 503, "Service Unavailable", "<p>No decoder is available. Either the server is overloaded or the file is invalid (no video track, unknown codec,..)</p>");
       }
     } else {
       httperror(c->fd, 400, "Bad Request", "<p>Insufficient query parameters.</p>");
@@ -307,8 +305,6 @@ void ics_http_handler(
       if (info) {
         SEND200CT(info, CONTENT_TYPE_SWITCH(a.render_fmt));
         free(info);
-      } else {
-        httperror(c->fd, 503, "Service Unavailable", "<p>No decoder is available. Either the server is overloaded or the file is invalid (no video track, unknown codec,..)</p>");
       }
     } else {
       httperror(c->fd, 400, "Bad Request", "<p>Insufficient query parameters.</p>");
