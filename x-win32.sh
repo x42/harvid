@@ -16,6 +16,8 @@ NSIDIR=/tmp/harvid-build-nsi/
 make clean
 make ARCH=mingw WINEROOT=${WINEROOT} CFLAGS="-DNDEBUG -O2" || exit
 
+test -n "$1" && exit
+
 # NSI package
 
 rm -rf $NSIDIR

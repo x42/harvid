@@ -69,6 +69,8 @@ ls -lh tmp/$OUTFN
 ldd tmp/$OUTFN
 
 ###
+test -n "$1" && exit
+###
 
 rm -rf /tmp/$OUTFN /tmp/$OUTFN.tgz
 mkdir /tmp/$OUTFN
