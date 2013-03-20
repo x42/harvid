@@ -187,6 +187,7 @@ static int decode_switches (int argc, char **argv) {
          "P:"	/* IP */
          "q"	/* quiet or silent */
          "s"	/* syslog */
+         "t:"	/* threads */
          "T:"	/* timeout */
          "u:"	/* setUser */
          "v"	/* verbose */
@@ -272,6 +273,11 @@ static int decode_switches (int argc, char **argv) {
         cfg_syslog = 1;
         if (cfg_logfile) free(cfg_logfile);
         cfg_logfile = NULL;
+        break;
+      case 't':
+        max_decoder_threads = atoi(optarg);
+        if (max_decoder_threads < 2 || max_decoder_threads > 128)
+          max_decoder_threads = 8;
         break;
       case 'T':		/* --timeout */
         cfg_timeout = atoi(optarg);
