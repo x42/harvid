@@ -1,3 +1,5 @@
+mandir ?= $(PREFIX)/share/man/man1
+
 all: 
 
 install: install-man
