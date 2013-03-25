@@ -1,18 +1,22 @@
 #!/bin/bash
-## compile a statically linked version of harvid for linux bundles ##
+## compile a statically linked version of harvid for linux
+## this requires a static build of ffmpeg; see x-pbuildstatic.sh
+##
 
-# this requires a build of ffmpeg; see x-pbuildstatic.sh
+#path to the static ffmpeg installation
+: ${PFX=$HOME/local}
+#path to output directory -- /harvid*.tgz will end up there
+: ${RESULT=/tmp}
 
 VERSION=$(git describe --tags HEAD || echo "X.X.X")
 TRIPLET=$(gcc -print-multiarch)
 OUTFN=harvid-$TRIPLET-$VERSION
 
-PFX=$HOME/local
 LIBF=$PFX/lib
 BINF=$PFX/bin
-
 export PKG_CONFIG_PATH=${LIBF}/pkgconfig
 
+# ffmpeg needs this libs
 LIBDEPS=" \
  librtmp.a \
  libgmp.a \
@@ -43,19 +47,19 @@ LIBDEPS=" \
  libjpeg.a \
  libz.a \
  "
-# paths to static libs
+# resolve paths to static libs on the system
 SLIBS=""
 for SLIB in $LIBDEPS; do
 	echo "searching $SLIB.."
 	SL=`find /usr/lib -name "$SLIB"`
 	if test -z "$SL"; then
 		echo "not found."
-		exit
+		exit 1
 	fi
 	SLIBS="$SLIBS $SL"
 done
 
-
+# compile harvid
 make -C src clean logo.o seek.o
 mkdir -p tmp
 gcc -DNDEBUG -DICSARCH=\"Linux\" -DICSVERSION=\"${VERSION}\" \
@@ -63,39 +67,40 @@ gcc -DNDEBUG -DICSARCH=\"Linux\" -DICSVERSION=\"${VERSION}\" \
   -o tmp/$OUTFN src/*.c src/logo.o src/seek.o \
 	`pkg-config --cflags libavcodec libavformat libavutil libpng libswscale` \
 	${CFLAGS} \
-	${LIBF}libavformat.a \
-	${LIBF}libavcodec.a \
-	${LIBF}libswscale.a \
-	${LIBF}libavdevice.a \
-	${LIBF}libavutil.a \
+	${LIBF}/libavformat.a \
+	${LIBF}/libavcodec.a \
+	${LIBF}/libswscale.a \
+	${LIBF}/libavdevice.a \
+	${LIBF}/libavutil.a \
 	\
 	$SLIBS \
 	-lm -ldl -pthread -lstdc++ \
-|| exit
+|| exit 1
 
 strip tmp/$OUTFN
 ls -lh tmp/$OUTFN
 ldd tmp/$OUTFN
 
-###
-test -n "$1" && exit
-###
+# give any arg to disable bundle
+test -n "$1" && exit 1
 
-rm -rf /tmp/$OUTFN /tmp/$OUTFN.tgz
-mkdir /tmp/$OUTFN
-cp tmp/$OUTFN /tmp/$OUTFN/harvid
-cp README.md /tmp/$OUTFN/README
-cp doc/harvid.1 /tmp/$OUTFN/harvid.1
+# build .tgz bundle
+rm -rf $RESULT/$OUTFN $RESULT/$OUTFN.tgz
+mkdir $RESULT/$OUTFN
+cp tmp/$OUTFN $RESULT/$OUTFN/harvid
+cp README.md $RESULT/$OUTFN/README
+cp doc/harvid.1 $RESULT/$OUTFN/harvid.1
 if test -f $BINF/ffmpeg_s; then
-	cp $BINF/ffmpeg_s /tmp/$OUTFN/ffmpeg
+	cp $BINF/ffmpeg_s $RESULT/$OUTFN/ffmpeg
 fi
 if test -f $BINF/ffprobe_s; then
-	cp $BINF/ffprobe_s /tmp/$OUTFN/ffprobe
+	cp $BINF/ffprobe_s $RESULT/$OUTFN/ffprobe
 fi
-cd /tmp/ ; tar czf /tmp/$OUTFN.tgz $OUTFN ; cd -
-rm -rf /tmp/$OUTFN
-ls -lh /tmp/$OUTFN.tgz
+cd $RESULT/ ; tar czf $RESULT/$OUTFN.tgz $OUTFN ; cd -
+rm -rf $RESULT/$OUTFN
+ls -lh $RESULT/$OUTFN.tgz
 
+# ..and copy the bundle to the local gh-pages branch
 test -d site/releases/ || exit
-mv /tmp/$OUTFN.tgz site/releases/
+mv $RESULT/$OUTFN.tgz site/releases/
 ls -lh site/releases/$OUTFN.tgz
