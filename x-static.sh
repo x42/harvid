@@ -1,22 +1,60 @@
 #!/bin/bash
 ## compile a statically linked version of harvid for linux bundles ##
 
-# this requires a special build of ffmpeg/libav*
-# git://source.ffmpeg.org/ffmpeg
-# ./configure --enable-gpl \
-#        --enable-libmp3lame --enable-libx264 --enable-libxvid --enable-libtheora  --enable-libvorbis \
-#        --enable-libvpx --enable-libopenjpeg --enable-libopus --enable-libschroedinger \
-#        --enable-libspeex --enable-frei0r --enable-libbluray --enable-libgsm \
-#        --disable-vaapi --disable-x11grab \
-#        --enable-shared --enable-static --prefix=$HOME/local/ $@
+# this requires a build of ffmpeg; see x-pbuildstatic.sh
 
 VERSION=$(git describe --tags HEAD || echo "X.X.X")
-OUTFN=harvid_static-$VERSION
+TRIPLET=$(gcc -print-multiarch)
+OUTFN=harvid-$TRIPLET-$VERSION
 
-LIB0=/usr/lib/
-LIB1=/usr/lib/i386-linux-gnu/
-LIBF=$HOME/local/lib/
+PFX=$HOME/local
+LIBF=$PFX/lib
+BINF=$PFX/bin
+
 export PKG_CONFIG_PATH=${LIBF}/pkgconfig
+
+LIBDEPS=" \
+ librtmp.a \
+ libgmp.a \
+ libpng12.a \
+ libjpeg.a \
+ libmp3lame.a \
+ libspeex.a \
+ libtheoraenc.a \
+ libtheoradec.a \
+ libogg.a \
+ libvorbis.a \
+ libvorbisenc.a \
+ libvorbisfile.a \
+ libschroedinger-1.0.a \
+ liborc-0.4.a \
+ libgsm.a \
+ libbluray.a \
+ libxvidcore.a \
+ libopus.a \
+ libbz2.a \
+ libvpx.a \
+ libopenjpeg.a \
+ libx264.a \
+ libX11.a \
+ libxcb.a \
+ libXau.a \
+ libXdmcp.a \
+ libjpeg.a \
+ libz.a \
+ "
+# paths to static libs
+SLIBS=""
+for SLIB in $LIBDEPS; do
+	echo "searching $SLIB.."
+	SL=`find /usr/lib -name "$SLIB"`
+	if test -z "$SL"; then
+		echo "not found."
+		exit
+	fi
+	SLIBS="$SLIBS $SL"
+done
+
 
 make -C src clean logo.o seek.o
 mkdir -p tmp
@@ -31,36 +69,7 @@ gcc -DNDEBUG -DICSARCH=\"Linux\" -DICSVERSION=\"${VERSION}\" \
 	${LIBF}libavdevice.a \
 	${LIBF}libavutil.a \
 	\
-	${LIB1}librtmp.a \
-  ${LIB1}libgmp.a \
-	${LIB1}libpng12.a \
-	${LIB0}libjpeg.a \
-	${LIB1}libmp3lame.a \
-	${LIB0}libspeex.a \
-	${LIB0}libtheoraenc.a \
-	${LIB0}libtheoradec.a \
-	${LIB0}libogg.a \
-	${LIB0}libvorbis.a \
-	${LIB0}libvorbisenc.a \
-	${LIB0}libvorbisfile.a \
-	${LIB0}libdc1394.a \
-	${LIB0}libraw1394.a \
-	${LIB1}libschroedinger-1.0.a \
-	${LIB0}liborc-0.4.a \
-	${LIB0}libgsm.a \
-	${LIB1}libbluray.a \
-	${LIB1}libxvidcore.a \
-	${LIB0}libopus.a \
-	${LIB1}libbz2.a \
-	${LIB0}libvpx.a \
-	${LIB0}libopenjpeg.a \
-	${LIB1}libx264.a \
-	${LIB1}libX11.a \
-	${LIB1}libxcb.a \
-	${LIB1}libXau.a \
-	${LIB1}libXdmcp.a \
-	${LIB0}libjpeg.a \
-	${LIB0}libz.a \
+	$SLIBS \
 	-lm -ldl -pthread -lstdc++ \
 || exit
 
@@ -77,6 +86,12 @@ mkdir /tmp/$OUTFN
 cp tmp/$OUTFN /tmp/$OUTFN/harvid
 cp README.md /tmp/$OUTFN/README
 cp doc/harvid.1 /tmp/$OUTFN/harvid.1
+if test -f $BINF/ffmpeg_s; then
+	cp $BINF/ffmpeg_s /tmp/$OUTFN/ffmpeg
+fi
+if test -f $BINF/ffprobe_s; then
+	cp $BINF/ffprobe_s /tmp/$OUTFN/ffprobe
+fi
 cd /tmp/ ; tar czf /tmp/$OUTFN.tgz $OUTFN ; cd -
 rm -rf /tmp/$OUTFN
 ls -lh /tmp/$OUTFN.tgz
