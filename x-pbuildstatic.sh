@@ -37,11 +37,11 @@ git clone -b master --depth 0 git://github.com/x42/harvid.git
 
 cd $SRC/harvid
 VERSION=$(git describe --tags HEAD)
-git archive --format=tar --prefix=harvid-$(VERSION)/ HEAD | gzip -9 > /tmp/harvid-$(VERSION).tar.gz
+git archive --format=tar --prefix=harvid-${VERSION}/ HEAD | gzip -9 > /tmp/harvid-${VERSION}.tar.gz
 
 cd $SRC/ffmpeg
 FFVERSION=$(git describe --tags)
-git archive --format=tar --prefix=ffmpeg-$(FFVERSION)/ HEAD | gzip -9 > /tmp/ffmpeg-$(FFVERSION).tar.gz
+git archive --format=tar --prefix=ffmpeg-${FFVERSION}/ HEAD | gzip -9 > /tmp/ffmpeg-${FFVERSION}.tar.gz
 
 ./configure --enable-gpl \
 	--enable-libmp3lame --enable-libx264 --enable-libxvid --enable-libtheora  --enable-libvorbis \
@@ -129,9 +129,4 @@ install -m755  ffprobe_s $PFX/bin/
 cd $SRC/harvid
 ./x-static.sh || exit 1
 
-## XXX copy out of pbuilder..
-## -> bind-mount /tmp
 ls -l /tmp/harvid*.tgz
-
-## drop to shell
-#exec /bin/sh
