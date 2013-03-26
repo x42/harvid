@@ -35,7 +35,14 @@ cd $SRC
 git clone -b master --depth 0 git://source.ffmpeg.org/ffmpeg
 git clone -b master --depth 0 git://github.com/x42/harvid.git
 
+cd $SRC/harvid
+VERSION=$(git describe --tags HEAD)
+git archive --format=tar --prefix=harvid-$(VERSION)/ HEAD | gzip -9 > /tmp/harvid-$(VERSION).tar.gz
+
 cd $SRC/ffmpeg
+FFVERSION=$(git describe --tags)
+git archive --format=tar --prefix=ffmpeg-$(FFVERSION)/ HEAD | gzip -9 > /tmp/ffmpeg-$(FFVERSION).tar.gz
+
 ./configure --enable-gpl \
 	--enable-libmp3lame --enable-libx264 --enable-libxvid --enable-libtheora  --enable-libvorbis \
 	--enable-libvpx --enable-libopenjpeg --enable-libopus --enable-libschroedinger \
