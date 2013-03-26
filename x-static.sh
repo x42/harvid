@@ -18,8 +18,6 @@ export PKG_CONFIG_PATH=${LIBF}/pkgconfig
 
 # ffmpeg needs this libs
 LIBDEPS=" \
- librtmp.a \
- libgmp.a \
  libpng12.a \
  libjpeg.a \
  libmp3lame.a \
@@ -40,11 +38,6 @@ LIBDEPS=" \
  libvpx.a \
  libopenjpeg.a \
  libx264.a \
- libX11.a \
- libxcb.a \
- libXau.a \
- libXdmcp.a \
- libjpeg.a \
  libz.a \
  "
 # resolve paths to static libs on the system
