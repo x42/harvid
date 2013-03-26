@@ -2,6 +2,7 @@
 
 #environment variables
 : ${OSXMACHINE:=priroda.local}
+: ${COWBUILDER:=opendaw.local}
 
 NEWVERSION=$1
 
@@ -64,12 +65,29 @@ if test "$ok" != 0; then
 	exit
 fi
 
+/bin/ping -q -c1 ${COWBUILDER} &>/dev/null \
+	&& /usr/sbin/arp -n ${COWBUILDER} &>/dev/null
+ok=$?
+if test "$ok" != 0; then
+	echo "Linux cowbuild host can not be reached."
+	exit
+fi
+
 echo "building win32 ..."
 ./x-win32.sh || exit
 echo "building linux static ..."
-./x-static.sh || exit
-echo "building osx package on $OSXMACHINE ..."
+ssh $COWBUILDER ~/bin/build-harvid.sh
 
+ok=$?
+if test "$ok" != 0; then
+	echo "remote build failed"
+	exit
+fi
+
+rsync -Pa $COWBUILDER:/tmp//harvid-i386-linux-gnu-${VERSION}.tar.gz site/releases/ || exit
+rsync -Pa $COWBUILDER:/tmp//harvid-x86_64-linux-gnu-${VERSION}.tar.gz site/releases/ || exit
+
+echo "building osx package on $OSXMACHINE ..."
 ssh $OSXMACHINE << EOF
 exec /bin/bash -l
 cd src/harvid || exit 1
