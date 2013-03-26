@@ -1,3 +1,10 @@
+2013-03-26 (v0.7.0) Robin Gareus <robin@gareus.org>
+* option to set maxiumum decoder thread count
+* fix make install-man
+* various build-script updates for static builds
+* send 503/retry instead of 500/err if video-cache fails fixes concurrency
+issue.
+
 2013-03-19 (v0.6.2) Robin Gareus <robin@gareus.org>
 * distinguish decoder-failure (500) and no-decoder thread avail (503/try again)
 * fix libjpeg detection (bashish echo)
