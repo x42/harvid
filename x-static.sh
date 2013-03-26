@@ -84,10 +84,10 @@ cp tmp/$OUTFN $RESULT/$OUTFN/harvid
 cp README.md $RESULT/$OUTFN/README
 cp doc/harvid.1 $RESULT/$OUTFN/harvid.1
 if test -f $BINF/ffmpeg_s; then
-	cp $BINF/ffmpeg_s $RESULT/$OUTFN/ffmpeg
+	cp $BINF/ffmpeg_s $RESULT/$OUTFN/ffmpeg_harvid
 fi
 if test -f $BINF/ffprobe_s; then
-	cp $BINF/ffprobe_s $RESULT/$OUTFN/ffprobe
+	cp $BINF/ffprobe_s $RESULT/$OUTFN/ffprobe_harvid
 fi
 cd $RESULT/ ; tar czf $RESULT/$OUTFN.tgz $OUTFN ; cd -
 rm -rf $RESULT/$OUTFN
