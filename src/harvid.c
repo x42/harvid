@@ -757,11 +757,15 @@ int hdl_decode_frame(int fd, httpheader *h, ics_request_args *a) {
 
   if (olen == 0) {
     /* get frame from cache - or decode it into the cache */
-    bptr = vcache_get_buffer(vc, dc, vid, a->frame, ji.out_width, ji.out_height, a->decode_fmt, &cptr);
+    bptr = vcache_get_buffer(vc, dc, vid, a->frame, ji.out_width, ji.out_height, a->decode_fmt, &cptr, &err);
 
     if (!bptr) {
-      dlog(DLOG_ERR, "VID: error decoding video file for fd:%d\n", fd);
-      httperror(fd, 500, "Service Unavailable", "<p>No decoder is available: File is invalid (no video track, unknown codec, invalid geometry,..)</p>");
+      dlog(DLOG_ERR, "VID: error decoding video file for fd:%d err:%d\n", fd, err);
+      if (err == 503) {
+        httperror(fd, 503, "Service Temporarily Unavailable", "<p>Video cache is unavailable. The server is currently busy or overloaded.</p>");
+      } else {
+        httperror(fd, 500, "Service Unavailable", "<p>No decoder or cache is available: File is invalid (no video track, unknown codec, invalid geometry,..)</p>");
+      }
       return 0;
     }
 

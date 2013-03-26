@@ -27,7 +27,7 @@ void vcache_destroy(void **p);
 void vcache_resize(void **p, int size);
 void vcache_clear (void *p, int id);
 
-uint8_t *vcache_get_buffer(void *p, void *dc, unsigned short id, int64_t frame, short w, short h, int fmt, void **cptr);
+uint8_t *vcache_get_buffer(void *p, void *dc, unsigned short id, int64_t frame, short w, short h, int fmt, void **cptr, int *err);
 void vcache_release_buffer(void *p, void *cptr);
 void vcache_invalidate_buffer(void *p, void *cptr);
 

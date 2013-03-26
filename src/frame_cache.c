@@ -188,10 +188,11 @@ static void fc_flush_cache (xjcd *cc) {
   pthread_rwlock_unlock(&cc->lock);
 }
 
-static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, short w, short h, int fmt, unsigned short vid) {
+static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, short w, short h, int fmt, unsigned short vid, int *err) {
   /* check if the requested frame is cached */
   videocacheline *rv = testclwh(cc->vcache, &cc->lock, frame, w, h, fmt, vid);
   int ds;
+  if (err) *err = 0;
   if (rv) {
     pthread_rwlock_wrlock(&cc->lock); // rdlock should suffice here
     /* check if it has been recently invalidated by another thread */
@@ -223,7 +224,9 @@ static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, short w, sho
   } while(--timeout > 0 && !rv);
 
   if (!rv) {
+    dlog(DLOG_WARNING, "CACHE: no buffer available.\n");
     /* no buffer available */
+    if (err) *err = 503;
     return NULL;
   }
 
@@ -238,6 +241,7 @@ static videocacheline *fc_readcl(xjcd *cc, void *dc, int64_t frame, short w, sho
      * ds == 500 -> invalid codec/format
      * (should not happen here - dctrl_get_info sorts that out)
      */
+    if(err) *err = ds;
     pthread_rwlock_wrlock(&cc->lock); // rdlock should suffice here
     /* we don't cache decode-errors */
     rv->flags &= ~CLF_VALID;
@@ -298,8 +302,8 @@ void vcache_destroy(void **p) {
   *p = NULL;
 }
 
-uint8_t *vcache_get_buffer(void *p, void *dc, unsigned short id, int64_t frame, short w, short h, int fmt, void **cptr) {
-  videocacheline *cl = fc_readcl((xjcd*)p, dc, frame, w, h, fmt, id);
+uint8_t *vcache_get_buffer(void *p, void *dc, unsigned short id, int64_t frame, short w, short h, int fmt, void **cptr, int *err) {
+  videocacheline *cl = fc_readcl((xjcd*)p, dc, frame, w, h, fmt, id, err);
   if (!cl) {
     if (cptr) *cptr = NULL;
     return NULL;
