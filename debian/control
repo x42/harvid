@@ -6,14 +6,19 @@ Build-Depends: debhelper (>= 8.0.0),
  libavcodec-dev, libavformat-dev, libswscale-dev,
  libpng12-dev,
  libjpeg8-dev | libjpeg62-dev
-Homepage: https://github.com/x42/ltc-tools
+Homepage: http://x42.github.com/harvid/
 Standards-Version: 3.9.3
 
 Package: harvid
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: HTTP Ardour Video Server
- The image compositor socket is a HTTP server to efficiently
- extract and cache still images from video files.
- It provides for frame-accurate decoding and is used as back-
- end for the Ardour3 video-timeline.
+ Harvid is a HTTP server to efficiently extract, cache and
+ serve still images from movie files.
+ .
+ It provides for frame-accurate decoding and is main use-case
+ is to act as backend and second level cache for rendering the
+ videotimeline in Ardour.
+ .
+ Harvid uses ffmpeg/libav and supports a wide variety of video
+ codecs and formats.

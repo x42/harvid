@@ -1,7 +1,7 @@
 harvid -- HTTP Ardour Video Daemon
 ==================================
 
-harvid decodes still images from movie files and serves them via HTTP.
+Harvid decodes still images from movie files and serves them via HTTP.
 
 Its intended use-case is to efficiently provide frame-accurate data and
 act as second level cache for rendering the video-timeline in
@@ -12,21 +12,20 @@ Download
 --------
 
 Apart from the source-code and packages from your linux-distributor, binaries
-are available for OSX, Windows and 32bit Linux at
-http://x42.github.com/harvid/ .
+are available for OSX, Windows and Linux at http://x42.github.com/harvid/ .
 
 
 Usage
 -----
 
-harvid is a standalone HTTP server, all interaction takes place via HTTP.
+Harvid is a standalone HTTP server, all interaction takes place via HTTP.
 After launching it, simply point a web-browser at http://localhost:1554/
 
 The OSX bundle and window installer come with a shortcut link to launch
 the server. On Linux or with the OSX package, harvid is usually started
 from a terminal by simply typing `harvid`&lt;enter&gt;.
 
-harvid can also be run directly from the source folder without installing
+Harvid can also be run directly from the source folder without installing
 it. Get its build-dependencies (see below), run
 
 	make
@@ -38,7 +37,7 @@ harvid. The easiest way is to simply run:
 
 	sudo make install
 
-harvid can be launched as system-service (daemonized, chroot, chuid, syslog),
+Harvid can be launched as system-service (daemonized, chroot, chuid, syslog),
 and listen on specific interfaces only in case you do not want to expose
 access to your movie-collection. However, is no per request access control.
 
@@ -68,7 +67,7 @@ the file `debian/rules` which demonstrates the use of PREFIX and DESTDIR.
 Internals
 ---------
 
-harvid is highly concurrent makes use of all available CPUs. It will
+Harvid is highly concurrent makes use of all available CPUs. It will
 spawn multiple decoder processes, keep them available for a reasonable
 time and also cache the video-decoder's output for recurring requests.
 
