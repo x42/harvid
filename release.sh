@@ -84,8 +84,8 @@ if test "$ok" != 0; then
 	exit
 fi
 
-rsync -Pa $COWBUILDER:/tmp//harvid-i386-linux-gnu-${VERSION}.tar.gz site/releases/ || exit
-rsync -Pa $COWBUILDER:/tmp//harvid-x86_64-linux-gnu-${VERSION}.tar.gz site/releases/ || exit
+rsync -Pa $COWBUILDER:/tmp//harvid-i386-linux-gnu-${VERSION}.tgz site/releases/ || exit
+rsync -Pa $COWBUILDER:/tmp//harvid-x86_64-linux-gnu-${VERSION}.tgz site/releases/ || exit
 
 echo "building osx package on $OSXMACHINE ..."
 ssh $OSXMACHINE << EOF
