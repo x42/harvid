@@ -1,10 +1,11 @@
 #!/usr/bin/make -f
+include /usr/share/dpkg/pkg-info.mk
 
 %:
 	dh $@
 
 override_dh_auto_build:
-	$(MAKE) LDFLAGS=-Wl,--as-needed CFLAGS="-DNDEBUG -O2"
+	$(MAKE) LDFLAGS=-Wl,--as-needed CFLAGS="-DNDEBUG -O2" VERSION="$(DEB_VERSION_UPSTREAM)"
 
 override_dh_auto_install:
 	$(MAKE) install-bin DESTDIR=$(CURDIR)/debian/harvid PREFIX=/usr
