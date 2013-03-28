@@ -29,11 +29,8 @@
 #include "daemon_util.h"
 #include "socket_server.h"
 
-#include "decoder_ctrl.h"
+#include <harvid.h>
 #include "image_format.h"
-#include "ffdecoder.h"
-#include "frame_cache.h"
-#include "image_cache.h"
 #include "enums.h"
 
 #include "ffcompat.h"

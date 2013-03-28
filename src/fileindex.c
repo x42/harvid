@@ -26,7 +26,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "daemon_log.h"
+#include <dlog.h>
 #include "httprotocol.h"
 #include "htmlconst.h"
 #include "enums.h"

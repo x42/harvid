@@ -23,7 +23,7 @@
 #include <string.h>     /* memset */
 #include <unistd.h>
 
-#include "daemon_log.h"
+#include "dlog.h"
 #include "image_cache.h"
 
 #include <time.h>

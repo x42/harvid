@@ -31,8 +31,8 @@
 #include <jpeglib.h>
 #include <png.h>
 
-#include "daemon_log.h"
-#include "vinfo.h"
+#include <dlog.h>
+#include <vinfo.h> // harvid.h
 #include "enums.h"
 
 // TODO global config or per request setting

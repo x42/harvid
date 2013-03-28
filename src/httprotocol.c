@@ -31,9 +31,8 @@
 #include <time.h>
 #include <stdint.h>
 
+#include <dlog.h>
 #include "socket_server.h"
-#include "daemon_log.h"
-
 #include "httprotocol.h"
 #include "htmlconst.h"
 #include "ics_handler.h"

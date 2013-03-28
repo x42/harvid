@@ -24,7 +24,7 @@
 #include <grp.h>
 #endif
 
-#include "daemon_log.h"
+#include <dlog.h>
 
 #define DEV_NULL "/dev/null"
 int daemonize (void) {

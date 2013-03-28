@@ -27,7 +27,7 @@
 #include "frame_cache.h"
 #include "ffdecoder.h"
 #include "ffcompat.h"
-#include "daemon_log.h"
+#include "dlog.h"
 
 #define DEFAULT_PIX_FMT (PIX_FMT_RGB24) // TODO global default
 

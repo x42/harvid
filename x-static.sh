@@ -57,7 +57,7 @@ make -C src clean logo.o seek.o
 mkdir -p tmp
 gcc -DNDEBUG -DICSARCH=\"Linux\" -DICSVERSION=\"${VERSION}\" \
   -Wall -O2 \
-  -o tmp/$OUTFN src/*.c src/logo.o src/seek.o \
+  -o tmp/$OUTFN -Ilibharvid src/*.c libharvid/*.c src/logo.o src/seek.o \
 	`pkg-config --cflags libavcodec libavformat libavutil libpng libswscale` \
 	${CFLAGS} \
 	${LIBF}/libavformat.a \

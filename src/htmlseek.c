@@ -1,7 +1,8 @@
 #include <stdio.h>
-#include "socket_server.h"
-#include "decoder_ctrl.h"
 
+#include <harvid.h>
+//#include <dlog.h>
+#include "socket_server.h"
 #include "httprotocol.h"
 #include "ics_handler.h"
 #include "htmlconst.h"

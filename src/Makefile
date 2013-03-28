@@ -55,6 +55,7 @@ ifeq ($(shell $(ECHO) "\#include <stdio.h>\n\#include <jpeglib.h>\nint main() { 
 endif
 
 
+FLAGS=-I../libharvid/
 FLAGS+=$(ARCHINCLUDES) $(ARCHFLAGS)
 FLAGS+=`pkg-config --cflags libavcodec libavformat libavutil libpng libswscale`
 
@@ -70,26 +71,31 @@ all: harvid
 HARVID_H = \
   daemon_log.h daemon_util.h \
   socket_server.h \
-  vinfo.h frame_cache.h image_cache.h\
-  ffdecoder.h \
-  decoder_ctrl.h \
-  ffcompat.h \
   enums.h \
   favicon.h \
   ics_handler.h httprotocol.h htmlconst.h \
   image_format.h \
-  timecode.h
+  ../libharvid/vinfo.h \
+  ../libharvid/frame_cache.h \
+  ../libharvid/image_cache.h\
+  ../libharvid/ffdecoder.h \
+  ../libharvid/decoder_ctrl.h \
+  ../libharvid/ffcompat.h \
+  ../libharvid/timecode.h
 
 HARVID_SRC = \
   harvid.c \
   daemon_log.c daemon_util.c \
   fileindex.c htmlseek.c \
   httprotocol.c ics_handler.c \
-  socket_server.c vinfo.c \
-  decoder_ctrl.c frame_cache.c image_cache.c \
-  ffdecoder.c \
   image_format.c \
-  timecode.c
+  socket_server.c \
+  ../libharvid/vinfo.c \
+  ../libharvid/decoder_ctrl.c \
+  ../libharvid/frame_cache.c \
+  ../libharvid/image_cache.c \
+  ../libharvid/ffdecoder.c \
+  ../libharvid/timecode.c
 
 logo.o: ../doc/harvid.jpg
 	$(LD) -r -b binary -o logo.o ../doc/harvid.jpg

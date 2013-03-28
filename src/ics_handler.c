@@ -23,8 +23,8 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "daemon_log.h"
-#include "ffcompat.h"
+#include <dlog.h>
+#include <ffcompat.h> // harvid.h
 #include "httprotocol.h"
 #include "ics_handler.h"
 #include "htmlconst.h"

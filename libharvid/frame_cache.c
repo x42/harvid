@@ -24,7 +24,7 @@
 #include <unistd.h>
 
 #include "decoder_ctrl.h"
-#include "daemon_log.h"
+#include "dlog.h"
 #include "frame_cache.h"
 #include "ffcompat.h"
 #include "ffdecoder.h"
