@@ -51,7 +51,9 @@
 #endif
 
 #ifndef HAVE_WINDOWS
+#ifndef __APPLE__
 #define HAVE_PTHREAD_SIGMASK
+#endif
 #define CATCH_SIGNALS
 #endif
 
