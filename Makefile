@@ -1,5 +1,5 @@
 VERSION?=$(shell git describe --tags HEAD || echo "X.X.X")
-SUBDIRS = src doc
+SUBDIRS = libharvid src doc
 
 default: all
 

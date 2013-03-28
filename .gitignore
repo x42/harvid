@@ -4,10 +4,10 @@ tags
 cscope.files
 cscope.out
 
-src/harvid
-tmp/
-pkg/osx/usr
-src/harvid.dSYM/
-site
-
-update_site.sh
+/src/harvid
+/libharvid/libharvid.a
+/tmp/
+/pkg/osx/usr
+/src/harvid.dSYM/
+/site
+/update_site.sh

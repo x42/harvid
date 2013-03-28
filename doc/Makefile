@@ -1,4 +1,4 @@
-mandir ?= $(PREFIX)/share/man/man1
+include ../common.mak
 
 all: 
 

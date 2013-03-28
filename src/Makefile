@@ -1,46 +1,8 @@
-VERSION?=$(shell git describe --tags HEAD || echo "X.X.X")
-
-CFLAGS ?= -Wall -g -O2
-PREFIX ?= /usr/local
-
-bindir ?= $(PREFIX)/bin
-mandir ?= $(PREFIX)/share/man/man1
-
 LOGODEP=logo.o seek.o
-ECHO=$(shell which echo) -e
 
-ARCHFLAGS=
-ARCHINCLUDES=
-ARCHLIBES=
+include ../common.mak
 
 CONFIGTEMP=conf.out
-IS_OSX=
-
-ifeq ($(ARCH),mingw)
-  CC=i686-w64-mingw32-gcc
-  LD=i686-w64-mingw32-ld
-  WINEROOT?=$(HOME)/.wine/drive_c/x-prefix
-  PKG_CONFIG_PATH=$(WINEROOT)/lib/pkgconfig/
-  ARCHINCLUDES=-I$(WINEROOT)/include -DHAVE_WINDOWS
-  ARCHLIBES=-lwsock32 -lws2_32 -lpthreadGC2
-  LDFLAGS+=-L$(WINEROOT)/lib/ -L${WINEROOT}/bin
-  UNAME=mingw
-else
-  UNAME=$(shell uname)
-  ifeq ($(UNAME),Darwin)
-  ARCHFLAGS=-arch i386 -arch ppc -arch x86_64
-  ARCHFLAGS+=-isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
-  ARCHFLAGS+=-headerpad_max_install_names
-  ARCHFLAGS+=-sectcreate __DATA __doc_harvid_jpg ../doc/harvid.jpg
-  ARCHFLAGS+=-sectcreate __DATA __doc_seek_js ../doc/seek.js
-  LOGODEP=
-  ECHO=echo
-  ISOSX=1
-  else
-  ARCHLIBES=-lrt -lpthread
-  endif
-endif
-
 
 ifeq ($(shell pkg-config --exists libavcodec libavformat libswscale || echo no), no)
   $(error "http://ffmpeg.org is required - install libavcodec-dev, libswscale-dev, etc")
@@ -53,7 +15,6 @@ endif
 ifeq ($(shell $(ECHO) "\#include <stdio.h>\n\#include <jpeglib.h>\nint main() { struct jpeg_error_mgr jerr; jpeg_std_error(&jerr); return 0; }" | $(CC) -pipe -x c -o $(CONFIGTEMP) $(ARCHINCLUDES) $(LDFLAGS) - -ljpeg 2>/dev/null || echo no; $(RM) -f $(CONFIGTEMP)), no)
   $(error "libjpeg is required - install libjpeg-dev, libjpeg8-dev or libjpeg62-dev")
 endif
-
 
 FLAGS=-I../libharvid/
 FLAGS+=$(ARCHINCLUDES) $(ARCHFLAGS)
@@ -90,12 +51,7 @@ HARVID_SRC = \
   httprotocol.c ics_handler.c \
   image_format.c \
   socket_server.c \
-  ../libharvid/vinfo.c \
-  ../libharvid/decoder_ctrl.c \
-  ../libharvid/frame_cache.c \
-  ../libharvid/image_cache.c \
-  ../libharvid/ffdecoder.c \
-  ../libharvid/timecode.c
+  ../libharvid/libharvid.a
 
 logo.o: ../doc/harvid.jpg
 	$(LD) -r -b binary -o logo.o ../doc/harvid.jpg
