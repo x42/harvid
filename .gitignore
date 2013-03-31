@@ -5,9 +5,10 @@ cscope.files
 cscope.out
 
 /src/harvid
+/src/harvid.dSYM/
 /libharvid/libharvid.a
+/doc/libharvid_example
 /tmp/
 /pkg/osx/usr
-/src/harvid.dSYM/
-/site
+/site/
 /update_site.sh
