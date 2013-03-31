@@ -25,10 +25,25 @@
 #ifndef _harvid_H
 #define _harvid_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* pixel-format definitions */
+#include <libavutil/avutil.h>
+
+/* libharvid public API */
 #include "decoder_ctrl.h"
-#include "ffdecoder.h"
 #include "frame_cache.h"
 #include "image_cache.h"
-#include "timecode.h"
+
+/* public ffdecoder.h API */
+void ff_initialize (void);
+void ff_cleanup (void);
+int  picture_bytesize(int render_fmt, int w, int h);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
