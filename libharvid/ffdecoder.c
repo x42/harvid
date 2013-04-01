@@ -92,7 +92,7 @@ static const AVRational c1_Q = { 1, 1 };
 // Manage video file
 //--------------------------------------------
 
-int picture_bytesize(int render_fmt, int w, int h) {
+int ff_picture_bytesize(int render_fmt, int w, int h) {
   const int bs = avpicture_get_size(render_fmt, w, h);
   if (bs < 0) return 0;
   return bs;
@@ -100,7 +100,7 @@ int picture_bytesize(int render_fmt, int w, int h) {
 
 static int ff_getbuffersize(void *ptr, size_t *s) {
   ffst *ff = (ffst*)ptr;
-  const int ps = picture_bytesize(ff->render_fmt, ff->out_width, ff->out_height);
+  const int ps = ff_picture_bytesize(ff->render_fmt, ff->out_width, ff->out_height);
   if (s) *s = ps;
   return ps;
 }
@@ -763,7 +763,7 @@ void ff_get_info_canonical(void *ptr, VInfo *i, int w, int h) {
   i->out_width = w;
   i->out_height = h;
   ff_caononicalize_size2(ptr, &i->out_width, &i->out_height);
-  i->buffersize = picture_bytesize(ff->render_fmt, i->out_width, i->out_height);
+  i->buffersize = ff_picture_bytesize(ff->render_fmt, i->out_width, i->out_height);
 }
 
 void ff_create(void **ff) {

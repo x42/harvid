@@ -39,6 +39,6 @@ uint8_t *ff_get_bufferptr(void *ptr);
 uint8_t *ff_set_bufferptr(void *ptr, uint8_t *buf);
 void ff_resize(void *ptr, int w, int h, uint8_t *buf, VInfo *i);
 
-int picture_bytesize(int render_fmt, int w, int h);
+int ff_picture_bytesize(int render_fmt, int w, int h);
 const char * ff_fmt_to_text(int fmt);
 #endif

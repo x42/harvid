@@ -229,7 +229,7 @@ static char *flags2txt(int f) {
   return rv;
 }
 
-const char * fmt_to_text(int fmt) {
+static const char * fmt_to_text(int fmt) {
   switch (fmt) {
     case 1:
       return "JPEG";

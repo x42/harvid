@@ -157,7 +157,7 @@ static void realloccl_buf(videocacheline *cptr, int w, int h, int fmt) {
     return; // already allocated
 
   free(cptr->b);
-  cptr->alloc_size = picture_bytesize(fmt, w, h);
+  cptr->alloc_size = ff_picture_bytesize(fmt, w, h);
   cptr->b = calloc(cptr->alloc_size, sizeof(uint8_t));
 }
 
