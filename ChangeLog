@@ -1,3 +1,10 @@
+2013-04-07 (0.7.1) Robin Gareus <robin@gareus.org>
+* basically a NOOP -- no new features, no changes in behaviour.
+* just shuffle around code to break out libharvid
+* update packaging info (post debian)
+* clean up auto-build/release/upload scripts
+* oh and, PTHREAD_SIGMASK is now disabled on OSX - allow sigterm, there :)
+
 2013-03-26 (v0.7.0) Robin Gareus <robin@gareus.org>
 * option to set maxiumum decoder thread count
 * fix make install-man
