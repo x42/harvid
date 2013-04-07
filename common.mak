@@ -25,7 +25,7 @@ ifeq ($(ARCH),mingw)
   PKG_CONFIG_PATH=$(WINEROOT)/lib/pkgconfig/
   ARCHINCLUDES=-I$(WINEROOT)/include -DHAVE_WINDOWS
   ARCHLIBES=-lwsock32 -lws2_32 -lpthreadGC2
-  LDFLAGS+=-L$(WINEROOT)/lib/ -L${WINEROOT}/bin
+  LDFLAGS+=-L$(WINEROOT)/lib/ -L$(WINEROOT)/bin
   UNAME=mingw
   LIBEXT=dll
 else

@@ -44,4 +44,4 @@ echo "--- DONE ---"
 ls -l $NSIDIR/*exe || exit
 
 test -d site/releases/ || exit
-cp $NSIDIR/harvid_installer-*exe site/releases/
+cp -vi $NSIDIR/harvid_installer-*exe site/releases/

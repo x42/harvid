@@ -84,8 +84,8 @@ if test "$ok" != 0; then
 	exit
 fi
 
-rsync -Pa $COWBUILDER:/tmp//harvid-i386-linux-gnu-${VERSION}.tgz site/releases/ || exit
-rsync -Pa $COWBUILDER:/tmp//harvid-x86_64-linux-gnu-${VERSION}.tgz site/releases/ || exit
+rsync -Pa $COWBUILDER:/tmp/harvid-i386-linux-gnu-${VERSION}.tgz site/releases/ || exit
+rsync -Pa $COWBUILDER:/tmp/harvid-x86_64-linux-gnu-${VERSION}.tgz site/releases/ || exit
 
 echo "building osx package on $OSXMACHINE ..."
 ssh $OSXMACHINE << EOF
@@ -115,7 +115,7 @@ groff -m mandoc -Thtml doc/harvid.1 > site/harvid.1.html
 cd site || exit
 git add harvid.1.html
 git add releases/*-${VERSION}.* || exit
-git rm -f $(ls releases/* | grep -v ${VERSION} | tr '\n' ' ')
+git rm -f $(ls releases/* | grep -v "${VERSION}\." | tr '\n' ' ')
 git commit -a --amend -m "website $VERSION" || exit
 git reflog expire --expire=now --all
 git gc --prune=now

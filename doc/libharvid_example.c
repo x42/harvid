@@ -2,7 +2,8 @@
  *
  * gcc -o libharvid_example libharvid_example.c \
  *   -I../libharvid/ ../libharvid/libharvid.a \
- *   `pkg-config --libs libavcodec libavformat libswscale`
+ *   `pkg-config --cflags --libs libavcodec libavformat libswscale libavutil`
+ *
  */
 
 #include <stdio.h>
