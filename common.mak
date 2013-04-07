@@ -4,8 +4,13 @@ CFLAGS ?= -Wall -g -O2
 PREFIX ?= /usr/local
 
 bindir ?= $(PREFIX)/bin
-mandir ?= $(PREFIX)/share/man/man1
+mandir ?= $(PREFIX)/share/man
 libdir ?= $(PREFIX)/lib
+docdir ?= $(PREFIX)/share/doc
+includedir ?=  $(PREFIX)/include
+
+man1dir ?= $(mandir)/man1
+hdocdir ?= $(docdir)/harvid
 
 ECHO=$(shell which echo) -e
 

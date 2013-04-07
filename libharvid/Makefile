@@ -20,7 +20,7 @@ LIBHARVID_H = \
   timecode.h \
   vinfo.h 
 
-all: libharvid.a libharvid.$(LIBEXT)
+all: libharvid.a
 
 libharvid.a: $(LIBHARVID_OBJECTS) $(LIBHARVID_H)
 ifeq ($(UNAME),Darwin)
@@ -75,17 +75,30 @@ libharvid.so: $(LIBHARVID_OBJECTS) $(LIBHARVID_H) .libharvid.sym
 %.o: %.c $(LIBHARVID_H)
 	$(CC) -c -o $(@) $(CFLAGS) $(FLAGS) $<
 
-# yet unsed, custom target
-# TODO install dlog_null.c and ../doc/libharvid_example.c to share/doc/harvid/examples/
 install-lib: libharvid.a libharvid.$(LIBEXT)
 	install -d $(DESTDIR)$(libdir)/pkgconfig/
 	sed 's!@PREFIX@!'$(PREFIX)'!;s!@LIBDIR@!'$(libdir)'!;s!@VERSION@!'$(VERSION)'!' harvid.pc.in > harvid.pc
 	install -m 644 harvid.pc $(DESTDIR)$(libdir)/pkgconfig/
 	install -m 644 libharvid.$(LIBEXT) $(DESTDIR)$(libdir)/
 	install -m 644 libharvid.a $(DESTDIR)$(libdir)/
-	install -d $(DESTDIR)$(PREFIX)/include/harvid/
-	install -m 644 harvid.h $(LIBHARVID_H) $(DESTDIR)$(PREFIX)/include/harvid/
+	install -d $(DESTDIR)$(includedir)/harvid/
+	install -m 644 harvid.h $(LIBHARVID_H) $(DESTDIR)$(includedir)/harvid/
+	install -d $(DESTDIR)$(hdocdir)/examples
+	install -m 644 dlog_null.c $(DESTDIR)$(hdocdir)/examples/
+	gzip -9 $(DESTDIR)$(hdocdir)/examples/dlog_null.c
 
+uninstall-lib:
+	rm -f $(DESTDIR)$(libdir)/pkgconfig/harvid.pc
+	rm -f $(DESTDIR)$(libdir)/libharvid.$(LIBEXT)
+	rm -f $(DESTDIR)$(libdir)/libharvid.a
+	rm -rf $(DESTDIR)$(includedir)/harvid/
+	rm -f $(DESTDIR)$(hdocdir)/examples/dlog_null.c.gz
+	-rmdir $(DESTDIR)$(libdir)/pkgconfig
+	-rmdir $(DESTDIR)$(libdir)
+	-rmdir $(DESTDIR)$(hdocdir)/examples
+	-rmdir $(DESTDIR)$(hdocdir)
+	-rmdir $(DESTDIR)$(docdir)
+	-rmdir $(DESTDIR)$(includedir)
 
 clean:
 	rm -f *.o libharvid.a libharvid.so libharvid.dll libharvid.dylib harvid.pc .libharvid.sym .libharvid.ver .libharvid_dll.c 
@@ -102,8 +115,8 @@ install-bin:
 
 uninstall-bin:
 
-man:
+man: libharvid.a
 
 clean:
 
-.PHONY: all install uninstall install-man uninstall-man install-bin uninstall-bin
+.PHONY: all install uninstall install-man uninstall-man install-bin uninstall-bin install-lib uninstall-lib

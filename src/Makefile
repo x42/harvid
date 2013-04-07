@@ -85,4 +85,8 @@ install-man:
 
 uninstall-man:
 
-.PHONY: all install uninstall install-man uninstall-man install-bin uninstall-bin
+install-lib:
+
+uninstall-lib:
+
+.PHONY: all install uninstall install-man uninstall-man install-bin uninstall-bin install-lib uninstall-lib
