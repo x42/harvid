@@ -92,6 +92,7 @@ ssh $OSXMACHINE << EOF
 exec /bin/bash -l
 cd src/harvid || exit 1
 git pull || exit 1
+git fetch --tags || exit 1
 ./x-macosx.sh
 EOF
 
