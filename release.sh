@@ -24,7 +24,7 @@ if test -n "$NEWVERSION"; then
 	echo "commit pending changes.."
 	git commit -a
 
-	dch --newversion "${NEWVERSION}-1" --distribution unstable || exit
+	dch --newversion "${NEWVERSION}-0.1" --distribution unstable || exit
 	vi ChangeLog
 	make VERSION="v${NEWVERSION}" clean man || exit
 
