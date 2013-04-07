@@ -132,15 +132,15 @@ if test "$a" == "n" -o "$a" == "N"; then
 	exit 1
 fi
 
-echo -n "uploading to github.."
+echo "uploading to github.."
 git push --force
 
-echo -n "uploading to ardour.org"
+echo "uploading to ardour.org"
 rsync -Pa \
-	site/releases/harvid-${VERSION}.dmg \
-	site/releases/harvid-${VERSION}.pkg \
-	site/releases/harvid-i386-linux-gnu-${VERSION}.tgz \
-	site/releases/harvid-x86_64-linux-gnu-${VERSION}.tgz  \
-	site/releases/site/releases/harvid_installer-${VERSION}.exe \
-	site/releases/latest_version_numer.txt \
-		ardour.org:/persist/community.ardour.org/files/
+	releases/harvid-${VERSION}.dmg \
+	releases/harvid-${VERSION}.pkg \
+	releases/harvid-i386-linux-gnu-${VERSION}.tgz \
+	releases/harvid-x86_64-linux-gnu-${VERSION}.tgz  \
+	releases/site/releases/harvid_installer-${VERSION}.exe \
+	releases/latest_version_numer.txt \
+		ardour.org:/persist/community.ardour.org/files/video-tools/
