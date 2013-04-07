@@ -26,21 +26,19 @@
 #define _harvid_dlog_H
 
 /* some common win/posix issues */
-#ifndef HAVE_WINDOWS
+#ifndef WIN32
 #define PRIlld "lld"
 #define mymsleep(ms) usleep((ms) * 1000)
 #else
+#include <windows.h>
 #define PRIlld "I64d"
 #define mymsleep(ms) Sleep(ms)
 #endif
 
 /* syslog */
-#ifndef HAVE_WINDOWS
+#ifndef WIN32
 #include <syslog.h>
 #else
-#include <windows.h>
-#include <winsock.h>
-
 #define LOG_EMERG 1
 #define LOG_CRIT 2
 #define LOG_ERR 3
