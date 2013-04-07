@@ -30,38 +30,53 @@ else
 	$(RANLIB) libharvid.a
 endif
 
-libharvid.$(LIBEXT): $(LIBHARVID_OBJECTS) $(LIBHARVID_H)
+.libharvid.sym: $(LIBHARVID_OBJECTS) $(LIBHARVID_H)
 	$(NM) $(LIBHARVID_OBJECTS) \
 	  | sed -n -e 's/^.*[ ]\([ABCDGIRSTW][ABCDGIRSTW]*\)[ ][ ]*\([_A-Za-z][_A-Za-z0-9]*\)$$/\1 \2 \2/p' \
 	  | sed '/ __gnu_lto/d' | sed 's/.* //' | sed 's/^_//g' \
 	  | sort | uniq \
 	  | grep -E -e "^(dctrl_|vcache_|jvi_|ff_cleanup|ff_initialize|icache_).*" \
 	  > .libharvid.sym
-ifeq ($(UNAME),mingw)
+
+libharvid.dll: $(LIBHARVID_OBJECTS) $(LIBHARVID_H) .libharvid.sym dlog_null.c
 	echo "asm (\".section .drectve\");" > .libharvid_dll.c
 	sed -e "s/\(.*\)/asm (\".ascii \\\\\" -export:\1\\\\\"\");/" .libharvid.sym >> .libharvid_dll.c
-	$(CC) -o libharvid.$(LIBEXT) -shared $(CFLAGS) $(FLAGS) $(LIBHARVID_OBJECTS) \
+	$(CC) -o libharvid.$(LIBEXT) \
+	  -shared \
+	  $(LIBHARVID_OBJECTS) \
+	  $(CFLAGS) $(FLAGS) \
 	  .libharvid_dll.c dlog_null.c \
 	  $(LDFLAGS) `pkg-config --libs libavcodec libavformat libavutil libswscale` $(ARCHLIBES)
 	$(STRIP) libharvid.$(LIBEXT)
-else
-ifeq ($(UNAME),Darwin)
+
+libharvid.dylib: $(LIBHARVID_OBJECTS) $(LIBHARVID_H) .libharvid.sym
 	sed 's,^,_,' .libharvid.sym > .libharvid.expsym
-	$(CC) -dynamiclib -Wl,-undefined -Wl,dynamic_lookup -o libharvid.$(LIBEXT) $(LIBHARVID_OBJECTS) $(CFLAGS) $(FLAGS) -install_name $(libdir)/libltc.0.$(LIBEXT) -Wl,-single_module -Wl,-exported_symbols_list,.libharvid.expsym
+	$(CC) -o libharvid.$(LIBEXT) \
+	  -dynamiclib \
+	  $(LIBHARVID_OBJECTS) \
+	  $(CFLAGS) $(FLAGS) \
+	  -install_name $(libdir)/libltc.0.$(LIBEXT) \
+	  -Wl,-undefined -Wl,dynamic_lookup \
+	  -Wl,-single_module -Wl,-exported_symbols_list,.libharvid.expsym
 	dsymutil libharvid.$(LIBEXT)
-else
+
+libharvid.so: $(LIBHARVID_OBJECTS) $(LIBHARVID_H) .libharvid.sym
 	echo "{ global:" > .libharvid.ver
 	sed -e "s/\(.*\)/\1;/" .libharvid.sym >> .libharvid.ver
 	echo "local: *; };" >> .libharvid.ver
-	$(CC) -o libharvid.$(LIBEXT) -fPIC -shared $(CFLAGS) $(FLAGS) $(LIBHARVID_OBJECTS) -Wl,-soname -Wl,libharvid.so.0 -Wl,-version-script -Wl,.libharvid.ver
+	$(CC) -o libharvid.$(LIBEXT) \
+	  -fPIC -shared \
+	  $(LIBHARVID_OBJECTS) \
+	  $(CFLAGS) $(FLAGS) \
+	  -Wl,-soname -Wl,libharvid.so.0 -Wl,-version-script -Wl,.libharvid.ver
 	$(STRIP) libharvid.$(LIBEXT)
-endif
-endif
+
 
 %.o: %.c $(LIBHARVID_H)
 	$(CC) -c -o $(@) $(CFLAGS) $(FLAGS) $<
 
-
+# yet unsed, custom target
+# TODO install dlog_null.c and ../doc/libharvid_example.c to share/doc/harvid/examples/
 install-lib: libharvid.a libharvid.$(LIBEXT)
 	install -d $(DESTDIR)$(libdir)/pkgconfig/
 	sed 's!@PREFIX@!'$(PREFIX)'!;s!@LIBDIR@!'$(libdir)'!;s!@VERSION@!'$(VERSION)'!' harvid.pc.in > harvid.pc
@@ -73,7 +88,7 @@ install-lib: libharvid.a libharvid.$(LIBEXT)
 
 
 clean:
-	rm -f *.o libharvid.so libharvid.dll libharvid.dylib harvid.pc .libharvid.sym .libharvid.ver .libharvid_dll.c 
+	rm -f *.o libharvid.a libharvid.so libharvid.dll libharvid.dylib harvid.pc .libharvid.sym .libharvid.ver .libharvid_dll.c 
 
 install:
 
