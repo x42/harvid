@@ -224,9 +224,9 @@ echo "------- Building DMG"
 UC_DMG=~/Desktop/mydmg/$APPNAME-${VERSION}.dmg
 VOLNAME=$APPNAME-${VERSION}
 
-MNTPATH=`mktemp -d -t ardourimg`
-TMPDMG=`mktemp -t ardour`
-ICNSTMP=`mktemp -t ardouricon`
+MNTPATH=`mktemp -d -t harvidimg`
+TMPDMG=`mktemp -t harvid`
+ICNSTMP=`mktemp -t harvidicon`
 DMGSIZE=$[ `du -sm "$PREFIX" | cut -f 1` * 1049 / 1000 + 3 ]
 
 rm -f $UC_DMG "$TMPDMG" "${TMPDMG}.dmg" "$ICNSTMP"
