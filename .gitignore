@@ -4,9 +4,15 @@ tags
 cscope.files
 cscope.out
 
+*.dSYM
+
 /src/harvid
-/src/harvid.dSYM/
 /libharvid/libharvid.a
+/libharvid/libharvid.so
+/libharvid/libharvid.dll
+/libharvid/libharvid.dylib
+
+/libharvid/.libharvid.*
 /doc/libharvid_example
 /tmp/
 /pkg/osx/usr

@@ -1,0 +1,9 @@
+libdir=@LIBDIR@
+includedir=@PREFIX@/include
+
+Name: Harvid
+Version: @VERSION@
+Description: video decoder control and frame cache
+Requires: libavcodec libavformat libswscale libavutil
+Libs: -L${libdir} -lharvid
+Cflags: -I${includedir}/harvid
