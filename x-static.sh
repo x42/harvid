@@ -40,6 +40,16 @@ LIBDEPS=" \
  libx264.a \
  libz.a \
  "
+
+if test "`hostname`" == "soyuz"; then
+	LIBDEPS="$LIBDEPS \
+ libX11.a \
+ libxcb.a \
+ libXau.a \
+ libXdmcp.a \
+ "
+fi
+
 # resolve paths to static libs on the system
 SLIBS=""
 for SLIB in $LIBDEPS; do
@@ -52,12 +62,21 @@ for SLIB in $LIBDEPS; do
 	SLIBS="$SLIBS $SL"
 done
 
+LIBHARVID_SRC=" \
+ libharvid/decoder_ctrl.c \
+ libharvid/ffdecoder.c \
+ libharvid/frame_cache.c \
+ libharvid/image_cache.c \
+ libharvid/timecode.c \
+ libharvid/vinfo.c \
+ "
+
 # compile harvid
 make -C src clean logo.o seek.o
 mkdir -p tmp
 gcc -DNDEBUG -DICSARCH=\"Linux\" -DICSVERSION=\"${VERSION}\" \
   -Wall -O2 \
-  -o tmp/$OUTFN -Ilibharvid src/*.c libharvid/*.c src/logo.o src/seek.o \
+  -o tmp/$OUTFN -Ilibharvid src/*.c ${LIBHARVID_SRC} src/logo.o src/seek.o \
 	`pkg-config --cflags libavcodec libavformat libavutil libpng libswscale` \
 	${CFLAGS} \
 	${LIBF}/libavformat.a \
