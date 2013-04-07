@@ -104,6 +104,8 @@ fi
 rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.pkg site/releases/ || exit
 rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.dmg site/releases/ || exit
 
+echo -n "${VERSION}" > site/releases/latest_version_numer.txt
+
 echo "preparing website"
 
 # git clone --single-branch -b gh-pages site
@@ -113,13 +115,14 @@ groff -m mandoc -Thtml doc/harvid.1 > site/harvid.1.html
 
 
 cd site || exit
-git add harvid.1.html
+git add harvid.1.html releases/latest_version_numer.txt
 git add releases/*-${VERSION}.* || exit
 git rm -f $(ls releases/* | grep -v "${VERSION}\." | tr '\n' ' ')
 git commit -a --amend -m "website $VERSION" || exit
 git reflog expire --expire=now --all
 git gc --prune=now
 git gc --aggressive --prune=now
+
 
 echo -n "git upload site and binaries? [Y/n] "
 read -n1 a
@@ -128,4 +131,15 @@ if test "$a" == "n" -o "$a" == "N"; then
 	exit 1
 fi
 
+echo -n "uploading to github.."
 git push --force
+
+echo -n "uploading to ardour.org"
+rsync -Pa \
+	site/releases/harvid-${VERSION}.dmg \
+	site/releases/harvid-${VERSION}.pkg \
+	site/releases/harvid-i386-linux-gnu-${VERSION}.tgz \
+	site/releases/harvid-x86_64-linux-gnu-${VERSION}.tgz  \
+	site/releases/site/releases/harvid_installer-${VERSION}.exe \
+	site/releases/latest_version_numer.txt \
+		ardour.org:/persist/community.ardour.org/files/
