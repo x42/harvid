@@ -201,8 +201,8 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
 static double ff_get_aspectratio(void *ptr) {
   ffst *ff = (ffst*)ptr;
   double aspect_ratio;
-  if (ff->pCodecCtx->sample_aspect_ratio.num == 0)
-    aspect_ratio = 1.77;
+  if ( ff->pCodecCtx->sample_aspect_ratio.num == 0 || ff->pCodecCtx->sample_aspect_ratio.den == 0)
+    aspect_ratio = 0;
   else
     aspect_ratio = av_q2d(ff->pCodecCtx->sample_aspect_ratio)
                    * (double)ff->pCodecCtx->width / (double)ff->pCodecCtx->height;
