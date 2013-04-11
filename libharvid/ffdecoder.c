@@ -746,6 +746,7 @@ void ff_get_info(void *ptr, VInfo *i) {
   i->movie_aspect = ff_get_aspectratio(ptr);
   i->out_width = ff->out_width;
   i->out_height = ff->out_height;
+  i->file_frame_offset = ff->file_frame_offset;
   if (ff->out_height > 0 && ff->out_width > 0)
     ff_getbuffersize(ptr, &i->buffersize);
   else

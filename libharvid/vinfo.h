@@ -39,6 +39,7 @@ typedef struct {
   TimecodeRate framerate; ///< framerate num/den&flags
   int64_t frames;  ///< duration of file in frames
   size_t buffersize;      ///< size in bytes used for an image of out_width x out_height at render_rmt (VInfo)
+  double file_frame_offset;
 } VInfo;
 
 /** initialise a VInfo struct

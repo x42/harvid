@@ -26,6 +26,7 @@ void jvi_init (VInfo *ji) {
   ji->framerate.num = 25;
   ji->framerate.den = 1;
   ji->out_width = ji->out_height = -1;
+  ji->file_frame_offset = 0.0;
 }
 
 void jvi_free (VInfo *i) {
