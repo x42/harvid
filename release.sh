@@ -141,6 +141,6 @@ rsync -Pa \
 	releases/harvid-${VERSION}.pkg \
 	releases/harvid-i386-linux-gnu-${VERSION}.tgz \
 	releases/harvid-x86_64-linux-gnu-${VERSION}.tgz  \
-	releases/site/releases/harvid_installer-${VERSION}.exe \
+	releases/harvid_installer-${VERSION}.exe \
 	releases/latest_version_numer.txt \
 		ardour.org:/persist/community.ardour.org/files/video-tools/
