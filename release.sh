@@ -105,7 +105,7 @@ fi
 rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.pkg site/releases/ || exit
 rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.dmg site/releases/ || exit
 
-echo -n "${VERSION}" > site/releases/latest_version_numer.txt
+echo -n "${VERSION}" > site/releases/harvid_version.txt
 
 echo "preparing website"
 
@@ -116,7 +116,7 @@ groff -m mandoc -Thtml doc/harvid.1 > site/harvid.1.html
 
 
 cd site || exit
-git add harvid.1.html releases/latest_version_numer.txt
+git add harvid.1.html releases/harvid_version.txt
 git add releases/*-${VERSION}.* || exit
 rm -f $(ls releases/* | grep -v "${VERSION}\." | grep harvid | tr '\n' ' ')
 git commit -a --amend -m "website $VERSION" || exit
@@ -142,5 +142,5 @@ rsync -Pa \
 	releases/harvid-i386-linux-gnu-${VERSION}.tgz \
 	releases/harvid-x86_64-linux-gnu-${VERSION}.tgz  \
 	releases/harvid_installer-${VERSION}.exe \
-	releases/latest_version_numer.txt \
+	releases/harvid_version.txt \
 		ardour.org:/persist/community.ardour.org/files/video-tools/
