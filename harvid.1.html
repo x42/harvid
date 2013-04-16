@@ -1,5 +1,5 @@
-<!-- Creator     : groff version 1.21 -->
-<!-- CreationDate: Wed Mar 27 05:18:11 2013 -->
+<!-- Creator     : groff version 1.22.4 -->
+<!-- CreationDate: Sat Dec 31 20:35:19 2022 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -36,8 +36,8 @@
 </h2>
 
 
-<p style="margin-left:11%; margin-top: 1em">harvid &minus;
-video server</p>
+<p style="margin-left:11%; margin-top: 1em">harvid - video
+server</p>
 
 <h2>SYNOPSIS
 <a name="SYNOPSIS"></a>
@@ -52,167 +52,156 @@ video server</p>
 </h2>
 
 
-<p style="margin-left:11%; margin-top: 1em">harvid &minus;
-http ardour video server</p>
+<p style="margin-left:11%; margin-top: 1em">harvid - http
+ardour video server</p>
 
 <h2>OPTIONS
 <a name="OPTIONS"></a>
 </h2>
 
 
-
-<p style="margin-left:11%; margin-top: 1em"><b>&minus;A</b>
-&lt;cmdlist&gt;, <b>&minus;&minus;admin</b>
-&lt;cmdlist&gt;</p>
+<p style="margin-left:11%; margin-top: 1em"><b>-A</b>
+&lt;cmdlist&gt;, <b>--admin</b> &lt;cmdlist&gt;</p>
 
 <p style="margin-left:22%;">space separated list of allowed
-admin commands. An exclamation&minus;mark before a command
+admin commands. An exclamation-mark before a command
 disables it. default: &rsquo;flush_cache&rsquo;; available:
 flush_cache, purge_cache, shutdown</p>
 
-<p style="margin-left:11%;"><b>&minus;c</b> &lt;path&gt;,
-<b>&minus;&minus;chroot</b> &lt;path&gt;</p>
+<p style="margin-left:11%;"><b>-c</b> &lt;path&gt;,
+<b>--chroot</b> &lt;path&gt;</p>
 
-<p style="margin-left:22%;">change system root &minus;
-jails server to this path</p>
+<p style="margin-left:22%;">change system root - jails
+server to this path</p>
 
-<p style="margin-left:11%;"><b>&minus;C</b>
-&lt;frames&gt;</p>
+<p style="margin-left:11%;"><b>-C</b> &lt;frames&gt;</p>
 
-<p style="margin-left:22%;">set initial frame&minus;cache
-size (default: 128)</p>
+<p style="margin-left:22%;">set initial frame-cache size
+(default: 128)</p>
 
-<p style="margin-left:11%;"><b>&minus;D</b>,
-<b>&minus;&minus;daemonize</b></p>
+<p style="margin-left:11%;"><b>-D</b>,
+<b>--daemonize</b></p>
 
 <p style="margin-left:22%;">fork into background and detach
 from TTY</p>
 
-<p style="margin-left:11%;"><b>&minus;g</b> &lt;name&gt;,
-<b>&minus;&minus;groupname</b> &lt;name&gt;</p>
+<p style="margin-left:11%;"><b>-g</b> &lt;name&gt;,
+<b>--groupname</b> &lt;name&gt;</p>
 
-<p style="margin-left:22%;">assume this
-user&minus;group</p>
+<p style="margin-left:22%;">assume this user-group</p>
 
-<p style="margin-left:11%;"><b>&minus;h</b>,
-<b>&minus;&minus;help</b></p>
+<p style="margin-left:11%;"><b>-h</b>, <b>--help</b></p>
 
 <p style="margin-left:22%;">display this help and exit</p>
 
-<p style="margin-left:11%;"><b>&minus;F</b> &lt;feat&gt;,
-<b>&minus;&minus;features</b> &lt;feat&gt;</p>
+<p style="margin-left:11%;"><b>-F</b> &lt;feat&gt;,
+<b>--features</b> &lt;feat&gt;</p>
 
 <p style="margin-left:22%;">space separated list of
-optional features. An exclamation&minus;mark before a
-features disables it. default: &rsquo;index&rsquo;;
-available: index, seek, flatindex, keepraw</p>
+optional features. An exclamation-mark before a features
+disables it. default: &rsquo;index&rsquo;; available: index,
+seek, flatindex, keepraw</p>
 
-<p style="margin-left:11%;"><b>&minus;l</b> &lt;path&gt;,
-<b>&minus;&minus;logfile</b> &lt;path&gt;</p>
+<p style="margin-left:11%;"><b>-l</b> &lt;path&gt;,
+<b>--logfile</b> &lt;path&gt;</p>
 
 <p style="margin-left:22%;">specify file for log
 messages</p>
 
-<p style="margin-left:11%;"><b>&minus;M</b>,
-<b>&minus;&minus;memlock</b></p>
+<p style="margin-left:11%;"><b>-M</b>, <b>--memlock</b></p>
 
 <p style="margin-left:22%;">attempt to lock memory (prevent
 cache paging)</p>
 
-<p style="margin-left:11%;"><b>&minus;p</b> &lt;num&gt;,
-<b>&minus;&minus;port</b> &lt;num&gt;</p>
+<p style="margin-left:11%;"><b>-p</b> &lt;num&gt;,
+<b>--port</b> &lt;num&gt;</p>
 
 <p style="margin-left:22%;">TCP port to listen on (default
 1554)</p>
 
-<p style="margin-left:11%;"><b>&minus;P</b>
+<p style="margin-left:11%;"><b>-P</b>
 &lt;listenaddr&gt;</p>
 
 <p style="margin-left:22%;">IP address to listen on
 (default 0.0.0.0)</p>
 
-<p style="margin-left:11%;"><b>&minus;q</b>,
-<b>&minus;&minus;quiet</b>, <b>&minus;&minus;silent</b></p>
+<p style="margin-left:11%;"><b>-q</b>, <b>--quiet</b>,
+<b>--silent</b></p>
 
 <p style="margin-left:22%;">inhibit usual output (may be
 used thrice)</p>
 
-<p style="margin-left:11%;"><b>&minus;s</b>,
-<b>&minus;&minus;syslog</b></p>
+<p style="margin-left:11%;"><b>-s</b>, <b>--syslog</b></p>
 
 <p style="margin-left:22%;">send messages to syslog</p>
 
-<p style="margin-left:11%;"><b>&minus;t</b>
-&lt;thread&minus;limit&gt;</p>
+<p style="margin-left:11%;"><b>-t</b>
+&lt;thread-limit&gt;</p>
 
-<p style="margin-left:22%;">set maximum
-decoder&minus;threads (default: 8)</p>
+<p style="margin-left:22%;">set maximum decoder-threads
+(default: 8)</p>
 
-<p style="margin-left:11%;"><b>&minus;T</b> &lt;sec&gt;,
-<b>&minus;&minus;timeout</b> &lt;secs&gt;</p>
+<p style="margin-left:11%;"><b>-T</b> &lt;sec&gt;,
+<b>--timeout</b> &lt;secs&gt;</p>
 
 <p style="margin-left:22%;">set a timeout after which the
 server will terminate if no new request arrives</p>
 
-<p style="margin-left:11%;"><b>&minus;u</b> &lt;name&gt;,
-<b>&minus;&minus;username</b> &lt;name&gt;</p>
+<p style="margin-left:11%;"><b>-u</b> &lt;name&gt;,
+<b>--username</b> &lt;name&gt;</p>
 
 <p style="margin-left:22%;">server will act as this
 user</p>
 
-<p style="margin-left:11%;"><b>&minus;v</b>,
-<b>&minus;&minus;verbose</b></p>
+<p style="margin-left:11%;"><b>-v</b>, <b>--verbose</b></p>
 
 <p style="margin-left:22%;">print more information (may be
 used twice)</p>
 
-<p style="margin-left:11%;"><b>&minus;V</b>,
-<b>&minus;&minus;version</b></p>
+<p style="margin-left:11%;"><b>-V</b>, <b>--version</b></p>
 
 <p style="margin-left:22%;">print version information and
 exit</p>
 
 <p style="margin-left:11%; margin-top: 1em">The default
-document&minus;root (if unspecified) is the system root: /
-or C:\.</p>
+document-root (if unspecified) is the system root: / or
+C:\.</p>
 
 <p style="margin-left:11%; margin-top: 1em">If both syslog
 and logfile are given that last specified option will be
 used.</p>
 
 
-<p style="margin-left:11%; margin-top: 1em"><b>&minus;&minus;verbose</b>
-and <b>&minus;&minus;quiet</b> are additive. The default is
-to print warnings and above only. Available log&minus;levels
-are &rsquo;mute&rsquo;, &rsquo;critical,
-&rsquo;error&rsquo;, &rsquo;warning&rsquo; and
-&rsquo;info&rsquo;.</p>
+<p style="margin-left:11%; margin-top: 1em"><b>--verbose</b>
+and <b>--quiet</b> are additive. The default is to print
+warnings and above only. Available log-levels are
+&rsquo;mute&rsquo;, &rsquo;critical, &rsquo;error&rsquo;,
+&rsquo;warning&rsquo; and &rsquo;info&rsquo;.</p>
 
 <p style="margin-left:11%; margin-top: 1em">The
-<b>&minus;&minus;features</b> option allows to enable and
-disable http&minus;handlers /seek and /index as well as
-tweak related behaviour. The &rsquo;flatindex&rsquo; option
-concerns /index&amp;flatindex=1 which recursively indexes
-all video file. It is disabled by defaults since a recursive
-search of the default docroot / can takes a very long time.
-When requesting png or jpeg images harvid decodes a raw RGB
-frame and then encodes it again. If &rsquo;keepraw&rsquo;
-feature is enabled, both the raw RGB and encoded image are
-kept in cache. The default is to invaldate the RGB frame
-after encoding the image.</p>
+<b>--features</b> option allows one to enable or disable
+<i>/seek</i> and <i>/index</i> http-handlers and change
+their respone: The &rsquo;flatindex&rsquo; option concerns
+/index&amp;flatindex=1 which recursively indexes all video
+file. It is disabled by defaults since a recursive search of
+the default docroot / can takes a very long time. When
+requesting png or jpeg images harvid decodes a raw RGB frame
+and then encodes it again. If &rsquo;keepraw&rsquo; feature
+is enabled, both the raw RGB and encoded image are kept in
+cache. The default is to invaldate the RGB frame after
+encoding the image.</p>
 
 <h2>EXAMPLES
 <a name="EXAMPLES"></a>
 </h2>
 
 
-<p style="margin-left:11%; margin-top: 1em">harvid
-<b>&minus;A</b> &rsquo;!flush_cache purge_cache
-shutdown&rsquo; <b>&minus;C</b> 256 /tmp/</p>
+<p style="margin-left:11%; margin-top: 1em">harvid -A
+&rsquo;!flush_cache purge_cache shutdown&rsquo; -C 256
+/tmp/</p>
 
-<p style="margin-left:11%; margin-top: 1em">sudo harvid
-<b>&minus;c</b> /tmp/ <b>&minus;u</b> nobody <b>&minus;g</b>
-nogroup /</p>
+<p style="margin-left:11%; margin-top: 1em">sudo harvid -c
+/tmp/ -u nobody -g nogroup /</p>
 
 <h2>REPORTING BUGS
 <a name="REPORTING BUGS"></a>
@@ -225,7 +214,7 @@ https://github.com/x42/harvid/issues <br>
 Website http://x42.github.com/harvid/</p>
 
 <p style="margin-left:11%; margin-top: 1em">Compiled with
-Lavf54.29.104 Lavc54.59.100 Lavu51.73.101</p>
+Lavf58.45.100 Lavc58.91.100 Lavu56.51.100</p>
 
 <h2>COPYRIGHT
 <a name="COPYRIGHT"></a>
@@ -233,7 +222,7 @@ Lavf54.29.104 Lavc54.59.100 Lavu51.73.101</p>
 
 
 <p style="margin-left:11%; margin-top: 1em">Copyright
-&copy; GPL 2002&minus;2013 Robin Gareus
+&copy; GPL 2002-2013, 2022 Robin Gareus
 &lt;robin@gareus.org&gt;</p>
 <hr>
 </body>
