@@ -1,3 +1,7 @@
+2013-04-16 (0.7.2) Robin Gareus <robin@gareus.org>
+* fix aspect ratio calculation
+* update website & upload script
+
 2013-04-07 (0.7.1) Robin Gareus <robin@gareus.org>
 * basically a NOOP -- no new features, no changes in behaviour.
 * just shuffle around code to break out libharvid
