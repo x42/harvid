@@ -1,0 +1,59 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+	<title>harvid</title>
+	<link rel="shortcut icon" href="favicon.ico" />
+</head>
+<body style="width:900px; margin:110px auto 0 auto;">
+	<div style="position:fixed; height:100px; width:100%; top:0; left:0; background:#000; text-align:center;"><img alt="Harvid" src="img/harvid.jpg"/></div>
+	<div style="width:800px; margin:0 auto;">
+
+		<h1>harvid - HTTP Ardour Video Daemon</h1>
+		<p>
+			harvid decodes still images from movie files and serves them via HTTP.
+		</p>
+
+		<h2>About</h2>
+		<p>
+		harvid's intended use-case is to efficiently provide frame-accurate data and act as second level cache for rendering the video-timeline in <a href="http://ardour.org">Ardour</a>, but it is not limited to that: it has applications for any task that requires a high-performance frame-accurate online image extraction processor.
+		</p>
+		<p>
+		For more information please see the <a href="https://github.com/x42/harvid#readme">readme file</a> or read the <a href="harvid.1.html">manual page</a> which is included with the software.
+		</p>
+
+		<h2>Download</h2>
+		<p>The latest version is v0.7.0, released on Wed, 27 Mar 2013 05:18:10 +0100.</p>
+
+		<ul>
+			<li>Source Code:
+			<a href="https://github.com/x42/harvid/archive/v0.7.0.tar.gz">tar.gz</a>,
+			<a href="https://github.com/x42/harvid/archive/v0.7.0.zip">zip</a>
+			</li>
+			<li><a href="releases/harvid_installer-v0.7.0.exe">Windows Installer</a> (32bit x86)</li>
+			<li><a href="releases/harvid-i386-linux-gnu-v0.7.0.tgz">Linux</a> statically linked binary (32bit x86)</li>
+			<li><a href="releases/harvid-x86_64-linux-gnu-v0.7.0.tgz">Linux</a> statically linked binary (63bit x86_64/amd64)</li>
+			<li><a href="releases/harvid-v0.7.0.pkg">MacOS Package</a> universal (PPC, i386, x86_64) for OSX &ge; 10.5; this package also includes ffmpeg and ffprobe binaries and installs to /usr/local/ (Note: it does not override nor interfere with existing ffmpeg installations).</li>
+			<li><a href="releases/harvid-v0.7.0.dmg">MacOS Application Bundle</a> universal (PPC, i386, x86_64) for OSX &ge; 10.5; self-contained .app bundle.</li>
+		</ul>
+
+		<p>See the <a href="https://github.com/x42/harvid">github repository page</a> for source-code checkout options.</p>
+
+		<h2>Usage</h2>
+		<p>
+		When used with Ardour, Ardour will automatically start the server when you open a video.
+		You can also launch harvid manually. In either case it will by default listen for requests
+		on http://localhost:1554/ and you can interact with it using any web-browser.
+		</p>
+
+		<h2>Issue Tracker</h2>
+		<p>
+		Please report bugs using the <a href="https://github.com/x42/harvid/issues">github issue tracker</a>.
+		</p>
+
+		<hr/>
+		<div style="text-align:center; color:#888;">&copy; 2002-2013 GPLv2 Robin Gareus &lt;robin@gareus.org&gt;</div>
+
+	</div>
+</body>
+</html>
