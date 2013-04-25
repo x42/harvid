@@ -62,30 +62,31 @@ avcodec_get_context_defaults3(AVCodecContext *s, AVCodec *codec)
 	avcodec_get_context_defaults(s);
 	return 0;
 }
+#endif
 
-#endif /* < 53.5.0 */
-
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(53, 5, 6)
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(52, 123, 0)
 static inline int
 avcodec_open2(AVCodecContext *avctx, AVCodec *codec, void **options __attribute__((unused)))
 {
 	return avcodec_open(avctx, codec);
 }
-#endif /* <= 53.5.6 */
+#endif
 
-#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(53, 5, 0)
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(52, 111, 0)
 static inline int
 avformat_find_stream_info(AVFormatContext *ic, void **options)
 {
 	return av_find_stream_info(ic);
 }
+#endif
 
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(53, 5, 0)
 static inline void
 avformat_close_input(AVFormatContext **s)
 {
 	av_close_input_file(*s);
 }
 
-#endif /* < 53.5.0 */
+#endif
 
 #endif /* FFCOMPAT_H */
