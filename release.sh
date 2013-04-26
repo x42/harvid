@@ -118,7 +118,7 @@ groff -m mandoc -Thtml doc/harvid.1 > site/harvid.1.html
 cd site || exit
 git add harvid.1.html releases/harvid_version.txt
 git add releases/*-${VERSION}.* || exit
-rm -f $(ls releases/* | grep -v "${VERSION}\." | grep harvid | tr '\n' ' ')
+rm -f $(ls releases/* | grep -v "${VERSION}\." | grep -v harvid_version.txt | tr '\n' ' ')
 git commit -a --amend -m "website $VERSION" || exit
 git reflog expire --expire=now --all
 git gc --prune=now
