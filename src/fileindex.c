@@ -218,14 +218,14 @@ static void parse_direntry (const char *root, const char *burl, const char *path
                 || !strcmp(&name[l4], ".flv")
                 || !strcmp(&name[l4], ".m4v")
         )) ||
-      (l5 > 0 && ( !strcmp(&name[l4], ".h264")
-                || !strcmp(&name[l4], ".webm")
+      (l5 > 0 && ( !strcmp(&name[l5], ".h264")
+                || !strcmp(&name[l5], ".webm")
         )) ||
-      (l6 > 0 && ( !strcmp(&name[l4], ".dirac")
+      (l6 > 0 && ( !strcmp(&name[l6], ".dirac")
         )) ||
-      (l9 > 0 && ( !strcmp(&name[l4], ".matroska")
+      (l9 > 0 && ( !strcmp(&name[l9], ".matroska")
         )) ||
-      (l3 > 0 && ( !strcmp(&name[l4], ".dv")
+      (l3 > 0 && ( !strcmp(&name[l3], ".dv")
         ))
      ) {
     char *url = strdup(burl);
