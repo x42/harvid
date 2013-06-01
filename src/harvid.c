@@ -504,7 +504,7 @@ static char *file_info_csv (CONN *c, ics_request_args *a, VInfo *ji) {
   off+=snprintf(im+off, NFOSIZ-off, "1"); // FORMAT VERSION
   off+=snprintf(im+off, NFOSIZ-off, ",%i", ji->movie_width);
   off+=snprintf(im+off, NFOSIZ-off, ",%i", ji->movie_height);
-  off+=snprintf(im+off, NFOSIZ-off, ",%f\n", ji->movie_aspect);
+  off+=snprintf(im+off, NFOSIZ-off, ",%f", ji->movie_aspect);
   off+=snprintf(im+off, NFOSIZ-off, ",%.3f", timecode_rate_to_double(&ji->framerate));
   off+=snprintf(im+off, NFOSIZ-off, ",%"PRId64, ji->frames);
   off+=snprintf(im+off, NFOSIZ-off, "\n");
