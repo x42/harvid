@@ -32,8 +32,8 @@ $SUDO apt-get -y install git build-essential yasm \
 	libpng12-dev libjpeg8-dev
 
 cd $SRC
-git clone -b release/1.2 --depth 0 git://source.ffmpeg.org/ffmpeg
-git clone -b master --depth 0 git://github.com/x42/harvid.git
+git clone -b release/1.2 --depth 1 git://source.ffmpeg.org/ffmpeg
+git clone -b master git://github.com/x42/harvid.git
 
 cd $SRC/harvid
 VERSION=$(git describe --tags HEAD)
