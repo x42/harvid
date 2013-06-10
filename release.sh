@@ -104,6 +104,7 @@ fi
 
 rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.pkg site/releases/ || exit
 rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.dmg site/releases/ || exit
+rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.tgz tmp/ || exit
 
 echo -n "${VERSION}" > site/releases/harvid_version.txt
 
@@ -137,6 +138,7 @@ git push --force
 
 echo "uploading to ardour.org"
 rsync -Pa \
+	tmp/harvid-${VERSION}.tgz \
 	releases/harvid-${VERSION}.dmg \
 	releases/harvid-${VERSION}.pkg \
 	releases/harvid-i386-linux-gnu-${VERSION}.tgz \

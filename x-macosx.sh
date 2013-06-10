@@ -295,8 +295,16 @@ cp pkg/osx/Resources/harvid.icns ${ICNSTMP}.icns
 rm -f ${ICNSTMP}.icns ${ICNSTMP}.rsrc
 
 echo
-echo "packaging suceeded."
+echo "DMG packaging suceeded."
 ls -l "$UC_DMG"
+
+echo
+echo "rolling .tgz"
+
+cd $PREFIX/${APPDIR}/Contents/
+tar czf ~/Desktop/mydmg/havid-${VERSION}.tgz \
+	--exclude  MacOS/harvid_param \
+	MacOS lib/harvid
 
 echo "Done."
 
