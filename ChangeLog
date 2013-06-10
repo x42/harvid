@@ -1,3 +1,8 @@
+2013-06-10 (0.7.3) Robin Gareus <robin@gareus.org>
+* update ffmpeg compatibility wrapper
+* fix CSV file info (no newline)
+* fix fileindex' file-ext filter
+
 2013-04-16 (0.7.2) Robin Gareus <robin@gareus.org>
 * fix aspect ratio calculation
 * update website & upload script
