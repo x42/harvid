@@ -302,7 +302,7 @@ echo
 echo "rolling .tgz"
 
 cd $PREFIX/${APPDIR}/Contents/
-tar czf ~/Desktop/mydmg/havid-${VERSION}.tgz \
+tar czf ~/Desktop/mydmg/harvid-osx-${VERSION}.tgz \
 	--exclude  MacOS/harvid_param \
 	MacOS lib/harvid
 
