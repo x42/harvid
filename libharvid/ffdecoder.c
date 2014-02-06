@@ -311,9 +311,9 @@ static void ff_get_framerate(void *ptr, TimecodeRate *fr) {
   }
   av_stream = ff->pFormatCtx->streams[ff->videoStream];
 
-  if(av_stream->r_frame_rate.den && av_stream->r_frame_rate.num) {
-    fr->num = av_stream->r_frame_rate.num;
-    fr->den = av_stream->r_frame_rate.den;
+  if(av_stream->avg_frame_rate.den && av_stream->avg_frame_rate.num) {
+    fr->num = av_stream->avg_frame_rate.num;
+    fr->den = av_stream->avg_frame_rate.den;
  // if ((ff->framerate < 4 || ff->framerate > 100) && (av_stream->time_base.num && av_stream->time_base.den)) {
  //   fr->num = av_stream->time_base.den
  //   fr->den = av_stream->time_base.num;
@@ -333,8 +333,8 @@ static void ff_set_framerate(ffst *ff) {
   AVStream *av_stream;
   av_stream = ff->pFormatCtx->streams[ff->videoStream];
 
-  if(av_stream->r_frame_rate.den && av_stream->r_frame_rate.num) {
-    ff->framerate = av_q2d(av_stream->r_frame_rate);
+  if(av_stream->avg_frame_rate.den && av_stream->avg_frame_rate.num) {
+    ff->framerate = av_q2d(av_stream->avg_frame_rate);
     if ((ff->framerate < 4 || ff->framerate > 100) && (av_stream->time_base.num && av_stream->time_base.den))
       ff->framerate = 1.0/av_q2d(av_stream->time_base);
   }
@@ -433,7 +433,7 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   if (avs->nb_frames != 0) {
     ff->frames = avs->nb_frames;
   } else if (avs->duration != avs->duration && avs->duration != 0) // ???
-    ff->frames = avs->duration * av_q2d(avs->r_frame_rate) * av_q2d(avs->time_base);
+    ff->frames = avs->duration * av_q2d(avs->avg_frame_rate) * av_q2d(avs->time_base);
   else {
     ff->frames = ff->pFormatCtx->duration * ff->framerate / AV_TIME_BASE;
   }
@@ -565,7 +565,7 @@ static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t timestamp) {
 
 #if LIBAVFORMAT_BUILD > 4629 // verify this version
   timestamp = av_rescale_q(timestamp, c1_Q, v_stream->time_base);
-  timestamp = av_rescale_q(timestamp, c1_Q, v_stream->r_frame_rate); //< timestamp/=framerate;
+  timestamp = av_rescale_q(timestamp, c1_Q, v_stream->avg_frame_rate); //< timestamp/=framerate;
 #endif
 
 #if LIBAVFORMAT_BUILD < 4617
