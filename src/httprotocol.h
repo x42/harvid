@@ -41,7 +41,7 @@
 #define RFC1123FMT "%a, %d %b %Y %H:%M:%S GMT" ///< time format used in HTTP header
 
 #ifdef HAVE_WINDOWS
-#define SL_SEP(string) (strlen(string)>0?(string[strlen(string)-1]=='/')?"":"\\":"")
+#define SL_SEP(string) (strlen(string)>0?(string[strlen(string)-1]=='/' || string[strlen(string)-1]=='\\')?"":"\\":"")
 #else
 #define SL_SEP(string) (strlen(string)>0?(string[strlen(string)-1]=='/')?"":"/":"")
 #endif

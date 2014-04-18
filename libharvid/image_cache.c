@@ -265,7 +265,7 @@ void icache_info_html(void *p, char **m, size_t *o, size_t *s, int tbl) {
     char *tmp = flags2txt(cptr->flags);
 #ifdef WIN32
     rprintf("<tr><td>%d.</td><td>%d</td><td>%s</td><td>%lu bytes</td><td>%dx%d</td>",
-        i, cptr->id, tmp, cptr->s, cptr->w, cptr->h);
+        i, cptr->id, tmp, (long unsigned) cptr->s, cptr->w, cptr->h);
 #else
     rprintf("<tr><td>%d.</td><td>%d</td><td>%s</td><td>%zu bytes</td><td>%dx%d</td>",
         i, cptr->id, tmp, cptr->s, cptr->w, cptr->h);
@@ -277,7 +277,8 @@ void icache_info_html(void *p, char **m, size_t *o, size_t *s, int tbl) {
       rprintf("<td>%s</td>", fmt_to_text(cptr->fmt));
     }
 
-    rprintf("<td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n", cptr->frame, (long long) cptr->lru);
+    rprintf("<td>%"PRIlld"</td><td>%"PRIlld"</td></tr>\n",
+        (long long) cptr->frame, (long long) cptr->lru);
 
     free(tmp);
     total_bytes += cptr->s;

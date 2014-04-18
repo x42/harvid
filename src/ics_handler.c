@@ -356,6 +356,7 @@ void ics_http_handler(
       dlog(DLOG_WARNING, "CON: permission denied for dir: '%s'\n", abspath);
       httperror(c->fd, 403, NULL, NULL);
     } else {
+      debugmsg(DEBUG_ICS, "indexing dir: '%s'\n", abspath);
       ics_request_args a;
       char base_url[1024];
       struct queryparserstate qps = {&a, NULL, 0};

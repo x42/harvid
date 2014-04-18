@@ -899,10 +899,11 @@ void dctrl_info_html (void *p, char **m, size_t *o, size_t *s, int tbl) {
     tmp = flags2txt(cptr->flags);
     fn = (cptr->flags&VOF_VALID) ? get_fn((JVD*)p, cptr->id) : NULL;
     rprintf(
-        "<tr><td>%d.</td><td>%i</td><td>%s</td><td class=\"left\">%s</td><td>i:%d,d:%d</td><td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
+        "<tr><td>%d.</td><td>%i</td><td>%s</td><td class=\"left\">%s</td><td>i:%d,d:%d</td><td>%s</td><td>%"PRIlld"</td><td>%"PRIlld"</td></tr>\n",
         i, cptr->id, tmp, fn?fn:"-", /* (cptr->decoder?LIBAVCODEC_IDENT:"null"), */
         cptr->hitcount_info, cptr->hitcount_decoder,
-        ff_fmt_to_text(cptr->fmt), cptr->frame, (long long)cptr->lru);
+        ff_fmt_to_text(cptr->fmt),
+        (long long) cptr->frame, (long long)cptr->lru);
     free(tmp);
     cptr = cptr->next;
     i++;

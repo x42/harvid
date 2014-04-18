@@ -394,9 +394,10 @@ void vcache_info_html(void *p, char **m, size_t *o, size_t *s, int tbl) {
   HASH_ITER(hh, ((xjcd*)p)->vcache, cptr, tmp) {
     char *tmp = flags2txt(cptr->flags);
     rprintf(
-        "<tr><td>%d.</td><td>%d</td><td>%s</td><td>%d bytes</td><td>%dx%d</td><td>%s</td><td>%"PRId64"</td><td>%"PRIlld"</td></tr>\n",
+        "<tr><td>%d.</td><td>%d</td><td>%s</td><td>%d bytes</td><td>%dx%d</td><td>%s</td><td>%"PRIlld"</td><td>%"PRIlld"</td></tr>\n",
         i, cptr->id, tmp, cptr->alloc_size, cptr->w, cptr->h,
-        (cptr->b ? ff_fmt_to_text(cptr->fmt) : "null"), cptr->frame, (long long) cptr->lru);
+        (cptr->b ? ff_fmt_to_text(cptr->fmt) : "null"),
+        (long long) cptr->frame, (long long) cptr->lru);
     free(tmp);
     total_bytes += cptr->alloc_size;
     i++;

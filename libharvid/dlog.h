@@ -26,13 +26,18 @@
 #define _harvid_dlog_H
 
 /* some common win/posix issues */
-#ifndef WIN32
 #define PRIlld "lld"
+
+#ifndef WIN32
 #define mymsleep(ms) usleep((ms) * 1000)
+#define SNPRINTF snprintf
+
 #else
+
 #include <windows.h>
-#define PRIlld "I64d"
 #define mymsleep(ms) Sleep(ms)
+int portable_snprintf(char *str, size_t str_m, const char *fmt, /*args*/ ...);
+#define SNPRINTF portable_snprintf
 #endif
 
 /* syslog */
@@ -82,7 +87,7 @@ void dlog(int level, const char *format, ...);
 
 #define rpprintf(p, off, siz, ...) \
 { \
-  while ((*siz) - (*off) <= snprintf((*p) + (*off), 0, __VA_ARGS__)) \
+  while ((*siz) - (*off) <= SNPRINTF((*p) + (*off), 0, __VA_ARGS__)) \
   { (*siz) *= 2; (*p) = realloc(*p, (*siz) * sizeof(char)); } \
   (*off) += snprintf((*p) + (*off), (*siz) - (*off), __VA_ARGS__); \
   assert((*siz) >= (*off)); \

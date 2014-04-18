@@ -14,6 +14,16 @@ Copyright:
   2003-2013  Troy D. Hanson
 License: BSD
 
+Files: src/snprintf.c
+Copyright:
+  1999 Mark Martinec
+License: GPL-2+
+Comment: snprintf. is only used for windows builds.
+ The code is dual licensed available under both
+ "Frontier Artistic License" or the "GNU General Public License"
+ the latter was chosen here.
+ see also http://www.ijs.si/software/snprintf/
+
 License: GPL-2+
  This package is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by

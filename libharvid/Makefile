@@ -20,6 +20,11 @@ LIBHARVID_H = \
   timecode.h \
   vinfo.h 
 
+ifeq ($(ARCH),mingw)
+	LIBHARVID_OBJECTS += snprintf.o
+	FLAGS += -DSNPRINTF_LONGLONG_SUPPORT -DHAVE_SNPRINTF -DPREFER_PORTABLE_SNPRINTF
+endif
+
 all: libharvid.a
 
 libharvid.a: $(LIBHARVID_OBJECTS) $(LIBHARVID_H)
