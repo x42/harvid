@@ -123,7 +123,14 @@ static void server_sockaddr(ICI *d, struct sockaddr_in *addr) {
 /** called once to init server */
 static int create_server_socket(void) {
   int s, val = 1;
-  if((s = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+#ifdef HAVE_WINDOWS
+  WSADATA wsaData;
+  WSAStartup(MAKEWORD(2, 2), &wsaData);
+  if((s = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
+#else
+  if((s = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+#endif
+  {
     dlog(DLOG_CRIT, "SRV: unable to create local socket: %s\n", strerror(errno));
     return -1;
   }
@@ -431,6 +438,9 @@ daemon_end:
   if (d->local_addr) free(d->local_addr);
   pthread_mutex_destroy(&d->lock);
   free(d);
+#ifdef HAVE_WINDOWS
+  WSACleanup();
+#endif
   return(rv);
 }
 
