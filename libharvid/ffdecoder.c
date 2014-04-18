@@ -249,6 +249,7 @@ static void ff_init_moviebuffer(void *ptr) {
 
   if (ff->internal_buffer) free(ff->internal_buffer);
   ff_getbuffersize(ff, &numBytes);
+  assert(numBytes > 0);
   ff->internal_buffer = (uint8_t *) calloc(numBytes, sizeof(uint8_t));
   ff->buffer = ff->internal_buffer;
   ff->buf_width = ff->out_width;

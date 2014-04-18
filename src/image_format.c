@@ -35,7 +35,6 @@
 #include <vinfo.h> // harvid.h
 #include "enums.h"
 
-// TODO global config or per request setting
 #define JPEG_QUALITY 75
 
 static int write_jpeg(VInfo *ji, uint8_t *buffer, int quality, FILE *x) {
