@@ -203,29 +203,29 @@ static void parse_direntry (const char *root, const char *burl, const char *path
   const int l5 = l4 - 1;
   const int l6 = l5 - 1;
   const int l9 = l6 - 3;
-  if ((l4 > 0 && ( !strcmp(&name[l4], ".avi")
-                || !strcmp(&name[l4], ".mov")
-                || !strcmp(&name[l4], ".ogg")
-                || !strcmp(&name[l4], ".ogv")
-                || !strcmp(&name[l4], ".mpg")
-                || !strcmp(&name[l4], ".mov")
-                || !strcmp(&name[l4], ".mp4")
-                || !strcmp(&name[l4], ".mkv")
-                || !strcmp(&name[l4], ".vob")
-                || !strcmp(&name[l4], ".asf")
-                || !strcmp(&name[l4], ".avs")
-                || !strcmp(&name[l4], ".dts")
-                || !strcmp(&name[l4], ".flv")
-                || !strcmp(&name[l4], ".m4v")
+  if ((l4 > 0 && ( !strcasecmp(&name[l4], ".avi")
+                || !strcasecmp(&name[l4], ".mov")
+                || !strcasecmp(&name[l4], ".ogg")
+                || !strcasecmp(&name[l4], ".ogv")
+                || !strcasecmp(&name[l4], ".mpg")
+                || !strcasecmp(&name[l4], ".mov")
+                || !strcasecmp(&name[l4], ".mp4")
+                || !strcasecmp(&name[l4], ".mkv")
+                || !strcasecmp(&name[l4], ".vob")
+                || !strcasecmp(&name[l4], ".asf")
+                || !strcasecmp(&name[l4], ".avs")
+                || !strcasecmp(&name[l4], ".dts")
+                || !strcasecmp(&name[l4], ".flv")
+                || !strcasecmp(&name[l4], ".m4v")
         )) ||
-      (l5 > 0 && ( !strcmp(&name[l5], ".h264")
-                || !strcmp(&name[l5], ".webm")
+      (l5 > 0 && ( !strcasecmp(&name[l5], ".h264")
+                || !strcasecmp(&name[l5], ".webm")
         )) ||
-      (l6 > 0 && ( !strcmp(&name[l6], ".dirac")
+      (l6 > 0 && ( !strcasecmp(&name[l6], ".dirac")
         )) ||
-      (l9 > 0 && ( !strcmp(&name[l9], ".matroska")
+      (l9 > 0 && ( !strcasecmp(&name[l9], ".matroska")
         )) ||
-      (l3 > 0 && ( !strcmp(&name[l3], ".dv")
+      (l3 > 0 && ( !strcasecmp(&name[l3], ".dv")
         ))
      ) {
     char *url = strdup(burl);
