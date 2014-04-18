@@ -160,6 +160,10 @@ static int parse_http_query(CONN *c, char *query, httpheader *h, ics_request_arg
     if (qps.fn) {
       a->file_name = malloc(1+strlen(c->d->docroot)+strlen(qps.fn)*sizeof(char));
       sprintf(a->file_name, "%s%s", c->d->docroot, qps.fn);
+#ifdef HAVE_WINDOWS
+      char *tmp;
+      while (tmp = strchr(a->file_name, '/')) *tmp = '\\';
+#endif
       a->file_qurl = qps.fn;
     }
 
@@ -337,6 +341,10 @@ void ics_http_handler(
     char *dp = url_unescape(&(path[7]), 0, NULL);
     char *abspath = malloc((strlen(c->d->docroot) + strlen(dp) + 2) * sizeof(char));
     sprintf(abspath, "%s/%s", c->d->docroot, dp);
+#ifdef HAVE_WINDOWS
+      char *tmp;
+      while (tmp = strchr(abspath, '/')) *tmp = '\\';
+#endif
     if (! (cfg_usermask & USR_INDEX)) {
       httperror(c->fd, 403, NULL, NULL);
     } else if (!dp || check_path(dp)) {

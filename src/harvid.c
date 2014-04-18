@@ -306,7 +306,11 @@ int main (int argc, char **argv) {
   program_name = argv[0];
   struct stat sb;
   int cfg_uid, cfg_gid;
-  char *docroot = "/" ;
+#ifdef HAVE_WINDOWS
+  char *docroot = "C:\\";
+#else
+  char *docroot = "/";
+#endif
   debug_level = DLOG_WARNING;
   int exitstatus = 0;
 
