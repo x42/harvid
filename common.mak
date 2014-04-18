@@ -31,7 +31,7 @@ ifeq ($(ARCH),mingw)
   ARCHINCLUDES=-I$(WINEROOT)/include -DHAVE_WINDOWS
   ARCHLIBES=-lwsock32 -lws2_32 -lpthreadGC2
   LDFLAGS+=-L$(WINEROOT)/lib/ -L$(WINEROOT)/bin
-  UNAME=mingw
+  UNAME=win32|mingw
   LIBEXT=dll
 else
   RANLIB=ranlib
