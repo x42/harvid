@@ -135,15 +135,26 @@ static FILE *open_outfile(char *filename) {
 }
 
 size_t format_image(uint8_t **out, int render_fmt, int misc_int, VInfo *ji, uint8_t *buf) {
+#ifdef HAVE_WINDOWS
+  char tfn[64] = "";
+#endif
 #ifdef __USE_XOPEN2K8
   size_t rs = 0;
   FILE *x = open_memstream((char**) out, &rs);
-#elif defined HAVE_WINDOWS
-  char tfn[L_tmpnam]; // = "C:\\icsd.tmp"
-  tmpnam(tfn);
-  FILE *x = fopen(tfn, "w+b");
 #else
   FILE *x = tmpfile();
+#endif
+#ifdef HAVE_WINDOWS
+#warning HAVE WINDOWS
+  if (!x) {
+    // wine and ancient version of windows don't support tmpfile()
+    // srand is per thread :(
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    srand(tv.tv_sec * tv.tv_usec * 100000);
+    snprintf(tfn, sizeof(tfn), "harvid.tmp.%d", rand());
+    x = fopen(tfn, "w+b"); // we should really use open(tfn, O_RDWR | O_CREAT | O_EXCL, 0600); and fdopen
+  }
 #endif
   if (!x) {
     dlog(LOG_ERR, "IMF: tmpfile() creation failed.\n");
@@ -177,8 +188,12 @@ size_t format_image(uint8_t **out, int render_fmt, int misc_int, VInfo *ji, uint
   fclose(x);
   return rs;
 #elif defined HAVE_WINDOWS
-  fclose(x);
-  x = fopen(tfn, "rb");
+  if (strlen(tfn) > 0) {
+    fclose(x);
+    x = fopen(tfn, "rb");
+  } else {
+    fflush(x);
+  }
 #else
   fflush(x);
 #endif
@@ -196,7 +211,9 @@ size_t format_image(uint8_t **out, int render_fmt, int misc_int, VInfo *ji, uint
   }
   fclose(x);
 #ifdef HAVE_WINDOWS
-  unlink(tfn);
+  if (strlen(tfn) > 0) {
+    unlink(tfn);
+  }
 #endif
   return (rsize);
 }
