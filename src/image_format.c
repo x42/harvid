@@ -1,7 +1,7 @@
 /*
    This file is part of harvid
 
-   Copyright (C) 2008-2013 Robin Gareus <robin@gareus.org>
+   Copyright (C) 2008-2014 Robin Gareus <robin@gareus.org>
 
    This file contains some GPL source from vgrabbj by
 	 Jens Gecius <devel@gecius.de>

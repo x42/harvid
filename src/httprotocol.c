@@ -1,7 +1,7 @@
 /*
    This file is part of harvid
 
-   Copyright (C) 2002,2003,2008-2013 Robin Gareus <robin@gareus.org>
+   Copyright (C) 2002,2003,2008-2014 Robin Gareus <robin@gareus.org>
 
    This file contains GPL code from mini-http, micro-http and libcurl.
    by Jef Poskanzer <jef@mail.acme.com> and

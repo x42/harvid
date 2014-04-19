@@ -1,3 +1,8 @@
+2014-04-19 (unreleased) Robin Gareus <robin@gareus.org>
+* case insensitive file extension for file-index
+* define OSX minimum version to 10.5
+* various fixes for windows build (paths, snprintf, tmpfile)
+
 2013-06-10 (0.7.3) Robin Gareus <robin@gareus.org>
 * update ffmpeg compatibility wrapper
 * fix CSV file info (no newline)
