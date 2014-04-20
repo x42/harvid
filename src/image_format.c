@@ -145,7 +145,6 @@ size_t format_image(uint8_t **out, int render_fmt, int misc_int, VInfo *ji, uint
   FILE *x = tmpfile();
 #endif
 #ifdef HAVE_WINDOWS
-#warning HAVE WINDOWS
   if (!x) {
     // wine and ancient version of windows don't support tmpfile()
     // srand is per thread :(
