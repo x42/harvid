@@ -408,6 +408,7 @@ char *hdl_homepage_html (CONN *c) {
   off+=snprintf(msg+off, HPSIZE-off, "<title>harvid</title></head>\n");
   off+=snprintf(msg+off, HPSIZE-off, HTMLBODY);
   off+=snprintf(msg+off, HPSIZE-off, CENTERDIV);
+  off+=snprintf(msg+off, HPSIZE-off, "<div style=\"text-align:center;\"><h1>Harvid - HTTP Ardour Video Daemon</h1></div>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<div style=\"float:left;margin:0 2em;\"><h2>Built-in handlers</h2>\n");
   off+=snprintf(msg+off, HPSIZE-off, "<ul>");
   if (cfg_usermask & USR_INDEX) {
