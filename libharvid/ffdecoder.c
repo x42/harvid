@@ -498,7 +498,7 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   }
   pthread_mutex_unlock(&avcodec_lock);
 
-  if (!(ff->pFrame = avcodec_alloc_frame())) {
+  if (!(ff->pFrame = av_frame_alloc())) {
     if (!want_quiet)
       fprintf(stderr, "Cannot allocate video frame buffer\n");
     avcodec_close(ff->pCodecCtx);
@@ -506,7 +506,7 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
     return(-1);
   }
 
-  if (!(ff->pFrameFMT = avcodec_alloc_frame())) {
+  if (!(ff->pFrameFMT = av_frame_alloc())) {
     if (!want_quiet)
       fprintf(stderr, "Cannot allocate display frame buffer\n");
     av_free(ff->pFrame);

@@ -1,6 +1,6 @@
 /* ffmpeg compatibility wrappers
  *
- * Copyright 2012,2013 Robin Gareus <robin@gareus.org>
+ * Copyright 2012-2014 Robin Gareus <robin@gareus.org>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -69,27 +69,35 @@ avcodec_get_context_defaults3(AVCodecContext *s, AVCodec *codec)
 
 #endif /* avcodec < 53.5.0 */
 
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(53, 5, 6)
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(53, 7, 0)
 static inline int
 avcodec_open2(AVCodecContext *avctx, AVCodec *codec, void **options __attribute__((unused)))
 {
 	return avcodec_open(avctx, codec);
 }
-#endif /* avcodec <= 53.5.6 */
+#endif /* avcodec <= 53.7.0 */
 
-#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(53, 5, 0)
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(53, 2, 0)
 static inline int
 avformat_find_stream_info(AVFormatContext *ic, void **options)
 {
 	return av_find_stream_info(ic);
 }
+#endif
 
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(53, 5, 0)
 static inline void
 avformat_close_input(AVFormatContext **s)
 {
 	av_close_input_file(*s);
 }
-
 #endif /* avformat < 53.5.0 */
+
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(54, 92, 100) // since 7ecc2d40
+static inline AVFrame *av_frame_alloc()
+{
+	return avcodec_alloc_frame();
+}
+#endif
 
 #endif /* FFCOMPAT_H */
