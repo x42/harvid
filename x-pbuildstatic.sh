@@ -32,16 +32,25 @@ $SUDO apt-get -y install git build-essential yasm \
 	libpng12-dev libjpeg8-dev
 
 cd $SRC
-git clone -b release/2.0 --depth 1 git://source.ffmpeg.org/ffmpeg
 git clone -b master git://github.com/x42/harvid.git
+
+FFVERSION=2.2.5
+#git clone -b release/${FFVERSION} --depth 1 git://source.ffmpeg.org/ffmpeg-${FFVERSION}
+if test -f /tmp/ffmpeg-2.2.5.tar.bz2; then
+	tar xjf /tmp/ffmpeg-2.2.5.tar.bz2
+else
+	wget http://www.ffmpeg.org/releases/ffmpeg-${FFVERSION}.tar.bz2
+	tar xjf ffmpeg-${FFVERSION}.tar.bz2
+fi
 
 cd $SRC/harvid
 VERSION=$(git describe --tags HEAD)
 git archive --format=tar --prefix=harvid-${VERSION}/ HEAD | gzip -9 > /tmp/harvid-${VERSION}.tar.gz
 
-cd $SRC/ffmpeg
-FFVERSION=2.0
-git archive --format=tar --prefix=ffmpeg-${FFVERSION}/ HEAD | gzip -9 > /tmp/ffmpeg-${FFVERSION}.tar.gz
+cd $SRC/ffmpeg-${FFVERSION}
+if test -d .git; then
+	git archive --format=tar --prefix=ffmpeg-${FFVERSION}/ HEAD | gzip -9 > /tmp/ffmpeg-${FFVERSION}.tar.gz
+fi
 
 ./configure --enable-gpl \
 	--enable-libmp3lame --enable-libx264 --enable-libxvid --enable-libtheora  --enable-libvorbis \
