@@ -64,7 +64,7 @@ typedef struct {
   long   frames;
   char  *current_file;
   /* helper variables */
-  double tpf;
+  int64_t tpf;
   int64_t avprev;
   int64_t stream_pts_offset;
   /* */
@@ -387,7 +387,7 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   ff->framerate = ff->duration = ff->frames = 1;
   ff->file_frame_offset = 0.0;
   ff->videoStream = -1;
-  ff->tpf = 1.0;
+  ff->tpf = 1;
   ff->avprev = -1;
   ff->stream_pts_offset = AV_NOPTS_VALUE;
   ff->render_fmt = render_fmt;
@@ -454,16 +454,17 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   printf("DURATION duration from FormatContext: %lu\n", ff->frames = ff->pFormatCtx->duration * ff->framerate / AV_TIME_BASE);
 #endif
 
-  if (avs->nb_frames != 0) {
+  if (avs->nb_frames > 0) {
     ff->frames = avs->nb_frames;
-  } else if (avs->duration != avs->duration && avs->duration != 0) // ???
-    ff->frames = avs->duration * av_q2d(avs->avg_frame_rate) * av_q2d(avs->time_base);
-  else {
+    ff->duration = ff->frames / ff->framerate;
+  } else {
+    ff->duration = ff->pFormatCtx->duration / (double)AV_TIME_BASE;
     ff->frames = ff->pFormatCtx->duration * ff->framerate / AV_TIME_BASE;
   }
-  ff->duration = (double) avs->duration * av_q2d(avs->time_base);
+
+  ff->tpf = av_rescale_q(av_rescale_q (1, c1_Q, avs->time_base), c1_Q, avs->avg_frame_rate);
   }
-  ff->tpf = 1.0/(av_q2d(ff->pFormatCtx->streams[ff->videoStream]->time_base)*ff->framerate);
+
   ff->file_frame_offset = ff->framerate*((double) ff->pFormatCtx->start_time/ (double) AV_TIME_BASE);
 
   if (want_verbose) {
@@ -633,10 +634,6 @@ static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t framenumber) {
     return -1;
   }
 
-  int64_t one_frame = av_rescale_q (1, c1_Q, v_stream->time_base);
-  one_frame = av_rescale_q(one_frame, c1_Q, v_stream->avg_frame_rate);
-  const int64_t prefuzz = one_frame > 10 ? 1 : 0;
-
   int bailout = 600;
   int decoded = 0;
   while (bailout > 0) {
@@ -696,8 +693,9 @@ static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t framenumber) {
       return -7;
     }
 
+    const int64_t prefuzz = ff->tpf > 10 ? 1 : 0;
     if (pts + prefuzz >= timestamp) {
-      if (pts - timestamp < one_frame) {
+      if (pts - timestamp < ff->tpf) {
 	ff->avprev = pts;
 	return 0; // OK
       }
@@ -706,7 +704,7 @@ static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t framenumber) {
 	if (!want_quiet)
 	  fprintf(stderr, " PTS mismatch want: %"PRId64" got: %"PRId64" -> re-seek\n", timestamp, pts);
 	// re-seek - make a guess, since we don't know the keyframe interval
-	rv = av_seek_frame(ff->pFormatCtx, ff->videoStream, MAX(0, timestamp - one_frame * 25), AVSEEK_FLAG_BACKWARD) ;
+	rv = av_seek_frame(ff->pFormatCtx, ff->videoStream, MAX(0, timestamp - ff->tpf * 25), AVSEEK_FLAG_BACKWARD) ;
 	if (ff->pCodecCtx->codec->flush) {
 	  avcodec_flush_buffers(ff->pCodecCtx);
 	}
@@ -776,7 +774,7 @@ void ff_get_info(void *ptr, VInfo *i) {
     ff_getbuffersize(ptr, &i->buffersize);
   else
     i->buffersize = 0;
-  i->frames = ff->frames; // ff->duration * ff->framerate;
+  i->frames = ff->frames;
 
   memcpy(&i->framerate, &ff->tc, sizeof(TimecodeRate));
 }
