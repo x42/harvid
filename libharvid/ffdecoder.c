@@ -37,20 +37,11 @@
 #define MAX(A,B) ( ( (A) > (B) ) ? (A) : (B) )
 #endif
 
-/* xj5 seek modes */
-enum {  SEEK_ANY, ///< directly seek to givenvideo frame
-        SEEK_KEY, ///< seek to next keyframe after given frame.
-        SEEK_CONTINUOUS, ///< seek to keframe before this frame and advance to current frame.
-        SEEK_LIVESTREAM, ///< decode until next keyframe in a live-stream and set initial PTS offset; later decode cont. until PTS match
-};
-
-
 /* ffmpeg source */
 typedef struct {
   /* file specific decoder settings */
   int   want_ignstart; //< set before calling ff_open_movie()
   int   want_genpts;
-  int   seekflags;
   /* Video File Info */
   int   movie_width;  ///< original file geometry
   int   movie_height; ///< original file geometry
@@ -399,15 +390,6 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
       fprintf(stderr, "Cannot open video file %s\n", file_name);
     return (-1);
   }
-#if 1 /// XXX http is not neccesarily a live-stream!
-  // TODO: ff_seeflags(sf) API to set/get value
-  if (!strncmp(file_name, "http://", 7)) {
-    ff->seekflags = SEEK_LIVESTREAM;
-  } else {
-    ff->seekflags = SEEK_CONTINUOUS;
-  }
-  // TODO: live-stream: remember first pts as offset! -> don't use multiple-decoders for the same stream ?!
-#endif
 
   pthread_mutex_lock(&avcodec_lock);
   /* Retrieve stream information */
@@ -450,8 +432,7 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
 
 #if 0 // DEBUG duration
   printf("DURATION frames from AVstream: %"PRIi64"\n", avs->nb_frames);
-  printf("DURATION duration from AVstream: %"PRIi64"\n", avs->duration /* * av_q2d(avs->r_frame_rate) * av_q2d(avs->time_base)*/);
-  printf("DURATION duration from FormatContext: %lu\n", ff->frames = ff->pFormatCtx->duration * ff->framerate / AV_TIME_BASE);
+  printf("DURATION duration from FormatContext: %.2f\n", ff->pFormatCtx->duration * ff->framerate / AV_TIME_BASE);
 #endif
 
   if (avs->nb_frames > 0) {
@@ -594,9 +575,6 @@ static uint64_t parse_pts_from_frame (AVFrame *f) {
   return pts;
 }
 
-// TODO: set this high (>1000) if transport stopped and to a low value (<100) if transport is running.
-#define MAX_CONT_FRAMES (1000)
-
 static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t framenumber) {
   AVStream *v_stream;
   int rv = 0;
@@ -619,9 +597,7 @@ static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t framenumber) {
     return 0;
   }
 
-  if (ff->seekflags == SEEK_LIVESTREAM) {
-    ;
-  } else if (ff->avprev < 0 || ff->avprev >= timestamp || ((ff->avprev + 32 * ff->tpf) < timestamp)) {
+  if (ff->avprev < 0 || ff->avprev >= timestamp || ((ff->avprev + 32 * ff->tpf) < timestamp)) {
     rv = av_seek_frame(ff->pFormatCtx, ff->videoStream, timestamp, AVSEEK_FLAG_BACKWARD) ;
     if (ff->pCodecCtx->codec->flush) {
       avcodec_flush_buffers(ff->pCodecCtx);
@@ -669,25 +645,6 @@ static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t framenumber) {
     }
 
     int64_t pts = parse_pts_from_frame (ff->pFrame);
-
-#if 0 // experimental -- XXX packet is free'ed here.
-  /* remember live-stream PTS offset */
-  if (   ff->seekflags == SEEK_LIVESTREAM
-      && pts != AV_NOPTS_VALUE
-      && ff->stream_pts_offset == AV_NOPTS_VALUE
-      && packet->flags&AV_PKT_FLAG_KEY)
-  {
-    ff->stream_pts_offset = pts;
-  }
-
-  if (ff->seekflags == SEEK_LIVESTREAM) {
-    if (ff->stream_pts_offset != AV_NOPTS_VALUE)
-      pts -= ff->stream_pts_offset;
-    else
-      pts = AV_NOPTS_VALUE;
-  }
-#endif
-
 
     if (pts == AV_NOPTS_VALUE) {
       return -7;
@@ -792,7 +749,6 @@ void ff_get_info_canonical(void *ptr, VInfo *i, int w, int h) {
 void ff_create(void **ff) {
   (*((ffst**)ff)) = (ffst*) calloc(1, sizeof(ffst));
   (*((ffst**)ff))->render_fmt = PIX_FMT_RGB24;
-  (*((ffst**)ff))->seekflags = SEEK_CONTINUOUS;
   (*((ffst**)ff))->want_ignstart = 0;
   (*((ffst**)ff))->want_genpts = 0;
   (*((ffst**)ff))->packet.data = NULL;
