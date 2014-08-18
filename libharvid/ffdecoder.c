@@ -56,6 +56,7 @@ typedef struct {
 
   double duration;
   double framerate;
+  TimecodeRate tc;
   double file_frame_offset;
   long   frames;
   char  *current_file;
@@ -304,41 +305,60 @@ int ff_close_movie(void *ptr) {
   return (0);
 }
 
-static void ff_get_framerate(void *ptr, TimecodeRate *fr) {
-  ffst *ff = (ffst*)ptr;
-  AVStream *av_stream;
-  if (!ff->current_file || !ff->pFormatCtx) {
-    return;
-  }
-  av_stream = ff->pFormatCtx->streams[ff->videoStream];
-
-  if(av_stream->avg_frame_rate.den && av_stream->avg_frame_rate.num) {
-    fr->num = av_stream->avg_frame_rate.num;
-    fr->den = av_stream->avg_frame_rate.den;
- // if ((ff->framerate < 4 || ff->framerate > 100) && (av_stream->time_base.num && av_stream->time_base.den)) {
- //   fr->num = av_stream->time_base.den
- //   fr->den = av_stream->time_base.num;
- // }
-  } else {
-    fr->num = av_stream->time_base.den;
-    fr->den = av_stream->time_base.num;
-  }
-
-  fr->drop = 0;
-  if (floor(ff->framerate * 100.0) == 2997)
-    fr->drop = 1;
-}
-
-
 static void ff_set_framerate(ffst *ff) {
   AVStream *av_stream;
   av_stream = ff->pFormatCtx->streams[ff->videoStream];
 
-  if(av_stream->avg_frame_rate.den && av_stream->avg_frame_rate.num) {
-    ff->framerate = av_q2d(av_stream->avg_frame_rate);
-    if ((ff->framerate < 4 || ff->framerate > 100) && (av_stream->time_base.num && av_stream->time_base.den))
-      ff->framerate = 1.0/av_q2d(av_stream->time_base);
+  ff->framerate = 0;
+  ff->tc.num = 0;
+  ff->tc.den = 1;
+
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(55, 0, 100) // 9cf788eca8ba (merge a75f01d7e0)
+  {
+    AVRational fr = av_stream->r_frame_rate;
+    if (fr.den > 0 && fr.num > 0) {
+      ff->framerate = av_q2d (av_stream->r_frame_rate);
+      ff->tc.num = fr.num;
+      ff->tc.den = fr.den;
+    }
   }
+#else
+  {
+    AVRational fr = av_stream_get_r_frame_rate (av_stream);
+    if (fr.den > 0 && fr.num > 0) {
+      ff->framerate = av_q2d (fr);
+      ff->tc.num = fr.num;
+      ff->tc.den = fr.den;
+    }
+  }
+#endif
+  if (ff->framerate < 1 || ff->framerate > 1000) {
+    AVRational fr = av_stream->avg_frame_rate;
+    if (fr.den > 0 && fr.num > 0) {
+      ff->framerate = av_q2d (fr);
+      ff->tc.num = fr.num;
+      ff->tc.den = fr.den;
+    }
+  }
+  if (ff->framerate < 1 || ff->framerate > 1000) {
+    AVRational fr = av_stream->time_base;
+    if (fr.den > 0 && fr.num > 0) {
+      ff->framerate = 1.0 / av_q2d (fr);
+      ff->tc.num = fr.den;
+      ff->tc.den = fr.num;
+    }
+  }
+  if (ff->framerate < 1 || ff->framerate > 1000) {
+    if (!want_quiet)
+      fprintf(stderr, "WARNING: cannot determine video-frame rate, using 25fps.\n");
+    ff->framerate = 25;
+    ff->tc.num = 25;
+    ff->tc.den = 1;
+  }
+
+  ff->tc.drop = 0;
+  if (floor(ff->framerate * 100.0) == 2997)
+    ff->tc.drop = 1;
 }
 
 int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
@@ -754,8 +774,7 @@ void ff_get_info(void *ptr, VInfo *i) {
     i->buffersize = 0;
   i->frames = ff->frames; // ff->duration * ff->framerate;
 
-  //fl2ratio(&(i->framerate->num), &(i->framerate->den), ff->framerate);
-  ff_get_framerate(ptr, &i->framerate);
+  memcpy(&i->framerate, &ff->tc, sizeof(TimecodeRate));
 }
 
 void ff_get_info_canonical(void *ptr, VInfo *i, int w, int h) {
