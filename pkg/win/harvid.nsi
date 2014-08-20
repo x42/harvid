@@ -7,7 +7,7 @@ OutFile "harvid_installer-@VERSION@.exe"
 ; The default installation directory
 InstallDir $PROGRAMFILES\harvid
 
-; Registry key to check for directory (so if you install again, it will 
+; Registry key to check for directory (so if you install again, it will
 ; overwrite the old one automatically)
 InstallDirRegKey HKLM "Software\RSS\harvid" "Install_Dir"
 
@@ -28,37 +28,49 @@ UninstPage instfiles
 Section "harvid (required)"
 
   SectionIn RO
-  
+
   ; Set output path to the installation directory.
   SetOutPath $INSTDIR
-  
-  ; Put file there
+
   File "harvid.exe"
   File "harvid.nsi"
-  File "avcodec-54.dll"
-  File "avdevice-53.dll"
-  File "avfilter-2.dll"
-  File "avformat-54.dll"
-  File "avresample-0.dll"
-  File "avutil-51.dll"
-  File "libjpeg-8.dll"
-  File "postproc-52.dll"
-  File "pthreadGC2.dll"
-  File "swresample-0.dll"
-  File "swscale-2.dll"
-  File "zlib1.dll"
-  File "cygwin1.dll"
+  File "ffmpeg.exe"
+  File "ffprobe.exe"
+
+  FILE "avcodec-55.dll"
+  FILE "avdevice-55.dll"
+  FILE "avfilter-4.dll"
+  FILE "avformat-55.dll"
+  FILE "avutil-52.dll"
+  FILE "libcharset-1.dll"
+  FILE "libiconv-2.dll"
+  FILE "libjpeg-9.dll"
+  FILE "libmp3lame-0.dll"
+  FILE "libogg-0.dll"
+  FILE "libpng16-16.dll"
+  FILE "libtheora-0.dll"
+  FILE "libtheoradec-1.dll"
+  FILE "libtheoraenc-1.dll"
+  FILE "libvorbis-0.dll"
+  FILE "libvorbisenc-2.dll"
+  FILE "libvorbisfile-3.dll"
+  FILE "libx264-142.dll"
+  FILE "postproc-52.dll"
+  FILE "pthreadGC2.dll"
+  FILE "swresample-0.dll"
+  FILE "swscale-2.dll"
+  FILE "zlib1.dll"
 
   ; Write the installation path into the registry
   WriteRegStr HKLM SOFTWARE\RSS\harvid "Install_Dir" "$INSTDIR"
-  
+
   ; Write the uninstall keys for Windows
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid" "DisplayName" "harvid"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid" "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid" "NoRepair" 1
   WriteUninstaller "uninstall.exe"
-  
+
 SectionEnd
 
 ; Optional section (can be disabled by the user)
@@ -73,7 +85,7 @@ SectionEnd
 ; Uninstaller
 
 Section "Uninstall"
-  
+
   ; Remove registry keys
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid"
   DeleteRegKey HKLM SOFTWARE\RSS\harvid
@@ -81,20 +93,32 @@ Section "Uninstall"
   ; Remove files and uninstaller
   Delete $INSTDIR\harvid.exe
   Delete $INSTDIR\harvid.nsi
-  Delete $INSTDIR\avcodec-54.dll
-  Delete $INSTDIR\avdevice-53.dll
-  Delete $INSTDIR\avfilter-2.dll
-  Delete $INSTDIR\avformat-54.dll
-  Delete $INSTDIR\avresample-0.dll
-  Delete $INSTDIR\avutil-51.dll
-  Delete $INSTDIR\libjpeg-8.dll
+  Delete $INSTDIR\uninstall.exe
+  Delete $INSTDIR\ffmpeg.exe
+  Delete $INSTDIR\ffprobe.exe
+  Delete $INSTDIR\avcodec-55.dll
+  Delete $INSTDIR\avdevice-55.dll
+  Delete $INSTDIR\avfilter-4.dll
+  Delete $INSTDIR\avformat-55.dll
+  Delete $INSTDIR\avutil-52.dll
+  Delete $INSTDIR\libcharset-1.dll
+  Delete $INSTDIR\libiconv-2.dll
+  Delete $INSTDIR\libjpeg-9.dll
+  Delete $INSTDIR\libmp3lame-0.dll
+  Delete $INSTDIR\libogg-0.dll
+  Delete $INSTDIR\libpng16-16.dll
+  Delete $INSTDIR\libtheora-0.dll
+  Delete $INSTDIR\libtheoradec-1.dll
+  Delete $INSTDIR\libtheoraenc-1.dll
+  Delete $INSTDIR\libvorbis-0.dll
+  Delete $INSTDIR\libvorbisenc-2.dll
+  Delete $INSTDIR\libvorbisfile-3.dll
+  Delete $INSTDIR\libx264-142.dll
   Delete $INSTDIR\postproc-52.dll
   Delete $INSTDIR\pthreadGC2.dll
   Delete $INSTDIR\swresample-0.dll
   Delete $INSTDIR\swscale-2.dll
   Delete $INSTDIR\zlib1.dll
-  Delete $INSTDIR\cygwin1.dll
-  Delete $INSTDIR\uninstall.exe
 
   ; Remove shortcuts, if any
   Delete "$SMPROGRAMS\harvid\*.*"

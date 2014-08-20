@@ -46,6 +46,7 @@ endif
 libharvid.dll: $(LIBHARVID_OBJECTS) $(LIBHARVID_H) .libharvid.sym dlog_null.c
 	echo "asm (\".section .drectve\");" > .libharvid_dll.c
 	sed -e "s/\(.*\)/asm (\".ascii \\\\\" -export:\1\\\\\"\");/" .libharvid.sym >> .libharvid_dll.c
+	export PKG_CONFIG_PATH=$(PKG_CONFIG_PATH);\
 	$(CC) -o libharvid.$(LIBEXT) \
 	  -shared \
 	  $(LIBHARVID_OBJECTS) \
@@ -56,6 +57,7 @@ libharvid.dll: $(LIBHARVID_OBJECTS) $(LIBHARVID_H) .libharvid.sym dlog_null.c
 
 libharvid.dylib: $(LIBHARVID_OBJECTS) $(LIBHARVID_H) .libharvid.sym
 	sed 's,^,_,' .libharvid.sym > .libharvid.expsym
+	export PKG_CONFIG_PATH=$(PKG_CONFIG_PATH);\
 	$(CC) -o libharvid.$(LIBEXT) \
 	  -dynamiclib \
 	  $(LIBHARVID_OBJECTS) \
@@ -69,6 +71,7 @@ libharvid.so: $(LIBHARVID_OBJECTS) $(LIBHARVID_H) .libharvid.sym
 	echo "{ global:" > .libharvid.ver
 	sed -e "s/\(.*\)/\1;/" .libharvid.sym >> .libharvid.ver
 	echo "local: *; };" >> .libharvid.ver
+	export PKG_CONFIG_PATH=$(PKG_CONFIG_PATH);\
 	$(CC) -o libharvid.$(LIBEXT) \
 	  -fPIC -shared \
 	  $(LIBHARVID_OBJECTS) \
@@ -78,6 +81,7 @@ libharvid.so: $(LIBHARVID_OBJECTS) $(LIBHARVID_H) .libharvid.sym
 
 
 %.o: %.c $(LIBHARVID_H)
+	export PKG_CONFIG_PATH=$(PKG_CONFIG_PATH);\
 	$(CC) -c -o $(@) $(CFLAGS) $(FLAGS) $<
 
 install-lib: libharvid.a libharvid.$(LIBEXT)

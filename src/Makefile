@@ -4,11 +4,11 @@ include ../common.mak
 
 CONFIGTEMP=conf.out
 
-ifeq ($(shell pkg-config --exists libavcodec libavformat libswscale || echo no), no)
+ifeq ($(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config --exists libavcodec libavformat libavutil libswscale || echo no), no)
   $(error "http://ffmpeg.org is required - install libavcodec-dev, libswscale-dev, etc")
 endif
 
-ifeq ($(shell pkg-config --exists libpng || echo no), no)
+ifeq ($(shell PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config --exists libpng || echo no), no)
   $(error "libpng is required - install libpng-dev")
 endif
 

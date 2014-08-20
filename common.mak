@@ -26,11 +26,12 @@ ifeq ($(ARCH),mingw)
   NM=i686-w64-mingw32-nm -B
   RANLIB=i686-w64-mingw32-ranlib
   STRIP=i686-w64-mingw32-strip
-  WINEROOT?=$(HOME)/.wine/drive_c/x-prefix
-  PKG_CONFIG_PATH=$(WINEROOT)/lib/pkgconfig/
-  ARCHINCLUDES=-I$(WINEROOT)/include -DHAVE_WINDOWS
-  ARCHLIBES=-lwsock32 -lws2_32 -lpthreadGC2
-  LDFLAGS+=-L$(WINEROOT)/lib/ -L$(WINEROOT)/bin
+  WINPREFIX?=$(HOME)/.wine/drive_c/x-prefix
+  WINLIB?=$(WINPREFIX)/lib
+  PKG_CONFIG_PATH=$(WINLIB)/pkgconfig/
+  ARCHINCLUDES=-I$(WINPREFIX)/include -DHAVE_WINDOWS
+  ARCHLIBES=-lwsock32 -lws2_32 -lpthread
+  LDFLAGS+=-L$(WINLIB) -L$(WINPREFIX)/bin
   UNAME=win32|mingw
   LIBEXT=dll
 else
