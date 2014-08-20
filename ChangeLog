@@ -1,7 +1,8 @@
-2014-04-19 (unreleased) Robin Gareus <robin@gareus.org>
+2014-08-18 (unreleased) Robin Gareus <robin@gareus.org>
 * case insensitive file extension for file-index
 * define OSX minimum version to 10.5
 * various fixes for windows build (paths, snprintf, tmpfile)
+* ffmpeg decode: update seek-mechanism & framerate parsing
 
 2013-06-10 (0.7.3) Robin Gareus <robin@gareus.org>
 * update ffmpeg compatibility wrapper
