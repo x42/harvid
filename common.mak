@@ -40,8 +40,6 @@ else
   NM=nm
   UNAME=$(shell uname)
   ifeq ($(UNAME),Darwin)
-  ARCHFLAGS=-arch i386 -arch ppc -arch x86_64
-  ARCHFLAGS+=-isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5
   ARCHFLAGS+=-headerpad_max_install_names
   ARCHLIBES+=-sectcreate __DATA __doc_harvid_jpg ../doc/harvid.jpg
   ARCHLIBES+=-sectcreate __DATA __doc_seek_js ../doc/seek.js
