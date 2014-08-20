@@ -1,8 +1,10 @@
 #!/bin/bash
 
 #environment variables
-: ${OSXMACHINE:=priroda.local}
-: ${COWBUILDER:=opendaw.local}
+: ${OSXUSER:=}
+: ${OSXMACHINE:=cowbuilder.local}
+: ${COWBUILDER:=osxbuilder.local}
+test -f "$HOME/.buildcfg.sh" && . "$HOME/.buildcfg.sh"
 
 NEWVERSION=$1
 
@@ -73,9 +75,7 @@ if test "$ok" != 0; then
 	exit
 fi
 
-echo "building win32 ..."
-./x-win32.sh || exit
-echo "building linux static ..."
+echo "building linux static and windows versions"
 ssh $COWBUILDER ~/bin/build-harvid.sh
 
 ok=$?
@@ -84,17 +84,27 @@ if test "$ok" != 0; then
 	exit
 fi
 
-rsync -Pa $COWBUILDER:/tmp/harvid-i386-linux-gnu-${VERSION}.tgz site/releases/ || exit
-rsync -Pa $COWBUILDER:/tmp/harvid-x86_64-linux-gnu-${VERSION}.tgz site/releases/ || exit
-
-echo "building osx package on $OSXMACHINE ..."
-ssh $OSXMACHINE << EOF
+if test -n "$OSXFROMSCRATCH"; then
+  echo "building osx package from scratch"
+  ssh ${OSXUSER}${OSXMACHINE} << EOF
 exec /bin/bash -l
-cd src/harvid || exit 1
-git pull || exit 1
-git fetch --tags || exit 1
-./x-macosx.sh
+curl -L -o /tmp/harvid-x-pbuildstatic.sh https://raw.github.com/x42/harvid/master/x-osx-buildstack.sh
+chmod +x /tmp/harvid-x-pbuildstatic.sh
+/tmp/harvid-x-pbuildstatic.sh
 EOF
+else
+  echo "building osx package with existing stack"
+  ssh ${OSXUSER}${OSXMACHINE} << EOF
+exec /bin/bash -l
+rm -rf harvid
+git clone -b master git://github.com/x42/harvid.git
+cd harvid
+./x-osx-bundle.sh
+cd ..
+rm -rf harvid
+EOF
+fi
+
 
 ok=$?
 if test "$ok" != 0; then
@@ -102,9 +112,14 @@ if test "$ok" != 0; then
 	exit
 fi
 
-rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.pkg site/releases/ || exit
-rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-${VERSION}.dmg site/releases/ || exit
-rsync -Pa $OSXMACHINE:Desktop/mydmg/harvid-osx-${VERSION}.tgz tmp/ || exit
+
+rsync -Pa $COWBUILDER:/tmp/harvid-i386-linux-gnu-${VERSION}.tgz site/releases/ || exit
+rsync -Pa $COWBUILDER:/tmp/harvid-x86_64-linux-gnu-${VERSION}.tgz site/releases/ || exit
+rsync -Pa $COWBUILDER:/tmp/harvid_installer-${VERSION}.exe site/releases/ || exit
+
+rsync -Pa ${OSXUSER}$OSXMACHINE:/tmp/harvid-${VERSION}.pkg site/releases/ || exit
+rsync -Pa ${OSXUSER}$OSXMACHINE:/tmp/harvid-${VERSION}.dmg site/releases/ || exit
+rsync -Pa ${OSXUSER}$OSXMACHINE:/tmp/harvid-osx-${VERSION}.tgz tmp/ || exit
 
 echo -n "${VERSION}" > site/releases/harvid_version.txt
 
