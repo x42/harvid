@@ -226,6 +226,7 @@ static void parse_direntry (const char *root, const char *burl, const char *path
       (l9 > 0 && ( !strcasecmp(&name[l9], ".matroska")
         )) ||
       (l3 > 0 && ( !strcasecmp(&name[l3], ".dv")
+                || !strcasecmp(&name[l3], ".ts")
         ))
      ) {
     char *url = strdup(burl);
