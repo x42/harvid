@@ -94,7 +94,7 @@ ls -lh tmp/$OUTFN
 ldd tmp/$OUTFN
 
 # give any arg to disable bundle
-test -n "$1" && exit 1
+test -n "$1" && exit 0
 
 # build .tgz bundle
 rm -rf $RESULT/$OUTFN $RESULT/$OUTFN.tgz
@@ -113,6 +113,6 @@ rm -rf $RESULT/$OUTFN
 ls -lh $RESULT/$OUTFN.tgz
 
 # ..and copy the bundle to the local gh-pages branch
-test -d site/releases/ || exit
+test -d site/releases/ || exit 0
 mv $RESULT/$OUTFN.tgz site/releases/
 ls -lh site/releases/$OUTFN.tgz

@@ -34,6 +34,8 @@ $SUDO apt-get -y install git build-essential yasm \
 cd $SRC
 git clone -b master git://github.com/x42/harvid.git
 
+set -e
+
 FFVERSION=2.2.5
 #git clone -b release/${FFVERSION} --depth 1 git://source.ffmpeg.org/ffmpeg-${FFVERSION}
 if test -f /tmp/ffmpeg-2.2.5.tar.bz2; then
@@ -60,10 +62,9 @@ fi
 	--disable-devices \
 	--enable-shared --enable-static --prefix=$PFX $@
 
-make -j4 || exit 1
-make install || exit 1
+make -j4
+make install
 
-cd $SRC/ffmpeg
 LIBDEPS=" \
  libmp3lame.a \
  libspeex.a \
@@ -101,6 +102,7 @@ done
 
 LIBF=$PFX/lib
 
+cd $SRC/ffmpeg-${FFVERSION}
 gcc -o ffmpeg_s ffmpeg_opt.o ffmpeg_filter.o ffmpeg.o cmdutils.o \
 	${LIBF}/libavformat.a \
 	${LIBF}/libavdevice.a \
@@ -113,7 +115,6 @@ gcc -o ffmpeg_s ffmpeg_opt.o ffmpeg_filter.o ffmpeg.o cmdutils.o \
 	\
 	$SLIBS \
 	-lrt -lm -ldl -pthread -lstdc++ \
-|| exit
 
 gcc -o ffprobe_s ffprobe.o cmdutils.o \
 	${LIBF}/libavformat.a \
@@ -127,7 +128,6 @@ gcc -o ffprobe_s ffprobe.o cmdutils.o \
 	\
 	$SLIBS \
 	-lrt -lm -ldl -pthread -lstdc++ \
-|| exit
 
 strip ffmpeg_s
 strip ffprobe_s
@@ -136,6 +136,6 @@ install -m755  ffmpeg_s $PFX/bin/
 install -m755  ffprobe_s $PFX/bin/
 
 cd $SRC/harvid
-./x-static.sh || exit 1
+./x-static.sh
 
 ls -l /tmp/harvid*.tgz
