@@ -443,7 +443,8 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
     ff->frames = ff->pFormatCtx->duration * ff->framerate / AV_TIME_BASE;
   }
 
-  ff->tpf = av_rescale_q(av_rescale_q (1, c1_Q, avs->time_base), c1_Q, avs->avg_frame_rate);
+  const AVRational fr_Q = { ff->tc.den, ff->tc.num };
+  ff->tpf = av_rescale_q (1, fr_Q, avs->time_base);
   }
 
   ff->file_frame_offset = ff->framerate*((double) ff->pFormatCtx->start_time/ (double) AV_TIME_BASE);
@@ -590,8 +591,8 @@ static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t framenumber) {
     return -1;
   }
 
-  timestamp = av_rescale_q(framenumber, c1_Q, v_stream->time_base);
-  timestamp = av_rescale_q(timestamp, c1_Q, v_stream->avg_frame_rate);
+  const AVRational fr_Q = { ff->tc.den, ff->tc.num };
+  timestamp = av_rescale_q(framenumber, fr_Q, v_stream->time_base);
 
   if (ff->avprev == timestamp) {
     return 0;
@@ -658,8 +659,8 @@ static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t framenumber) {
       }
       // Cannot reliably seek to target frame
       if (decoded == 0) {
-	if (!want_quiet)
-	  fprintf(stderr, " PTS mismatch want: %"PRId64" got: %"PRId64" -> re-seek\n", timestamp, pts);
+	if (want_verbose)
+	  fprintf(stdout, " PTS mismatch want: %"PRId64" got: %"PRId64" -> re-seek\n", timestamp, pts);
 	// re-seek - make a guess, since we don't know the keyframe interval
 	rv = av_seek_frame(ff->pFormatCtx, ff->videoStream, MAX(0, timestamp - ff->tpf * 25), AVSEEK_FLAG_BACKWARD) ;
 	if (ff->pCodecCtx->codec->flush) {
