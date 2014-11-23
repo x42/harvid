@@ -1,15 +1,11 @@
 #!/bin/sh
 ## cross-compile and package win32 version of harvid ##
-
-# requires mingw and a working wine install with NSIS
-# and dependent libraries installed in wine C:\x-prefix\
-# x-compiled ffmpeg, libpng, pthread,.. with
-# 'configure prefix=~/.wine/drive_c/x-prefix host=i586-mingw32msvc-gcc ...'
+## see also x-win-pbuild.sh
+## 'configure prefix=~/.wine/drive_c/x-prefix host=i586-mingw32msvc-gcc ...'
 
 #environment variables
 : ${WINPREFIX=$HOME/.wine/drive_c/x-prefix}
 : ${WINLIB=${WINPREFIX}/lib}
-: ${NSISEXE=$HOME/.wine/drive_c/Program\ Files/NSIS/makensis.exe}
 
 set -e
 
@@ -39,14 +35,11 @@ done
 cp -v ${WINPREFIX}/bin/ffmpeg.exe $NSIDIR
 cp -v ${WINPREFIX}/bin/ffprobe.exe $NSIDIR
 
-
 sed 's/@VERSION@/'${VERSION}'/' pkg/win/harvid.nsi > $NSIDIR/harvid.nsi
 
-#XXX winepath should probably be moved into a wrapper script "$NSISEXE"
-WP=`winepath -w "$NSIDIR/harvid.nsi"`
 echo
-echo "$NSISEXE" "$WP"
-"$NSISEXE" "$WP"
+echo "makensis $NSIDIR/harvid.nsi"
+makensis "$NSIDIR/harvid.nsi"
 
 echo "--- DONE ---"
 cp -v "$NSIDIR/harvid_installer-$VERSION.exe" /tmp/

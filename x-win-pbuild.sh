@@ -22,23 +22,12 @@ apt-get -y install build-essential \
 	gcc-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64-tools mingw32 \
 	wget git autoconf automake pkg-config \
 	curl unzip ed yasm \
-	wine libwine-gl xauth xvfb
+	nsis
 
 cd "$SRC"
 git clone -b master git://github.com/x42/harvid.git
 
 set -e
-
-# running .exe binary installers is not feasible here
-# we get jack-headers and NSIS from a prepared .zip
-if test -f /tmp/x_win32_stack.tar.xz; then
-	tar xJf /tmp/x_win32_stack.tar.xz
-else
-	wget http://robin.linuxaudio.org/x_win32_stack.tar.xz
-	tar xJf x_win32_stack.tar.xz
-fi
-
-"$SRC"/win-stack/update_pc_prefix.sh
 
 ###############################################################################
 
@@ -205,6 +194,4 @@ make $MAKEFLAGS && make install
 cd "$SRC"/harvid
 
 export WINPREFIX="$PREFIX"
-export NSISEXE="$WINPREFIX/NSIS/makensis"
-
 ./x-win-bundle.sh
