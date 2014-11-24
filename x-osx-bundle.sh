@@ -2,7 +2,7 @@
 
 set -e
 
-: ${HVSTACK=$HOME/hvstack}
+: ${HVSTACK=$HOME/src/hv_stack}
 : ${HVARCH=-arch i386 -arch ppc -arch x86_64}
 : ${OSXCOMPAT="-isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5 -headerpad_max_install_names"}
 
@@ -139,16 +139,20 @@ test -d $PREFIX/Resources/harvid.pmdoc
 
 mkdir -p "${TARGET}"
 
-SHORTVS=$(echo $VERSION | sed 's/^v\([0-9.]*\).*$/\1/')
-echo "calling packagemaker"
-/Developer/usr/bin/packagemaker \
-	-d $PREFIX/Resources/harvid.pmdoc \
-	-v --id gareus.org.sodankyla.harvid.pkg \
-	--out "${TARGET}/harvid-${VERSION}.pkg" \
-	--version $SHORTVS \
-	--title "harvid"
+if test -f /Developer/usr/bin/packagemaker ; then
+	SHORTVS=$(echo $VERSION | sed 's/^v\([0-9.]*\).*$/\1/')
+	echo "calling packagemaker"
+	/Developer/usr/bin/packagemaker \
+		-d $PREFIX/Resources/harvid.pmdoc \
+		-v --id gareus.org.sodankyla.harvid.pkg \
+		--out "${TARGET}/harvid-${VERSION}.pkg" \
+		--version $SHORTVS \
+		--title "harvid"
 
-ls -l "${TARGET}/harvid-${VERSION}.pkg"
+	ls -l "${TARGET}/harvid-${VERSION}.pkg"
+else
+	echo "--!!!--  Skipped Package"
+fi
 
 echo
 echo "------- Preparing bundle"
@@ -240,10 +244,19 @@ cp -vi "${TOPDIR}/doc/dmgbg.png" "${MNTPATH}/.background/dmgbg.png"
 
 echo "setting DMG background ..."
 
+if test $(sw_vers -productVersion | cut -d '.' -f 2) -lt 9; then
+	# OSX ..10.8.X
+	DISKNAME=${VOLNAME}
+else
+	# OSX 10.9.X and later
+	DISKNAME=`basename "${MNTPATH}"`
+fi
+
 echo '
    tell application "Finder"
-     tell disk "'${VOLNAME}'"
+     tell disk "'${DISKNAME}'"
            open
+           delay 1
            set current view of container window to icon view
            set toolbar visible of container window to false
            set statusbar visible of container window to false
@@ -263,7 +276,8 @@ echo '
      end tell
    end tell
 ' | osascript || {
-	umount "${DiskDevice}"
+	echo "Failed to set background/arrange icons"
+	umount "${DiskDevice}" || true
 	hdiutil eject "${DiskDevice}"
 	exit 1
 }
@@ -273,26 +287,28 @@ chmod -Rf go-w "${MNTPATH}"
 set -e
 sync
 
-echo "compressing Image ..."
+echo "unmounting the disk image ..."
+# Umount the image ('eject' above may already have done that)
+umount "${DiskDevice}" || true
+hdiutil eject "${DiskDevice}" || true
 
-# Umount the image
-umount "${DiskDevice}"
-hdiutil eject "${DiskDevice}"
 # Create a read-only version, use zlib compression
+echo "compressing Image ..."
 hdiutil convert -format UDZO "${TMPDMG}" -imagekey zlib-level=9 -o "${UC_DMG}"
 # Delete the temporary files
 rm "$TMPDMG"
-rmdir "$MNTPATH"
+rm -rf "$MNTPATH"
 
 echo "setting file icon ..."
 
 cp pkg/osx/Resources/harvid.icns ${ICNSTMP}.icns
-/usr/bin/sips -i ${ICNSTMP}.icns
-/Developer/Tools/DeRez -only icns ${ICNSTMP}.icns > ${ICNSTMP}.rsrc
-/Developer/Tools/Rez -append ${ICNSTMP}.rsrc -o "$UC_DMG"
-/Developer/Tools/SetFile -a C "$UC_DMG"
+sips -i ${ICNSTMP}.icns
+DeRez -only icns ${ICNSTMP}.icns > ${ICNSTMP}.rsrc
+Rez -append ${ICNSTMP}.rsrc -o "$UC_DMG"
+SetFile -a C "$UC_DMG"
 
 rm -f ${ICNSTMP}.icns ${ICNSTMP}.rsrc
+rm -rf $BUNDLEDIR
 
 echo
 echo "DMG packaging suceeded."

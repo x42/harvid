@@ -1,11 +1,11 @@
 #!/bin/sh
 
 # we keep a copy of the sources here:
-: ${SRCDIR=$HOME/xjsrc}
+: ${SRCDIR=$HOME/src/stack}
 # actual build location
-: ${BUILDD=$HOME/hvbuildd}
+: ${BUILDD=$HOME/src/hv_build}
 # target install dir:
-: ${PREFIX=$HOME/hvstack}
+: ${PREFIX=$HOME/src/hv_stack}
 # concurrency
 : ${MAKEFLAGS="-j2"}
 
@@ -29,7 +29,7 @@ case `sw_vers -productVersion | cut -d'.' -f1,2` in
 		echo "**UNTESTED OSX VERSION**"
 		echo "if it works, please report back :)"
 		HVARCH="-arch i386 -arch x86_64"
-		OSXCOMPAT=""
+		OSXCOMPAT="-mmacosx-version-min=10.5"
 		;;
 	esac
 
@@ -51,9 +51,10 @@ export PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig
 export PREFIX
 export SRCDIR
 
+export PATH=${PREFIX}/bin:${HOME}/bin:/usr/local/git/bin/:/usr/bin:/bin:/usr/sbin:/sbin
+
 function autoconfbuild {
 echo "======= $(pwd) ======="
-PATH=${PREFIX}/bin:/usr/bin:/bin:/usr/sbin:/sbin \
 CFLAGS="${HVARCH}${OSXCOMPAT:+ $OSXCOMPAT}" \
 CXXFLAGS="${HVARCH}${OSXCOMPAT:+ $OSXCOMPAT}" \
 LDFLAGS="${HVARCH}${OSXCOMPAT:+ $OSXCOMPAT} -headerpad_max_install_names" \
@@ -66,18 +67,26 @@ echo "--- Downloading.. $2"
 test -f ${SRCDIR}/$1 || curl -L -o ${SRCDIR}/$1 $2
 }
 
-################################################################################
-download libiconv-1.14.tar.gz ftp://ftp.gnu.org/gnu/libiconv/libiconv-1.14.tar.gz
+function src {
+download ${1}.${2} $3
 cd ${BUILDD}
-tar xzf ${SRCDIR}/libiconv-1.14.tar.gz
-cd libiconv-1.14
+rm -rf $1
+tar xf ${SRCDIR}/${1}.${2}
+cd $1
+}
+
+################################################################################
+src pkg-config-0.28 tar.gz http://pkgconfig.freedesktop.org/releases/pkg-config-0.28.tar.gz
+./configure --prefix=$PREFIX --with-internal-glib
+make $MAKEFLAGS
+make install
+
+################################################################################
+src libiconv-1.14 tar.gz ftp://ftp.gnu.org/gnu/libiconv/libiconv-1.14.tar.gz
 autoconfbuild --with-included-gettext --with-libiconv-prefix=$PREFIX
 
 ################################################################################
-download libpng-1.6.12.tar.gz ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng16/libpng-1.6.12.tar.gz
-cd ${BUILDD}
-tar xzf ${SRCDIR}/libpng-1.6.12.tar.gz
-cd libpng-1.6.12
+src libpng-1.6.14 tar.gz https://downloads.sourceforge.net/project/libpng/libpng16/1.6.14/libpng-1.6.14.tar.gz
 autoconfbuild
 
 ################################################################################
@@ -88,25 +97,20 @@ cd jpeg-9a
 autoconfbuild
 
 ################################################################################
-download libogg-1.3.2.tar.gz http://downloads.xiph.org/releases/ogg/libogg-1.3.2.tar.gz
-cd ${BUILDD}
-tar xzf ${SRCDIR}/libogg-1.3.2.tar.gz
-cd libogg-1.3.2
+src libogg-1.3.2 tar.gz http://downloads.xiph.org/releases/ogg/libogg-1.3.2.tar.gz
 autoconfbuild
 
 ################################################################################
-download libvorbis-1.3.4.tar.gz http://downloads.xiph.org/releases/vorbis/libvorbis-1.3.4.tar.gz
-cd ${BUILDD}
-tar xzf ${SRCDIR}/libvorbis-1.3.4.tar.gz
-cd libvorbis-1.3.4
+src libvorbis-1.3.4 tar.gz http://downloads.xiph.org/releases/vorbis/libvorbis-1.3.4.tar.gz
 autoconfbuild --disable-examples --disable-oggtest --with-ogg=${PREFIX}
 
 ################################################################################
-download libtheora-1.1.1.tar.bz2 http://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.bz2
-cd ${BUILDD}
-tar xjf ${SRCDIR}/libtheora-1.1.1.tar.bz2
-cd libtheora-1.1.1
+src libtheora-1.1.1 tar.bz2 http://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.bz2
 autoconfbuild --disable-sdltest --disable-vorbistest --disable-oggtest --disable-asm --disable-examples --with-ogg=${PREFIX} --with-vorbis=${PREFIX}
+
+################################################################################
+src yasm-1.2.0 tar.gz http://www.tortall.net/projects/yasm/releases/yasm-1.2.0.tar.gz
+autoconfbuild
 
 ################################################################################
 function x264build {
@@ -129,7 +133,7 @@ x264build i386
 make install prefix=${PREFIX}
 make clean
 x264build x86_64
-if test -z "$NOPPC"; then
+if echo "$HVARCH" | grep -q "ppc"; then
 	make clean
 	x264build ppc
 fi
@@ -147,9 +151,7 @@ autoconfbuild
 
 
 ################################################################################
-download libvpx-v1.3.0.tar.bz2 https://webm.googlecode.com/files/libvpx-v1.3.0.tar.bz2
-cd ${BUILDD}
-tar xjf ${SRCDIR}/libvpx-v1.3.0.tar.bz2
+src libvpx-v1.3.0 tar.bz2 https://webm.googlecode.com/files/libvpx-v1.3.0.tar.bz2
 
 function buildvpx {
 cd ${BUILDD}/libvpx-v1.3.0
@@ -180,13 +182,14 @@ buildvpx x86-darwin9-gcc
 cd ${BUILDD}/ffmpeg-${FFVERSION}/
 
 ./configure --prefix=${PREFIX} \
---enable-libx264 --enable-libtheora --enable-libvorbis --enable-libmp3lame --enable-libvpx \
---enable-shared --enable-gpl --disable-static --disable-debug \
---disable-ffserver --disable-ffplay \
---arch=x86_32 --target-os=darwin --cpu=i686 --enable-cross-compile \
---extra-cflags="-arch i386 ${OSXCOMPAT}  -I${PREFIX}/include" \
---extra-ldflags="-arch i386 ${OSXCOMPAT} -L${PREFIX}/lib -headerpad_max_install_names"
-make $MAKEFLAGS && make install
+	--enable-libx264 --enable-libtheora --enable-libvorbis --enable-libmp3lame --enable-libvpx \
+	--enable-shared --enable-gpl --disable-static --disable-debug \
+	--disable-ffserver --disable-ffplay --disable-iconv \
+	--arch=x86_32 --target-os=darwin --cpu=i686 --enable-cross-compile \
+	--extra-cflags="-arch i386 ${OSXCOMPAT}  -I${PREFIX}/include" \
+	--extra-ldflags="-arch i386 ${OSXCOMPAT} -L${PREFIX}/lib -headerpad_max_install_names"
+make $MAKEFLAGS
+make install
 
 find . -iname "*dylib" -type f -exec echo cp -v {} ${PREFIX}/fflipo/\`basename {}\`-i386 \; | bash -
 cp ffprobe ${PREFIX}/fflipo/ffprobe-i386
@@ -196,28 +199,29 @@ make clean
 buildvpx x86_64-darwin9-gcc
 cd ${BUILDD}/ffmpeg-${FFVERSION}/
 ./configure --prefix=${PREFIX} \
---enable-libx264 --enable-libtheora --enable-libvorbis --enable-libmp3lame --enable-libvpx \
---enable-shared --enable-gpl --disable-static --disable-debug \
---disable-ffserver --disable-ffplay \
---arch=x86_64 \
---extra-cflags="-arch x86_64 ${OSXCOMPAT}  -I${PREFIX}/include" \
---extra-ldflags="-arch x86_64 ${OSXCOMPAT} -L${PREFIX}/lib -headerpad_max_install_names"
+	--enable-libx264 --enable-libvpx \
+	--enable-libtheora --enable-libvorbis --enable-libmp3lame \
+	--enable-shared --enable-gpl --disable-static --disable-debug \
+	--disable-ffserver --disable-ffplay --disable-iconv \
+	--arch=x86_64 \
+	--extra-cflags="-arch x86_64 ${OSXCOMPAT}  -I${PREFIX}/include" \
+	--extra-ldflags="-arch x86_64 ${OSXCOMPAT} -L${PREFIX}/lib -headerpad_max_install_names"
 make $MAKEFLAGS
 find . -iname "*dylib" -type f -exec echo cp -v {} ${PREFIX}/fflipo/\`basename {}\`-x86_64 \; | bash -
 cp ffprobe ${PREFIX}/fflipo/ffprobe-x86_64
 cp ffmpeg ${PREFIX}/fflipo/ffmpeg-x86_64
 make clean
 
-if test -z "$NOPPC"; then
+if echo "$HVARCH" | grep -q "ppc"; then
 buildvpx ppc32-darwin9-gcc
 cd ${BUILDD}/ffmpeg-${FFVERSION}/
 ./configure --prefix=${PREFIX} \
---enable-libx264 --enable-libtheora --enable-libvorbis --enable-libmp3lame --enable-libvpx \
---enable-shared --enable-gpl --disable-static --disable-debug \
---disable-ffserver --disable-ffplay \
---arch=ppc \
---extra-cflags="-arch ppc ${OSXCOMPAT}  -I${PREFIX}/include" \
---extra-ldflags="-arch ppc ${OSXCOMPAT} -L${PREFIX}/lib -headerpad_max_install_names"
+	--enable-libx264 --enable-libtheora --enable-libvorbis --enable-libmp3lame --enable-libvpx \
+	--enable-shared --enable-gpl --disable-static --disable-debug \
+	--disable-ffserver --disable-ffplay --disable-iconv \
+	--arch=ppc \
+	--extra-cflags="-arch ppc ${OSXCOMPAT}  -I${PREFIX}/include" \
+	--extra-ldflags="-arch ppc ${OSXCOMPAT} -L${PREFIX}/lib -headerpad_max_install_names"
 make $MAKEFLAGS
 find . -iname "*dylib" -type f -exec echo cp -v {} ${PREFIX}/fflipo/\`basename {}\`-ppc \; | bash -
 cp ffprobe ${PREFIX}/fflipo/ffprobe-ppc
