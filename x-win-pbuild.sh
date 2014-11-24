@@ -25,7 +25,7 @@ apt-get -y install build-essential \
 	nsis
 
 cd "$SRC"
-git clone -b master git://github.com/x42/harvid.git
+git clone -b master --single-branch git://github.com/x42/harvid.git
 
 set -e
 

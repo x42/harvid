@@ -247,7 +247,7 @@ fi
 ################################################################################
 cd ${BUILDD}
 rm -rf harvid
-git clone -b master git://github.com/x42/harvid.git
+git clone -b master --single-branch git://github.com/x42/harvid.git
 cd harvid
 
 export HVARCH

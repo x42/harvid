@@ -97,7 +97,7 @@ else
   ssh ${OSXUSER}${OSXMACHINE} << EOF
 exec /bin/bash -l
 rm -rf harvid
-git clone -b master git://github.com/x42/harvid.git
+git clone -b master --single-branch git://github.com/x42/harvid.git
 cd harvid
 ./x-osx-bundle.sh
 cd ..
