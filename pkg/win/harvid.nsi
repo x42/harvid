@@ -76,7 +76,7 @@ SectionEnd
 ; Optional section (can be disabled by the user)
 Section "Start Menu Shortcuts"
   CreateDirectory "$SMPROGRAMS\harvid"
-  CreateShortCut "$SMPROGRAMS\harvid\harvid.lnk" "$INSTDIR\harvid.exe" "" "$INSTDIR\harvid.exe" 0
+  CreateShortCut "$SMPROGRAMS\harvid\harvid.lnk" "$INSTDIR\harvid.exe" "-A shutdown" "$INSTDIR\harvid.exe" 0
   CreateShortCut "$SMPROGRAMS\harvid\uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
 SectionEnd
 

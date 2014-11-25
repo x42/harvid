@@ -31,7 +31,7 @@ ifeq ($(ARCH),mingw)
   PKG_CONFIG_PATH=$(WINLIB)/pkgconfig/
   ARCHINCLUDES=-I$(WINPREFIX)/include -DHAVE_WINDOWS
   ARCHLIBES=-lwsock32 -lws2_32 -lpthread
-  LDFLAGS+=-L$(WINLIB) -L$(WINPREFIX)/bin
+  LDFLAGS+=-L$(WINLIB) -L$(WINPREFIX)/bin -mwindows
   UNAME=win32|mingw
   LIBEXT=dll
 else
