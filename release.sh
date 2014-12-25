@@ -116,6 +116,7 @@ fi
 rsync -Pa $COWBUILDER:/tmp/harvid-i386-linux-gnu-${VERSION}.tgz site/releases/ || exit
 rsync -Pa $COWBUILDER:/tmp/harvid-x86_64-linux-gnu-${VERSION}.tgz site/releases/ || exit
 rsync -Pa $COWBUILDER:/tmp/harvid_installer-${VERSION}.exe site/releases/ || exit
+rsync -Pa $COWBUILDER:/tmp/harvid_win-${VERSION}.tar.xz tmp/ || exit
 
 rsync -Pa ${OSXUSER}$OSXMACHINE:/tmp/harvid-${VERSION}.pkg site/releases/ || exit
 rsync -Pa ${OSXUSER}$OSXMACHINE:/tmp/harvid-${VERSION}.dmg site/releases/ || exit
@@ -154,6 +155,7 @@ git push --force
 echo "uploading to ardour.org"
 rsync -Pa \
 	../tmp/harvid-osx-${VERSION}.tgz \
+	../tmp/harvid_win-${VERSION}.tar.xz \
 	releases/harvid-${VERSION}.dmg \
 	releases/harvid-${VERSION}.pkg \
 	releases/harvid-i386-linux-gnu-${VERSION}.tgz \

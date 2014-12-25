@@ -35,6 +35,13 @@ done
 cp -v ${WINPREFIX}/bin/ffmpeg.exe $NSIDIR
 cp -v ${WINPREFIX}/bin/ffprobe.exe $NSIDIR
 
+TARDIR=$(mktemp -d)
+cd $TARDIR
+ln -s $NSIDIR harvid
+tar cJhf /tmp/harvid_win-$VERSION.tar.xz harvid
+rm -rf $TARDIR
+cd -
+
 sed 's/@VERSION@/'${VERSION}'/' pkg/win/harvid.nsi > $NSIDIR/harvid.nsi
 
 echo
@@ -44,3 +51,4 @@ makensis "$NSIDIR/harvid.nsi"
 echo "--- DONE ---"
 cp -v "$NSIDIR/harvid_installer-$VERSION.exe" /tmp/
 ls -lt "/tmp/harvid_installer-$VERSION.exe" | head -n 1
+ls -lt "/tmp/harvid_win-$VERSION.tar.xz" | head -n 1
