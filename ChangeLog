@@ -1,3 +1,10 @@
+2015-01-02 (0.7.6) Robin Gareus <robin@gareus.org>
+* update build system, packaging and default flags
+* optimized windows build (no terminal)
+* support OSX 10.10
+* remove 'beta' from header image/icon
+(no changes to application itself)
+
 2014-09-05 (0.7.5) Robin Gareus <robin@gareus.org>
 * fix FPS calculation
 * hotfix release
