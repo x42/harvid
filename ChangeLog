@@ -1,4 +1,4 @@
-2015-01-02 (0.7.6) Robin Gareus <robin@gareus.org>
+2015-01-03 (0.7.6) Robin Gareus <robin@gareus.org>
 * update build system, packaging and default flags
 * optimized windows build (no terminal)
 * support OSX 10.10
