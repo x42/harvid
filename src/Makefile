@@ -53,11 +53,24 @@ HARVID_SRC = \
   socket_server.c \
   ../libharvid/libharvid.a
 
+ifneq ($(shell which xxd),)
+FLAGS+=-DXXDI
+
+logo.o: ../doc/harvid.jpg
+	xxd -i ../doc/harvid.jpg | $(CC) -x c - -c -o logo.o
+
+seek.o: ../doc/seek.js
+	xxd -i ../doc/seek.js | $(CC) -x c - -c -o seek.o
+
+else
+
 logo.o: ../doc/harvid.jpg
 	$(LD) -r -b binary -o logo.o ../doc/harvid.jpg
 
 seek.o: ../doc/seek.js
 	$(LD) -r -b binary -o seek.o ../doc/seek.js
+
+endif
 
 harvid: $(HARVID_SRC) $(HARVID_H) $(LOGODEP)
 	export PKG_CONFIG_PATH=$(PKG_CONFIG_PATH);\

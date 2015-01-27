@@ -208,7 +208,15 @@ void hdl_index_dir (int fd, const char *root, char *base_url, const char *path, 
 
 // logo.o
 
-#ifdef __APPLE__
+#ifdef XXDI
+
+#define EXTLD(NAME) \
+  extern const unsigned char ___ ## NAME []; \
+  extern const unsigned int ___ ## NAME ## _len;
+#define LDVAR(NAME) ___ ## NAME
+#define LDLEN(NAME) ___ ## NAME ## _len
+
+#elif defined __APPLE__
 #include <mach-o/getsect.h>
 
 #define EXTLD(NAME) \
