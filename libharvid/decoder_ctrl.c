@@ -342,6 +342,7 @@ static int clearjvo(JVD *jvd, int f, int id, int age, pthread_mutex_t *l) {
 
     cptr = cptr->next;
     if (f > 1 && mem != jvd->jvo) {
+      assert (prev != mem);
       prev->next = cptr;
       pthread_mutex_destroy(&mem->lock);
       free(mem);
@@ -551,8 +552,9 @@ static JVOBJECT *new_video_object(JVD *jvd, unsigned short id, int fmt) {
       sched_yield();
       return NULL;
     }
-    if (pthread_mutex_trylock(&jvo->lock))
+    if (pthread_mutex_trylock(&jvo->lock)) {
       continue;
+    }
     if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_PENDING|VOF_INFO))) {
       pthread_mutex_unlock(&jvo->lock);
       continue;
@@ -626,6 +628,15 @@ static void * dctrl_get_decoder(void *p, unsigned short id, int fmt, int64_t fra
     pthread_rwlock_unlock(&jvd->lock_jdh);
     if (jvo) {
       debugmsg(DEBUG_DCTL, "ID found in hashtable\n");
+      pthread_mutex_lock(&jvo->lock);
+      if ((jvo->flags&(VOF_OPEN|VOF_VALID|VOF_PENDING)) == (VOF_VALID|VOF_OPEN)) {
+        jvo->infolock_refcnt++;
+        jvo->flags |= VOF_INFO;
+        pthread_mutex_unlock(&jvo->lock);
+        BUSYDEC(jvd)
+        return(jvo);
+      }
+      pthread_mutex_unlock(&jvo->lock);
     }
   }
 
@@ -650,19 +661,22 @@ static void * dctrl_get_decoder(void *p, unsigned short id, int fmt, int64_t fra
     pthread_mutex_lock(&jvo->lock);
     if ((jvo->flags&(VOF_PENDING))) {
       pthread_mutex_unlock(&jvo->lock);
+      jvo = NULL;
       continue;
     }
-    jvo->flags |= VOF_PENDING;
-    pthread_mutex_unlock(&jvo->lock);
 
-    if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_INFO)) == (VOF_VALID)) {
+    if ((jvo->flags&(VOF_USED|VOF_OPEN|VOF_VALID|VOF_INFO|VOF_PENDING)) == (VOF_VALID)) {
+      jvo->flags |= VOF_PENDING;
+      jvo->lru = time(NULL);
+      pthread_mutex_unlock(&jvo->lock);
+
       if (fmt == PIX_FMT_NONE) fmt = DEFAULT_PIX_FMT;
+
       if (!my_open_movie(&jvo->decoder, get_fn(jvd, jvo->id), fmt)) {
         pthread_mutex_lock(&jvo->lock);
         jvo->fmt = fmt;
         jvo->flags |= VOF_OPEN;
         jvo->flags &= ~VOF_PENDING;
-        pthread_mutex_unlock(&jvo->lock);
       } else {
         pthread_mutex_lock(&jvo->lock);
         jvo->flags &= ~VOF_PENDING;
@@ -676,8 +690,6 @@ static void * dctrl_get_decoder(void *p, unsigned short id, int fmt, int64_t fra
       }
     }
 
-    pthread_mutex_lock(&jvo->lock);
-    jvo->flags &= ~VOF_PENDING;
     if (frame < 0) {
       /* we only need info -> decoder may be in use */
       if ((jvo->flags&(VOF_OPEN|VOF_VALID)) == (VOF_VALID|VOF_OPEN)) {
