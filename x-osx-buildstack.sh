@@ -86,7 +86,7 @@ src libiconv-1.14 tar.gz ftp://ftp.gnu.org/gnu/libiconv/libiconv-1.14.tar.gz
 autoconfbuild --with-included-gettext --with-libiconv-prefix=$PREFIX
 
 ################################################################################
-src libpng-1.6.14 tar.gz https://downloads.sourceforge.net/project/libpng/libpng16/1.6.14/libpng-1.6.14.tar.gz
+src libpng-1.6.16 tar.gz https://downloads.sourceforge.net/project/libpng/libpng16/1.6.16/libpng-1.6.16.tar.gz
 autoconfbuild
 
 ################################################################################
@@ -106,6 +106,8 @@ autoconfbuild --disable-examples --disable-oggtest --with-ogg=${PREFIX}
 
 ################################################################################
 src libtheora-1.1.1 tar.bz2 http://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.bz2
+cp configure configure.bak
+sed -i '' 's/-fforce-addr //' configure
 autoconfbuild --disable-sdltest --disable-vorbistest --disable-oggtest --disable-asm --disable-examples --with-ogg=${PREFIX} --with-vorbis=${PREFIX}
 
 ################################################################################
