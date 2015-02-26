@@ -110,7 +110,7 @@ static void setnonblock(int sock, unsigned long l) {
 }
 
 static void server_sockaddr(ICI *d, struct sockaddr_in *addr) {
-  memset(addr, 0, sizeof(addr));
+  memset(addr, 0, sizeof(struct sockaddr_in));
   addr->sin_family = AF_INET;
   addr->sin_addr.s_addr = d->listenaddr;
   addr->sin_port = d->listenport;
