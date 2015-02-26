@@ -41,9 +41,7 @@ else
   UNAME=$(shell uname)
   ifeq ($(UNAME),Darwin)
   ARCHFLAGS+=-headerpad_max_install_names
-  ARCHLIBES+=-sectcreate __DATA __doc_harvid_jpg ../doc/harvid.jpg
-  ARCHLIBES+=-sectcreate __DATA __doc_seek_js ../doc/seek.js
-  LOGODEP=
+  LOGODEP=logo.c seek.c
   ECHO=echo
   LIBEXT=dylib
   NM=nm

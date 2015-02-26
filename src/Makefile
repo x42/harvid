@@ -1,4 +1,8 @@
-LOGODEP=logo.o seek.o
+ifneq ($(shell which xxd),)
+  LOGODEP=logo.c seek.c
+else
+  LOGODEP=logo.o seek.o
+endif
 
 include ../common.mak
 
@@ -56,6 +60,12 @@ HARVID_SRC = \
 ifneq ($(shell which xxd),)
 FLAGS+=-DXXDI
 
+logo.c: ../doc/harvid.jpg
+	xxd -i ../doc/harvid.jpg > logo.c
+
+seek.c: ../doc/seek.js
+	xxd -i ../doc/seek.js > seek.c
+
 logo.o: ../doc/harvid.jpg
 	xxd -i ../doc/harvid.jpg | $(CC) -x c - -c -o logo.o
 
@@ -77,7 +87,7 @@ harvid: $(HARVID_SRC) $(HARVID_H) $(LOGODEP)
 	$(CC) -o $(@) $(CFLAGS) $(FLAGS) $(HARVID_SRC) $(LOGODEP) $(LDFLAGS) $(LOADLIBES)
 
 clean:
-	rm -f harvid logo.o seek.o cscope.* tags
+	rm -f harvid logo.c logo.o seek.c seek.o cscope.* tags
 
 man: harvid
 	help2man -N -n 'video server' -o ../doc/harvid.1 ./harvid
