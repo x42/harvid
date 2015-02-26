@@ -305,7 +305,8 @@ void *ic = NULL; // encoded image cache
 int main (int argc, char **argv) {
   program_name = argv[0];
   struct stat sb;
-  int cfg_uid, cfg_gid;
+  uid_t cfg_uid;
+  gid_t cfg_gid;
 #ifdef HAVE_WINDOWS
   char *docroot = "C:\\";
 #else
@@ -341,8 +342,6 @@ int main (int argc, char **argv) {
   /* resolve before doing chroot() */
   cfg_uid = resolve_uid(cfg_username);
   cfg_gid = resolve_gid(cfg_groupname);
-
-  if (cfg_uid < 0 || cfg_gid < 0) {exitstatus = -1; goto errexit;}
 
   if (cfg_chroot) {
     if (do_chroot(cfg_chroot)) {exitstatus = -1; goto errexit;}

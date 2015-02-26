@@ -39,6 +39,13 @@
 #define FREQ_LEN (3600)
 #endif
 
+#ifdef HAVE_WINDOWS
+typedef int gid_t
+typedef int uid_t
+#else
+#include <unistd.h>
+#endif
+
 /**
  * @brief daemon
  *
@@ -54,16 +61,16 @@ typedef struct ICI {
   int num_clients; ///< current number of connected clients
   int max_clients; ///< configured max. number of connections for this server
   pthread_mutex_t lock; ///< lock to modify num_clients
-  int uid;         ///< drop privileges, assume this userid
-  int gid;         ///< drop privileges, adopt this group
+  uid_t uid;       ///< drop privileges, assume this userid
+  gid_t gid;       ///< drop privileges, adopt this group
   const char *docroot;   ///< document root for all connections
-	unsigned int age; ///< used for timeout -- in seconds
-	unsigned int timeout; ///< if > 0 shut down serve if age reaches this value
+  unsigned int age; ///< used for timeout -- in seconds
+  unsigned int timeout; ///< if > 0 shut down serve if age reaches this value
   void *userdata;  ///< generic placeholder for usage specific data
 #ifdef USAGE_FREQUENCY_STATISTICS
-	time_t       req_stats[FREQ_LEN];
-	time_t       stat_start;
-	unsigned int stat_count;
+  time_t       req_stats[FREQ_LEN];
+  time_t       stat_start;
+  unsigned int stat_count;
 #endif
 } ICI;
 
@@ -104,7 +111,7 @@ typedef struct CONN {
  * @param d user-data passed on to callbacks.
  */
 int start_tcp_server (const unsigned int hostnl, const unsigned short port,
-		const char *docroot, const int uid, const int gid,
+		const char *docroot, const uid_t uid, const gid_t gid,
 		unsigned int timeout, void *d);
 
 // extern function virtual prototype(s)

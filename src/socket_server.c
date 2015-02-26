@@ -446,7 +446,7 @@ daemon_end:
 
 // tcp server thread
 int start_tcp_server (const unsigned int hostnl, const unsigned short port,
-    const char *docroot, const int uid, const int gid,
+    const char *docroot, const uid_t uid, const gid_t gid,
     unsigned int timeout, void *userdata) {
   ICI *d = calloc(1, sizeof(ICI));
   pthread_mutex_init(&d->lock, NULL);

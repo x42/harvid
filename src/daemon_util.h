@@ -25,6 +25,13 @@
 #ifndef _dutil_H
 #define _dutil_H
 
+#ifdef HAVE_WINDOWS
+typedef int gid_t
+typedef int uid_t
+#else
+#include <unistd.h>
+#endif
+
 /**
  * fork the current process in the background and close
  * standard-file descriptors.
@@ -36,16 +43,16 @@ int daemonize (void);
 /**
  * resolve unix-user-name or ID to integer
  * @param setuid_user unix user name or ID
- * @return -1 on error, uid otherwise
+ * @return 0 on error, uid otherwise (root cannot be looked up)
  */
-int resolve_uid(const char *setuid_user);
+uid_t resolve_uid(const char *setuid_user);
 
 /**
  * resolve unix-group-name or ID to integer
  * @param setgid_group unix group name or ID
- * @return -1 on error, gid otherwise
+ * @return 0 on error, gid otherwise (root cannot be looked up)
  */
-int resolve_gid(const char *setgid_group);
+gid_t resolve_gid(const char *setgid_group);
 
 /**
  * assume a differernt user identity - drop root privileges.
@@ -53,7 +60,7 @@ int resolve_gid(const char *setgid_group);
  * @param gid unix group id
  * @return 0 if successful, negative number on error
  */
-int drop_privileges(const int uid, const int gid);
+int drop_privileges(const gid_t uid, const gid_t gid);
 
 /**
  * change root - jail the daemon to confined path on the system

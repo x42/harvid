@@ -53,9 +53,9 @@ int daemonize (void) {
   return 0;
 }
 
-int resolve_uid(const char *setuid_user) {
+uid_t resolve_uid(const char *setuid_user) {
 #ifndef HAVE_WINDOWS
-  uid_t uid = 0;
+  int uid = 0;
   struct passwd *pw;
   if (!setuid_user) return 0;
 
@@ -65,10 +65,10 @@ int resolve_uid(const char *setuid_user) {
   else if(atoi(setuid_user)) /* numerical? */
     uid = atoi(setuid_user);
   else {
-    uid = -1;
+    uid = 0;
   }
-  if (uid < 0) {
-    dlog(DLOG_CRIT, "SYS: failed to lookup UID for user '%s'\n", setuid_user);
+  if (uid == 0) {
+    dlog(DLOG_CRIT, "SYS: invalid username '%s'\n", setuid_user);
   }
   return uid;
 #else
@@ -87,10 +87,10 @@ int resolve_gid(const char *setgid_group) {
   else if(atoi(setgid_group)) /* numerical? */
     gid = atoi(setgid_group);
   else {
-    gid = -1;
+    gid = 0;
   }
-  if (gid < 0) {
-    dlog(DLOG_CRIT, "SYS: failed to lookup GID for group '%s'\n", setgid_group);
+  if (gid == 0) {
+    dlog(DLOG_CRIT, "SYS: invalid group '%s'\n", setgid_group);
   }
   return gid;
 #else
@@ -99,7 +99,7 @@ int resolve_gid(const char *setgid_group) {
 }
 
 /* set process user and group(s) id */
-int drop_privileges(const int uid, const int gid) {
+int drop_privileges(const uid_t uid, const gid_t gid) {
 #ifndef HAVE_WINDOWS
   if (getuid()) {
     dlog(DLOG_WARNING, "SYS: non-suid. Keeping current privileges.\n");
