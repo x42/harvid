@@ -375,9 +375,9 @@ void ics_http_handler(
       SEND200CT("", CONTENT_TYPE_SWITCH(a.render_fmt));
       hdl_index_dir(c->fd, c->d->docroot, base_url, dp, a.render_fmt, a.idx_option);
       free(dp);
-      free(abspath);
       free(qps.fn);
     }
+    free(abspath);
     c->run = 0;
   } else if (CTP("/admin")) { /* /admin/ */
     if (strncasecmp(path,  "/admin/check", 12) == 0) {
