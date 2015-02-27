@@ -62,7 +62,7 @@ libharvid.dylib: $(LIBHARVID_OBJECTS) $(LIBHARVID_H) .libharvid.sym
 	  -dynamiclib \
 	  $(LIBHARVID_OBJECTS) \
 	  $(CFLAGS) $(FLAGS) \
-	  -install_name $(libdir)/libltc.0.$(LIBEXT) \
+	  -install_name $(libdir)/libharvid.0.$(LIBEXT) \
 	  -Wl,-undefined -Wl,dynamic_lookup \
 	  -Wl,-single_module -Wl,-exported_symbols_list,.libharvid.expsym
 	dsymutil libharvid.$(LIBEXT)
