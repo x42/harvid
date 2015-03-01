@@ -12,9 +12,11 @@
 #    (/tmp/ is fixed set by x-static.sh )
 #
 
+
 #use environment variables if set for SRC and PFX
 : ${SRC=/usr/src}
 : ${PFX=$HOME/local}
+: ${SRCDIR=/var/tmp/winsrc}
 
 if [ "$(id -u)" != "0" -a -z "$SUDO" ]; then
 	echo "This script must be run as root in pbuilder" 1>&2
@@ -31,19 +33,18 @@ $SUDO apt-get -y install git build-essential yasm \
 	libxvidcore-dev zlib1g-dev zlib1g-dev \
 	libpng12-dev libjpeg8-dev
 
+mkdir -p ${SRCDIR}
+mkdir -p ${SRC}
+
 cd $SRC
 git clone -b master --single-branch git://github.com/x42/harvid.git
 
 set -e
 
 FFVERSION=2.2.13
-#git clone -b release/${FFVERSION} --depth 1 git://source.ffmpeg.org/ffmpeg-${FFVERSION}
-if test -f /tmp/ffmpeg-2.2.5.tar.bz2; then
-	tar xjf /tmp/ffmpeg-2.2.5.tar.bz2
-else
-	wget http://www.ffmpeg.org/releases/ffmpeg-${FFVERSION}.tar.bz2
-	tar xjf ffmpeg-${FFVERSION}.tar.bz2
-fi
+test -f ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2 \
+	|| curl -k -L -o ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2 http://www.ffmpeg.org/releases/ffmpeg-${FFVERSION}.tar.bz2
+tar xjf ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2
 
 cd $SRC/harvid
 VERSION=$(git describe --tags HEAD)
