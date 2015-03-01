@@ -31,7 +31,7 @@ $SUDO apt-get -y install git build-essential yasm \
 	libschroedinger-dev libspeex-dev libtheora-dev \
 	libvorbis-dev libvpx-dev libx264-dev \
 	libxvidcore-dev zlib1g-dev zlib1g-dev \
-	libpng12-dev libjpeg8-dev
+	libpng12-dev libjpeg8-dev curl
 
 mkdir -p ${SRCDIR}
 mkdir -p ${SRC}
