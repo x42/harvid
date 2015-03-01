@@ -7,6 +7,8 @@ cscope.out
 *.dSYM
 
 /src/harvid
+/src/logo.c
+/src/seek.c
 /libharvid/libharvid.a
 /libharvid/libharvid.so
 /libharvid/libharvid.dll
