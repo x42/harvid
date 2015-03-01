@@ -164,7 +164,7 @@ make clean
 }
 
 ################################################################################
-FFVERSION=2.2.5
+FFVERSION=2.2.13
 download ffmpeg-${FFVERSION}.tar.bz2 http://www.ffmpeg.org/releases/ffmpeg-${FFVERSION}.tar.bz2
 cd ${BUILDD}
 tar xjf ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2

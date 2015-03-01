@@ -36,7 +36,7 @@ git clone -b master --single-branch git://github.com/x42/harvid.git
 
 set -e
 
-FFVERSION=2.2.5
+FFVERSION=2.2.13
 #git clone -b release/${FFVERSION} --depth 1 git://source.ffmpeg.org/ffmpeg-${FFVERSION}
 if test -f /tmp/ffmpeg-2.2.5.tar.bz2; then
 	tar xjf /tmp/ffmpeg-2.2.5.tar.bz2
