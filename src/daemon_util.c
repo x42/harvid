@@ -25,6 +25,7 @@
 #endif
 
 #include <dlog.h>
+#include "daemon_util.h"
 
 #define DEV_NULL "/dev/null"
 int daemonize (void) {
@@ -76,7 +77,7 @@ uid_t resolve_uid(const char *setuid_user) {
 #endif
 }
 
-int resolve_gid(const char *setgid_group) {
+gid_t resolve_gid(const char *setgid_group) {
 #ifndef HAVE_WINDOWS
   gid_t gid = 0;
   struct group *gr;
