@@ -1,3 +1,9 @@
+2015-03-03 (0.8.0) Robin Gareus <robin@gareus.org>
+* portability fixes
+* update ut-hash
+* speed up direct info-lookups & fix possible deadlock
+* bump various build-stack versions for binary releases
+
 2015-01-03 (0.7.6) Robin Gareus <robin@gareus.org>
 * update build system, packaging and default flags
 * optimized windows build (no terminal)
