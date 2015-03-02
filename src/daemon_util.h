@@ -26,8 +26,8 @@
 #define _dutil_H
 
 #ifdef HAVE_WINDOWS
-typedef int gid_t
-typedef int uid_t
+typedef int gid_t;
+typedef int uid_t;
 #else
 #include <unistd.h>
 #endif
