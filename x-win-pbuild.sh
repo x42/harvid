@@ -22,7 +22,7 @@ apt-get -y install build-essential \
 	gcc-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64-tools mingw32 \
 	wget git autoconf automake pkg-config \
 	curl unzip ed yasm \
-	nsis
+	nsis vim-common
 
 cd "$SRC"
 git clone -b master --single-branch git://github.com/x42/harvid.git
