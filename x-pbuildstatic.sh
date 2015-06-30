@@ -61,6 +61,7 @@ fi
 	--enable-libspeex --enable-libbluray --enable-libgsm \
 	--disable-vaapi --disable-x11grab \
 	--disable-devices \
+	--extra-cflags="-D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64" \
 	--enable-shared --enable-static --prefix=$PFX $@
 
 make -j4

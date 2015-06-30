@@ -78,7 +78,7 @@ gcc -DNDEBUG -DICSARCH=\"Linux\" -DICSVERSION=\"${VERSION}\" \
   -Wall -O2 -DXXDI \
   -o tmp/$OUTFN -Ilibharvid src/*.c ${LIBHARVID_SRC} src/logo.o src/seek.o \
 	`pkg-config --cflags libavcodec libavformat libavutil libpng libswscale` \
-	${CFLAGS} \
+	${CFLAGS} -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 \
 	${LIBF}/libavformat.a \
 	${LIBF}/libavcodec.a \
 	${LIBF}/libswscale.a \
