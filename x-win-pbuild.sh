@@ -140,10 +140,10 @@ PATH=${PREFIX}/bin:/usr/bin:/bin:/usr/sbin:/sbin \
 make $MAKEFLAGS && make install
 
 ################################################################################
-download libvpx-v1.3.0.tar.bz2 https://webm.googlecode.com/files/libvpx-v1.3.0.tar.bz2
+download libvpx-1.4.0.tar.bz2 https://webm.googlecode.com/files/libvpx-v1.4.0.tar.bz2
 cd ${BUILDD}
-tar xjf ${SRCDIR}/libvpx-v1.3.0.tar.bz2
-cd libvpx-v1.3.0
+tar xjf ${SRCDIR}/libvpx-1.4.0.tar.bz2
+cd libvpx-1.4.0
 ed vpx/src/svc_encodeframe.c << EOF
 %s/MINGW_HAS_SECURE_API/MINGW_HAS_SECURE_APIXXX/
 wq
@@ -165,7 +165,7 @@ cd lame-3.99.5
 autoconfbuild
 
 ################################################################################
-FFVERSION=2.2.13
+FFVERSION=2.8.3
 download ffmpeg-${FFVERSION}.tar.bz2 http://www.ffmpeg.org/releases/ffmpeg-${FFVERSION}.tar.bz2
 cd ${BUILDD}
 tar xjf ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2

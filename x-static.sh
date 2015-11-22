@@ -83,6 +83,7 @@ gcc -DNDEBUG -DICSARCH=\"Linux\" -DICSVERSION=\"${VERSION}\" \
 	${LIBF}/libavcodec.a \
 	${LIBF}/libswscale.a \
 	${LIBF}/libavdevice.a \
+	${LIBF}/libswresample.a \
 	${LIBF}/libavutil.a \
 	\
 	$SLIBS \

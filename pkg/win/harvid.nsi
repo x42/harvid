@@ -37,29 +37,7 @@ Section "harvid (required)"
   File "ffmpeg.exe"
   File "ffprobe.exe"
 
-  FILE "avcodec-55.dll"
-  FILE "avdevice-55.dll"
-  FILE "avfilter-4.dll"
-  FILE "avformat-55.dll"
-  FILE "avutil-52.dll"
-  FILE "libcharset-1.dll"
-  FILE "libiconv-2.dll"
-  FILE "libjpeg-9.dll"
-  FILE "libmp3lame-0.dll"
-  FILE "libogg-0.dll"
-  FILE "libpng16-16.dll"
-  FILE "libtheora-0.dll"
-  FILE "libtheoradec-1.dll"
-  FILE "libtheoraenc-1.dll"
-  FILE "libvorbis-0.dll"
-  FILE "libvorbisenc-2.dll"
-  FILE "libvorbisfile-3.dll"
-  FILE "libx264-142.dll"
-  FILE "postproc-52.dll"
-  FILE "pthreadGC2.dll"
-  FILE "swresample-0.dll"
-  FILE "swscale-2.dll"
-  FILE "zlib1.dll"
+  FILE /r "*.dll"
 
   ; Write the installation path into the registry
   WriteRegStr HKLM SOFTWARE\RSS\harvid "Install_Dir" "$INSTDIR"
@@ -96,29 +74,8 @@ Section "Uninstall"
   Delete $INSTDIR\uninstall.exe
   Delete $INSTDIR\ffmpeg.exe
   Delete $INSTDIR\ffprobe.exe
-  Delete $INSTDIR\avcodec-55.dll
-  Delete $INSTDIR\avdevice-55.dll
-  Delete $INSTDIR\avfilter-4.dll
-  Delete $INSTDIR\avformat-55.dll
-  Delete $INSTDIR\avutil-52.dll
-  Delete $INSTDIR\libcharset-1.dll
-  Delete $INSTDIR\libiconv-2.dll
-  Delete $INSTDIR\libjpeg-9.dll
-  Delete $INSTDIR\libmp3lame-0.dll
-  Delete $INSTDIR\libogg-0.dll
-  Delete $INSTDIR\libpng16-16.dll
-  Delete $INSTDIR\libtheora-0.dll
-  Delete $INSTDIR\libtheoradec-1.dll
-  Delete $INSTDIR\libtheoraenc-1.dll
-  Delete $INSTDIR\libvorbis-0.dll
-  Delete $INSTDIR\libvorbisenc-2.dll
-  Delete $INSTDIR\libvorbisfile-3.dll
-  Delete $INSTDIR\libx264-142.dll
-  Delete $INSTDIR\postproc-52.dll
-  Delete $INSTDIR\pthreadGC2.dll
-  Delete $INSTDIR\swresample-0.dll
-  Delete $INSTDIR\swscale-2.dll
-  Delete $INSTDIR\zlib1.dll
+
+  Delete "$INSTDIR\*.dll"
 
   ; Remove shortcuts, if any
   Delete "$SMPROGRAMS\harvid\*.*"

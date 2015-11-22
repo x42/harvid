@@ -41,7 +41,7 @@ git clone -b master --single-branch git://github.com/x42/harvid.git
 
 set -e
 
-FFVERSION=2.2.13
+FFVERSION=2.8.2
 test -f ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2 \
 	|| curl -k -L -o ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2 http://www.ffmpeg.org/releases/ffmpeg-${FFVERSION}.tar.bz2
 tar xjf ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2
