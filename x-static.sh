@@ -87,7 +87,7 @@ gcc -DNDEBUG -DICSARCH=\"Linux\" -DICSVERSION=\"${VERSION}\" \
 	${LIBF}/libavutil.a \
 	\
 	$SLIBS \
-	-lm -ldl -pthread -lstdc++ \
+	-lm -lrt -ldl -pthread -lstdc++ \
 || exit 1
 
 strip tmp/$OUTFN
