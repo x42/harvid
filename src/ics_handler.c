@@ -404,7 +404,7 @@ void ics_http_handler(
         httperror(c->fd, 403, NULL, NULL);
       }
     } else {
-      httperror(c->fd, 400, "Bad Request", "Nonexistant admin command.");
+      httperror(c->fd, 400, "Bad Request", "Nonexistent admin command.");
     }
     c->run = 0;
   } else if (CTP("/") && !strcmp(path, "/") && strlen(query) == 0) { /* HOMEPAGE */
