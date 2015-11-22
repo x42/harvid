@@ -140,7 +140,7 @@ PATH=${PREFIX}/bin:/usr/bin:/bin:/usr/sbin:/sbin \
 make $MAKEFLAGS && make install
 
 ################################################################################
-download libvpx-1.4.0.tar.bz2 https://webm.googlecode.com/files/libvpx-v1.4.0.tar.bz2
+download libvpx-1.4.0.tar.bz2 http://downloads.webmproject.org/releases/webm/libvpx-1.4.0.tar.bz2
 cd ${BUILDD}
 tar xjf ${SRCDIR}/libvpx-1.4.0.tar.bz2
 cd libvpx-1.4.0
@@ -165,7 +165,7 @@ cd lame-3.99.5
 autoconfbuild
 
 ################################################################################
-FFVERSION=2.8.3
+FFVERSION=2.8.2
 download ffmpeg-${FFVERSION}.tar.bz2 http://www.ffmpeg.org/releases/ffmpeg-${FFVERSION}.tar.bz2
 cd ${BUILDD}
 tar xjf ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2
