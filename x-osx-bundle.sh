@@ -42,8 +42,8 @@ strip -SXx "$TDIR/ffmpeg_harvid"
 
 mkdir -p $PREFIX/usr/local/man/man1/
 cp -fv "${TOPDIR}/doc/harvid.1" $PREFIX/usr/local/man/man1/
-cp -fv "${HVSTACK}/share/man/man1/ffmpeg.1" $PREFIX/usr/local/man/man1/ffmpeg_harvid.1
-cp -fv "${HVSTACK}/share/man/man1/ffprobe.1" $PREFIX/usr/local/man/man1/ffprobe_harvid.1
+cp -fv "${HVSTACK}/share/man/man1/ffmpeg.1" $PREFIX/usr/local/man/man1/ffmpeg_harvid.1 || true
+cp -fv "${HVSTACK}/share/man/man1/ffprobe.1" $PREFIX/usr/local/man/man1/ffprobe_harvid.1 || true
 
 echo
 
