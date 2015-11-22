@@ -102,7 +102,7 @@ static int ff_getbuffersize(void *ptr, size_t *s) {
 
 static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, int ys) {
   switch (ff->render_fmt) {
-    case PIX_FMT_UYVY422:
+    case AV_PIX_FMT_UYVY422:
       {
 	int i;
 	for (i = 0; i < w*h*2; i += 2) {
@@ -110,7 +110,7 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
 	}
       }
       break;
-    case PIX_FMT_YUYV422:
+    case AV_PIX_FMT_YUYV422:
       {
 	int i;
 	for (i = 0; i < w*h*2; i += 2) {
@@ -118,25 +118,25 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
 	}
       }
       break;
-    case PIX_FMT_YUV420P:
+    case AV_PIX_FMT_YUV420P:
       {
 	size_t Ylen = w * h;
 	memset(buf, 0, Ylen);
 	memset(buf+Ylen, 0x80, Ylen/2);
       }
       break;
-    case PIX_FMT_YUV440P:
+    case AV_PIX_FMT_YUV440P:
       {
 	size_t Ylen = w * h;
 	memset(buf, 0, Ylen);
 	memset(buf+Ylen, 0x80, Ylen);
       }
       break;
-    case PIX_FMT_BGR24:
-    case PIX_FMT_RGB24:
-    case PIX_FMT_RGBA:
-    case PIX_FMT_BGRA:
-    case PIX_FMT_ARGB:
+    case AV_PIX_FMT_BGR24:
+    case AV_PIX_FMT_RGB24:
+    case AV_PIX_FMT_RGBA:
+    case AV_PIX_FMT_BGRA:
+    case AV_PIX_FMT_ARGB:
       memset(buf, 0, ff_getbuffersize(ff, NULL));
       break;
     default:
@@ -147,8 +147,8 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
 #if 1 // draw cross
   int x,y;
   switch (ff->render_fmt) {
-    case PIX_FMT_YUV420P:
-    case PIX_FMT_YUV440P:
+    case AV_PIX_FMT_YUV420P:
+    case AV_PIX_FMT_YUV440P:
       for (x = 0, y = 0; x < w-1; x++, y = h * x / w) {
 	int off = (x + w * y);
 	buf[off]=127; buf[off+1]=127;
@@ -156,8 +156,8 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
 	buf[off]=127; buf[off+1]=127;
       }
       break;
-    case PIX_FMT_YUYV422:
-    case PIX_FMT_UYVY422:
+    case AV_PIX_FMT_YUYV422:
+    case AV_PIX_FMT_UYVY422:
       for (x = 0, y = 0; x < w-1; x++, y = h * x / w) {
 	int off = (x + w * y) * 2;
 	buf[off] = 127; buf[off+1] = 127;
@@ -165,8 +165,8 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
 	buf[off] = 127; buf[off+1] = 127;
       }
       break;
-    case PIX_FMT_RGB24:
-    case PIX_FMT_BGR24:
+    case AV_PIX_FMT_RGB24:
+    case AV_PIX_FMT_BGR24:
       for (x = 0, y = 0; x < w-1; x++, y = h * x / w) {
 	int off = 3 * (x + w * y);
 	buf[off]=255; buf[off+1]=255; buf[off+2]=255;
@@ -174,11 +174,11 @@ static void render_empty_frame(ffst *ff, uint8_t* buf, int w, int h, int xoff, i
 	buf[off]=255; buf[off+1]=255; buf[off+2]=255;
       }
       break;
-    case PIX_FMT_RGBA:
-    case PIX_FMT_BGRA:
-    case PIX_FMT_ARGB:
+    case AV_PIX_FMT_RGBA:
+    case AV_PIX_FMT_BGRA:
+    case AV_PIX_FMT_ARGB:
       {
-      const int O = (ff->render_fmt == PIX_FMT_ARGB) ? 1 : 0;
+      const int O = (ff->render_fmt == AV_PIX_FMT_ARGB) ? 1 : 0;
       for (x = 0, y = 0; x < w-1; x++, y = h * x / w) {
 	int off = 4 * (x + w * y) + O;
 	buf[off]=255; buf[off+1]=255; buf[off+2]=255;
@@ -749,7 +749,7 @@ void ff_get_info_canonical(void *ptr, VInfo *i, int w, int h) {
 
 void ff_create(void **ff) {
   (*((ffst**)ff)) = (ffst*) calloc(1, sizeof(ffst));
-  (*((ffst**)ff))->render_fmt = PIX_FMT_RGB24;
+  (*((ffst**)ff))->render_fmt = AV_PIX_FMT_RGB24;
   (*((ffst**)ff))->want_ignstart = 0;
   (*((ffst**)ff))->want_genpts = 0;
   (*((ffst**)ff))->packet.data = NULL;
@@ -792,25 +792,25 @@ void ff_resize(void *ptr, int w, int h, uint8_t *buf, VInfo *i) {
 
 const char * ff_fmt_to_text(int fmt) {
   switch (fmt) {
-    case PIX_FMT_NONE:
+    case AV_PIX_FMT_NONE:
       return "-";
-    case PIX_FMT_BGR24:
+    case AV_PIX_FMT_BGR24:
       return "BGR24";
-    case PIX_FMT_RGB24:
+    case AV_PIX_FMT_RGB24:
       return "RGB24";
-    case PIX_FMT_RGBA:
+    case AV_PIX_FMT_RGBA:
       return "RGBA";
-    case PIX_FMT_BGRA:
+    case AV_PIX_FMT_BGRA:
       return "BGRA";
-    case PIX_FMT_ARGB:
+    case AV_PIX_FMT_ARGB:
       return "ARGB";
-    case PIX_FMT_YUV420P:
+    case AV_PIX_FMT_YUV420P:
       return "YUV420P";
-    case PIX_FMT_YUYV422:
+    case AV_PIX_FMT_YUYV422:
       return "YUYV422";
-    case PIX_FMT_UYVY422:
+    case AV_PIX_FMT_UYVY422:
       return "UYVY422";
-    case PIX_FMT_YUV440P:
+    case AV_PIX_FMT_YUV440P:
       return "YUV440P";
     default:
       return "?";

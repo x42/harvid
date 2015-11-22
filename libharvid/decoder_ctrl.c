@@ -29,7 +29,7 @@
 #include "ffcompat.h"
 #include "dlog.h"
 
-#define DEFAULT_PIX_FMT (PIX_FMT_RGB24) // TODO global default
+#define DEFAULT_PIX_FMT (AV_PIX_FMT_RGB24) // TODO global default
 
 //#define HASH_EMIT_KEYS 3
 #define HASH_FUNCTION HASH_SAX
@@ -104,15 +104,15 @@ static inline int my_open_movie(void **vd, char *fn, int render_fmt) {
   }
   ff_create(vd);
   assert (
-         render_fmt == PIX_FMT_YUV420P
-      || render_fmt == PIX_FMT_YUV440P
-      || render_fmt == PIX_FMT_YUYV422
-      || render_fmt == PIX_FMT_UYVY422
-      || render_fmt == PIX_FMT_RGB24
-      || render_fmt == PIX_FMT_BGR24
-      || render_fmt == PIX_FMT_RGBA
-      || render_fmt == PIX_FMT_ARGB
-      || render_fmt == PIX_FMT_BGRA
+         render_fmt == AV_PIX_FMT_YUV420P
+      || render_fmt == AV_PIX_FMT_YUV440P
+      || render_fmt == AV_PIX_FMT_YUYV422
+      || render_fmt == AV_PIX_FMT_UYVY422
+      || render_fmt == AV_PIX_FMT_RGB24
+      || render_fmt == AV_PIX_FMT_BGR24
+      || render_fmt == AV_PIX_FMT_RGBA
+      || render_fmt == AV_PIX_FMT_ARGB
+      || render_fmt == AV_PIX_FMT_BGRA
       );
 
   if (!ff_open_movie (*vd, fn, render_fmt)) {
@@ -144,7 +144,7 @@ static inline void my_get_info_canonical(void *vd, VInfo *i, int w, int h) {
 static JVOBJECT *newjvo (JVOBJECT *jvo, pthread_mutex_t *appendlock) {
   debugmsg(DEBUG_DCTL, "DCTL: newjvo() allocated new decoder object\n");
   JVOBJECT *n = calloc(1, sizeof(JVOBJECT));
-  n->fmt = PIX_FMT_NONE;
+  n->fmt = AV_PIX_FMT_NONE;
   n->frame = -1;
   pthread_mutex_init(&n->lock, NULL);
   JVOBJECT *cptr = jvo;
@@ -175,8 +175,8 @@ static JVOBJECT *testjvd(JVOBJECT *jvo, unsigned short id, int fmt, int64_t fram
     if (!(cptr->flags&VOF_VALID) || cptr->id != id) {
       continue;
     }
-    if (fmt != PIX_FMT_NONE && cptr->fmt != fmt
-        && cptr->fmt != PIX_FMT_NONE
+    if (fmt != AV_PIX_FMT_NONE && cptr->fmt != fmt
+        && cptr->fmt != AV_PIX_FMT_NONE
         ) {
       continue;
     }
@@ -324,7 +324,7 @@ static int clearjvo(JVD *jvd, int f, int id, int age, pthread_mutex_t *l) {
       my_destroy(&cptr->decoder);
       cptr->decoder = NULL;
       cptr->flags &= ~VOF_OPEN;
-      cptr->fmt = PIX_FMT_NONE;
+      cptr->fmt = AV_PIX_FMT_NONE;
     }
 
     hashref_delete_jvo(jvd, cptr);
@@ -410,7 +410,7 @@ static JVOBJECT *getjvo(JVD *jvd) {
         if (cptr->flags&(VOF_OPEN)) {
           my_destroy(&cptr->decoder); // close it.
           cptr->decoder = NULL; // not really need..
-          cptr->fmt = PIX_FMT_NONE;
+          cptr->fmt = AV_PIX_FMT_NONE;
         }
 
         hashref_delete_jvo(jvd, cptr);
@@ -563,7 +563,7 @@ static JVOBJECT *new_video_object(JVD *jvd, unsigned short id, int fmt) {
 
 
   jvo->id = id;
-  jvo->fmt = fmt == PIX_FMT_NONE ? DEFAULT_PIX_FMT : fmt;
+  jvo->fmt = fmt == AV_PIX_FMT_NONE ? DEFAULT_PIX_FMT : fmt;
   jvo->frame = -1;
   jvo->flags |= VOF_VALID;
 
@@ -619,7 +619,7 @@ static void * dctrl_get_decoder(void *p, unsigned short id, int fmt, int64_t fra
    * use it IFF frame == -1  (ie. non-blocking info lookups) */
   if (frame < 0) {
     pthread_rwlock_rdlock(&jvd->lock_jdh);
-    if (fmt == PIX_FMT_NONE) {
+    if (fmt == AV_PIX_FMT_NONE) {
       HASH_FIND(hhi, jvd->jvi, &id, sizeof(unsigned short), jvo);
     } else {
       const JVOBJECT jvt = {id, fmt, 0};
@@ -670,7 +670,7 @@ static void * dctrl_get_decoder(void *p, unsigned short id, int fmt, int64_t fra
       jvo->lru = time(NULL);
       pthread_mutex_unlock(&jvo->lock);
 
-      if (fmt == PIX_FMT_NONE) fmt = DEFAULT_PIX_FMT;
+      if (fmt == AV_PIX_FMT_NONE) fmt = DEFAULT_PIX_FMT;
 
       if (!my_open_movie(&jvo->decoder, get_fn(jvd, jvo->id), fmt)) {
         pthread_mutex_lock(&jvo->lock);
@@ -798,7 +798,7 @@ int dctrl_decode(void *p, unsigned short id, int64_t frame, uint8_t *b, int w, i
 
 int dctrl_get_info(void *p, unsigned short id, VInfo *i) {
   int err = 0;
-  JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, PIX_FMT_NONE, -1, &err);
+  JVOBJECT *jvo = (JVOBJECT*) dctrl_get_decoder(p, id, AV_PIX_FMT_NONE, -1, &err);
   if (!jvo) return err;
   my_get_info(jvo->decoder, i);
   jvo->hitcount_info++;
