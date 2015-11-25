@@ -1,3 +1,9 @@
+2015-11-25 (0.8.1) Robin Gareus <robin@gareus.org>
+* explicit LARGEFILE64 support
+* spelling corrections
+* ffmpeg-2.9 compatibility
+* update static builds to ffmpeg-2.8
+
 2015-03-03 (0.8.0) Robin Gareus <robin@gareus.org>
 * portability fixes
 * update ut-hash
