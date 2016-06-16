@@ -55,6 +55,8 @@ For encoding images,
 [libpng](http://www.libpng.org/pub/png/libpng.html)
 and [libjpeg](http://libjpeg.sourceforge.net/) are required.
 
+## Fedora
+ `sudo dnf install ffmpeg-devel libjpeg-devel`
 
 Packaging Information
 ---------------------
