@@ -24,6 +24,7 @@
 #include <math.h>
 #include <sys/stat.h>
 #include <libgen.h> // basename
+#include <locale.h>
 
 #include "daemon_log.h"
 #include "daemon_util.h"
@@ -373,6 +374,12 @@ int main (int argc, char **argv) {
 #else
     dlog(LOG_WARNING, "memory locking is not available on windows.\n");
 #endif
+  }
+
+  char const* const current_c_locale = setlocale (LC_NUMERIC, 0);
+  if (strcmp ("C", current_c_locale) != 0) {
+    dlog(DLOG_INFO, "Setting locate to 'C' for portable numerics.\n");
+    setlocale (LC_NUMERIC, "C");
   }
 
   /* all systems go */
