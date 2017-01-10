@@ -336,7 +336,7 @@ static int main_loop (void *arg) {
     if (drop_privileges(d->uid, d->gid)) {rv = -1; goto daemon_end;}
   }
 
-  if (access(d->docroot, R_OK)) {
+  if (strlen(d->docroot) > 0 && access(d->docroot, R_OK)) {
     dlog(DLOG_CRIT, "SRV: can not read document-root (permission denied)\n");
     rv = -1;
     goto daemon_end;

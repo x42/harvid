@@ -348,6 +348,11 @@ int main (int argc, char **argv) {
     if (do_chroot(cfg_chroot)) {exitstatus = -1; goto errexit;}
   }
 
+#ifdef HAVE_WINDOWS
+  if (strlen (docroot) == 0) {
+    dlog(DLOG_INFO, "No document-root, allowing all drive-letters\n");
+  } else
+#endif
   if (stat(docroot, &sb) || !S_ISDIR(sb.st_mode)) {
     dlog(DLOG_CRIT, "document-root is not a directory\n");
     exitstatus = -1;

@@ -348,10 +348,13 @@ void ics_http_handler(
     struct stat sb;
     char *dp = url_unescape(&(path[7]), 0, NULL);
     char *abspath = malloc((strlen(c->d->docroot) + strlen(dp) + 2) * sizeof(char));
-    sprintf(abspath, "%s/%s", c->d->docroot, dp);
+    sprintf(abspath, "%s%s%s", c->d->docroot, strlen(c->d->docroot) > 0 ? "/" : "", dp);
 #ifdef HAVE_WINDOWS
       char *tmp;
       while (tmp = strchr(abspath, '/')) *tmp = '\\';
+      if (strlen (abspath) > 0 && abspath[strlen(abspath) - 1] == '\\') {
+        abspath[strlen(abspath) - 1] = '\0';
+      }
 #endif
     if (! (cfg_usermask & USR_INDEX)) {
       httperror(c->fd, 403, NULL, NULL);
