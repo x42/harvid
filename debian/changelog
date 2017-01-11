@@ -1,10 +1,10 @@
-harvid (0.8.1-0.1) unstable; urgency=medium
+harvid (0.8.2-0.1) unstable; urgency=medium
 
   * locally created custom package -- NMU
   * see upstream ChangeLog
   * https://github.com/x42/harvid/commits/master
 
- -- Robin Gareus <robin@gareus.org>  Wed, 25 Nov 2015 16:01:15 +0100
+ -- Robin Gareus <robin@gareus.org>  Wed, 11 Jan 2017 10:28:28 +0100
 
 harvid (0.7.0-1) unstable; urgency=low
 

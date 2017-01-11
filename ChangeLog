@@ -1,3 +1,7 @@
+2017-01-11 (0.8.2) Robin Gareus <robin@gareus.org>
+* explicitly set "C" locale: consistent numeric data format
+* allow empty docroot for passing drive-letters on windows
+
 2015-11-25 (0.8.1) Robin Gareus <robin@gareus.org>
 * explicit LARGEFILE64 support
 * spelling corrections
