@@ -185,7 +185,7 @@ EOF
 	--enable-libx264 --enable-libtheora --enable-libvpx --enable-libvorbis --enable-libmp3lame \
 	--arch=i686 --target-os=mingw32 --cpu=i686 --enable-cross-compile --cross-prefix=i686-w64-mingw32- \
 	--extra-cflags="-I${PREFIX}/include -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64" \
-	--extra-ldflags="-L${PREFIX}/lib"
+	--extra-ldflags="-L${PREFIX}/lib -mwindows"
 make $MAKEFLAGS && make install
 
 
