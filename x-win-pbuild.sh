@@ -161,7 +161,7 @@ MAKEFLAGS=-j1 autoconfbuild --enable-shared --disable-sdltest --disable-examples
 ################################################################################
 download x264-snapshot-20171224-2245-stable.tar.bz2 http://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-20171224-2245-stable.tar.bz2
 cd ${BUILDD}
-tar xjf  ${SRCDIR}/x264-snapshot-20171224-2245-stable
+tar xjf  ${SRCDIR}/x264-snapshot-20171224-2245-stable.tar.bz2
 cd x264*
 PATH=${PREFIX}/bin:/usr/bin:/bin:/usr/sbin:/sbin \
 	CPPFLAGS="-I${PREFIX}/include" \
