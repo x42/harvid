@@ -3,7 +3,7 @@
 set -e
 
 : ${HVSTACK=$HOME/src/hv_stack}
-: ${HVARCH=-arch i386 -arch ppc -arch x86_64}
+: ${HVARCH=-arch i386 -arch x86_64}
 : ${OSXCOMPAT="-isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5 -headerpad_max_install_names"}
 
 TARGET=/tmp/

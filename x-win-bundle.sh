@@ -49,7 +49,7 @@ cp -v ${WINPREFIX}/bin/ffprobe.exe $NSIDIR
 TARDIR=$(mktemp -d)
 cd $TARDIR
 ln -s $NSIDIR harvid
-tar cJhf /tmp/harvid_win-$WARCH-$VERSION.tar.xz harvid
+tar cJhf /tmp/harvid_$WARCH-$VERSION.tar.xz harvid
 rm -rf $TARDIR
 cd -
 
@@ -64,4 +64,4 @@ makensis "$NSIDIR/harvid.nsi"
 echo "--- DONE ---"
 cp -v "$NSIDIR/harvid_installer-$WARCH-$VERSION.exe" /tmp/
 ls -lt "/tmp/harvid_installer-$WARCH-$VERSION.exe" | head -n 1
-ls -lt "/tmp/harvid_win-$WARCH-$VERSION.tar.xz" | head -n 1
+ls -lt "/tmp/harvid_$WARCH-$VERSION.tar.xz" | head -n 1

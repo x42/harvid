@@ -115,8 +115,10 @@ fi
 
 rsync -Pa $COWBUILDER:/tmp/harvid-i386-linux-gnu-${VERSION}.tgz site/releases/ || exit
 rsync -Pa $COWBUILDER:/tmp/harvid-x86_64-linux-gnu-${VERSION}.tgz site/releases/ || exit
-rsync -Pa $COWBUILDER:/tmp/harvid_installer-${VERSION}.exe site/releases/ || exit
-rsync -Pa $COWBUILDER:/tmp/harvid_win-${VERSION}.tar.xz tmp/ || exit
+rsync -Pa $COWBUILDER:/tmp/harvid_installer-w32-${VERSION}.exe site/releases/ || exit
+rsync -Pa $COWBUILDER:/tmp/harvid_installer-w64-${VERSION}.exe site/releases/ || exit
+rsync -Pa $COWBUILDER:/tmp/harvid_w32-${VERSION}.tar.xz tmp/ || exit
+rsync -Pa $COWBUILDER:/tmp/harvid_w64-${VERSION}.tar.xz tmp/ || exit
 
 rsync -Pa ${OSXUSER}$OSXMACHINE:/tmp/harvid-${VERSION}.pkg site/releases/ || exit
 rsync -Pa ${OSXUSER}$OSXMACHINE:/tmp/harvid-${VERSION}.dmg site/releases/ || exit
@@ -135,7 +137,7 @@ groff -m mandoc -Thtml doc/harvid.1 > site/harvid.1.html
 cd site || exit
 git add harvid.1.html releases/harvid_version.txt
 git add releases/*-${VERSION}.* || exit
-rm -f $(ls releases/* | grep -v "${VERSION}\." | grep -v harvid_version.txt | tr '\n' ' ')
+rm -f $(ls releases/* | grep -v "${VERSION}\." | grep -v harvid_version.txt | grep -v harvid-v0.8.2.dmg | grep -v harvid-v0.8.2.pkg | tr '\n' ' ')
 git commit -a --amend -m "website $VERSION" || exit
 git reflog expire --expire=now --all
 git gc --prune=now
@@ -155,11 +157,13 @@ git push --force
 echo "uploading to ardour.org"
 rsync -Pa \
 	../tmp/harvid-osx-${VERSION}.tgz \
-	../tmp/harvid_win-${VERSION}.tar.xz \
+	../tmp/harvid_w32-${VERSION}.tar.xz \
+	../tmp/harvid_w64-${VERSION}.tar.xz \
 	releases/harvid-${VERSION}.dmg \
 	releases/harvid-${VERSION}.pkg \
 	releases/harvid-i386-linux-gnu-${VERSION}.tgz \
 	releases/harvid-x86_64-linux-gnu-${VERSION}.tgz  \
-	releases/harvid_installer-${VERSION}.exe \
+	releases/harvid_installer-w32-${VERSION}.exe \
+	releases/harvid_installer-w64-${VERSION}.exe \
 	releases/harvid_version.txt \
 		ardour.org:/persist/community.ardour.org/files/video-tools/

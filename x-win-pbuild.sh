@@ -214,8 +214,9 @@ EOF
 	--disable-jack --disable-sdl2 \
 	--enable-cross-compile --cross-prefix=${XPREFIX}- \
 	$FFFLAGS \
-	--extra-cflags="-I${PREFIX}/include -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -mstackrealign -mwindows" \
-	--extra-ldflags="-L${PREFIX}/lib"
+	--extra-cflags="-I${PREFIX}/include -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -mstackrealign" \
+	--extra-ldflags="-L${PREFIX}/lib -mwindows"
+
 make $MAKEFLAGS && make install
 
 
