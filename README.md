@@ -56,14 +56,6 @@ For encoding images,
 and [libjpeg](http://libjpeg.sourceforge.net/) are required.
 
 
-Packaging Information
----------------------
-
-A good start is to look in the `debian/` folder that comes with the source
-code (it is excluded from source archives via .gitattributes). In particular
-the file `debian/rules` which demonstrates the use of PREFIX and DESTDIR.
-
-
 Internals
 ---------
 
