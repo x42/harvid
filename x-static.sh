@@ -28,12 +28,9 @@ LIBDEPS=" \
  libvorbis.a \
  libvorbisenc.a \
  libvorbisfile.a \
- libschroedinger-1.0.a \
- liborc-0.4.a \
  libgsm.a \
  libbluray.a \
  libxvidcore.a \
- libopus.a \
  libbz2.a \
  libvpx.a \
  libopenjpeg.a \

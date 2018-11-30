@@ -27,8 +27,8 @@ fi
 $SUDO apt-get -y install git build-essential yasm \
 	libass-dev libbluray-dev libgmp3-dev \
 	libbz2-dev libfreetype6-dev libgsm1-dev liblzo2-dev \
-	libmp3lame-dev libopenjpeg-dev libopus-dev librtmp-dev \
-	libschroedinger-dev libspeex-dev libtheora-dev \
+	libmp3lame-dev libopenjpeg-dev librtmp-dev \
+	libspeex-dev libtheora-dev \
 	libvorbis-dev libvpx-dev libx264-dev \
 	libxvidcore-dev zlib1g-dev zlib1g-dev \
 	libpng12-dev libjpeg8-dev curl vim-common
@@ -41,7 +41,7 @@ git clone -b master --single-branch git://github.com/x42/harvid.git
 
 set -e
 
-FFVERSION=2.8.2
+FFVERSION=3.4.5
 test -f ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2 \
 	|| curl -k -L -o ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2 http://www.ffmpeg.org/releases/ffmpeg-${FFVERSION}.tar.bz2
 tar xjf ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2
@@ -57,10 +57,9 @@ fi
 
 ./configure --enable-gpl \
 	--enable-libmp3lame --enable-libx264 --enable-libxvid --enable-libtheora  --enable-libvorbis \
-	--enable-libvpx --enable-libopenjpeg --enable-libopus --enable-libschroedinger \
+	--enable-libvpx --enable-libopenjpeg \
 	--enable-libspeex --enable-libbluray --enable-libgsm \
-	--disable-vaapi --disable-x11grab \
-	--disable-devices \
+	--disable-vaapi --disable-devices \
 	--extra-cflags="-D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64" \
 	--enable-shared --enable-static --prefix=$PFX $@
 
@@ -76,12 +75,9 @@ LIBDEPS=" \
  libvorbis.a \
  libvorbisenc.a \
  libvorbisfile.a \
- libschroedinger-1.0.a \
- liborc-0.4.a \
  libgsm.a \
  libbluray.a \
  libxvidcore.a \
- libopus.a \
  libbz2.a \
  libvpx.a \
  libopenjpeg.a \
@@ -105,7 +101,10 @@ done
 LIBF=$PFX/lib
 
 cd $SRC/ffmpeg-${FFVERSION}
-gcc -o ffmpeg_s ffmpeg_opt.o ffmpeg_filter.o ffmpeg.o cmdutils.o \
+gcc -o ffmpeg_s \
+	fftools/ffmpeg.o fftools/cmdutils.o \
+	fftools/ffmpeg_opt.o fftools/ffmpeg_filter.o fftools/ffmpeg_hw.o \
+	./fftools/ffmpeg_cuvid.o \
 	${LIBF}/libavformat.a \
 	${LIBF}/libavdevice.a \
 	${LIBF}/libavfilter.a \
@@ -118,7 +117,7 @@ gcc -o ffmpeg_s ffmpeg_opt.o ffmpeg_filter.o ffmpeg.o cmdutils.o \
 	$SLIBS \
 	-lrt -lm -ldl -pthread -lstdc++ \
 
-gcc -o ffprobe_s ffprobe.o cmdutils.o \
+gcc -o ffprobe_s fftools/ffprobe.o fftools/cmdutils.o \
 	${LIBF}/libavformat.a \
 	${LIBF}/libavdevice.a \
 	${LIBF}/libavfilter.a \

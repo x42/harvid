@@ -19,13 +19,13 @@ ARCHINCLUDES=
 ARCHLIBES=
 LIBEXT=so
 
-ifeq ($(ARCH),mingw)
-  CC=i686-w64-mingw32-gcc
-  LD=i686-w64-mingw32-ld
-  AR=i686-w64-mingw32-ar
-  NM=i686-w64-mingw32-nm -B
-  RANLIB=i686-w64-mingw32-ranlib
-  STRIP=i686-w64-mingw32-strip
+ifneq ($(XWIN),)
+  CC=$(XWIN)-gcc
+  LD=$(XWIN)-ld
+  AR=$(XWIN)-ar
+  NM=$(XWIN)-nm -B
+  RANLIB=$(XWIN)-ranlib
+  STRIP=$(XWIN)-strip
   WINPREFIX?=$(HOME)/.wine/drive_c/x-prefix
   WINLIB?=$(WINPREFIX)/lib
   PKG_CONFIG_PATH=$(WINLIB)/pkgconfig/

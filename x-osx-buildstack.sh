@@ -10,19 +10,9 @@
 : ${MAKEFLAGS="-j2"}
 
 case `sw_vers -productVersion | cut -d'.' -f1,2` in
-	"10.4")
-		echo "Tiger"
-		HVARCH="-arch i386 -arch ppc"
-		OSXCOMPAT=""
-		;;
-	"10.5")
-		echo "Leopard"
-		HVARCH="-arch i386 -arch ppc"
-		OSXCOMPAT=""
-		;;
 	"10.6")
 		echo "Snow Leopard"
-		HVARCH="-arch i386 -arch ppc -arch x86_64"
+		HVARCH="-arch i386 -arch x86_64"
 		OSXCOMPAT="-isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5"
 		;;
 	*)
@@ -55,13 +45,19 @@ OSXCOMPAT="$OSXCOMPAT -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
 
 export PATH=${PREFIX}/bin:${HOME}/bin:/usr/local/git/bin/:/usr/bin:/bin:/usr/sbin:/sbin
 
+function autoconfconf {
+	set -e
+	echo "======= $(pwd) ======="
+	CFLAGS="${HVARCH}${OSXCOMPAT:+ $OSXCOMPAT}" \
+		CXXFLAGS="${HVARCH}${OSXCOMPAT:+ $OSXCOMPAT}" \
+		LDFLAGS="${HVARCH}${OSXCOMPAT:+ $OSXCOMPAT} -headerpad_max_install_names" \
+		./configure --disable-dependency-tracking --prefix=$PREFIX --enable-shared "$@"
+}
+
 function autoconfbuild {
-echo "======= $(pwd) ======="
-CFLAGS="${HVARCH}${OSXCOMPAT:+ $OSXCOMPAT}" \
-CXXFLAGS="${HVARCH}${OSXCOMPAT:+ $OSXCOMPAT}" \
-LDFLAGS="${HVARCH}${OSXCOMPAT:+ $OSXCOMPAT} -headerpad_max_install_names" \
-./configure --disable-dependency-tracking --prefix=$PREFIX --enable-shared $@
-make $MAKEFLAGS && make install
+	set -e
+	autoconfconf "$@"
+	make $MAKEFLAGS && make install
 }
 
 function download {
@@ -126,12 +122,10 @@ DYL=`ls libx264.*.dylib`
 cp ${DYL} ${DYL}-$1
 }
 
-### ftp://ftp.videolan.org/pub/x264/snapshots/last_x264.tar.bz2
 ### ftp://ftp.videolan.org/pub/x264/snapshots/last_stable_x264.tar.bz2
-download x264.tar.bz2 ftp://ftp.videolan.org/pub/x264/snapshots/last_stable_x264.tar.bz2 # XXX
+download x264-snapshot-20171224-2245-stable.tar.bz2 http://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-20171224-2245-stable.tar.bz2
 cd ${BUILDD}
-#git clone --depth 1 git://git.videolan.org/x264.git
-tar xjf  ${SRCDIR}/x264.tar.bz2
+tar xjf  ${SRCDIR}/x264-snapshot-20171224-2245-stable.tar.bz2
 cd x264*
 x264build i386
 make install prefix=${PREFIX}
@@ -147,11 +141,14 @@ lipo -create -output ${PREFIX}/lib/${DYL} ${DYL}-*
 install_name_tool -id ${PREFIX}/lib/${DYL} ${PREFIX}/lib/${DYL}
 
 ################################################################################
-download lame-3.99.5.tar.gz http://sourceforge.net/projects/lame/files/lame/3.99/lame-3.99.5.tar.gz/download
+download lame-3.100.tar.gz http://sourceforge.net/projects/lame/files/lame/3.100/lame-3.100.tar.gz/download
 cd ${BUILDD}
-tar xzf ${SRCDIR}/lame-3.99.5.tar.gz
-cd lame-3.99.5
-autoconfbuild
+tar xzf ${SRCDIR}/lame-3.100.tar.gz
+cd lame-3.100
+autoconfconf
+sed -i -e '/lame_init_old/d' include/libmp3lame.sym
+sed -i -e 's/frontend //' Makefile
+make $MAKEFLAGS && make install
 
 
 ################################################################################
@@ -166,18 +163,11 @@ make clean
 }
 
 ################################################################################
-FFVERSION=2.8.2
+FFVERSION=3.4.5
 download ffmpeg-${FFVERSION}.tar.bz2 http://www.ffmpeg.org/releases/ffmpeg-${FFVERSION}.tar.bz2
 cd ${BUILDD}
 tar xjf ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2
 cd ffmpeg-${FFVERSION}/
-ed configure << EOF
-%s/jack_jack_h/xxjack_jack_h/
-%s/enabled jack_indev/enabled xxjack_indev/
-%s/sdl_outdev_deps="sdl"/sdl_outdev_deps="xxxsdl"/
-%s/enabled sdl/enabled xxsdl/
-wq
-EOF
 
 rm -rf ${PREFIX}/fflipo
 mkdir ${PREFIX}/fflipo

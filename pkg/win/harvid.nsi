@@ -2,7 +2,7 @@
 Name "harvid"
 
 ; The file to write
-OutFile "harvid_installer-@VERSION@.exe"
+OutFile "harvid_installer-@WARCH@-@VERSION@.exe"
 
 ; The default installation directory
 InstallDir $PROGRAMFILES\harvid
