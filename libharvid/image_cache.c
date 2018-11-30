@@ -263,7 +263,7 @@ void icache_info_html(void *p, char **m, size_t *o, size_t *s, int tbl) {
   pthread_rwlock_rdlock(&((ICC*)p)->lock);
   HASH_ITER(hh, ((ICC*)p)->icache, cptr, tmp) {
     char *tmp = flags2txt(cptr->flags);
-#ifdef WIN32
+#ifdef _WIN32
     rprintf("<tr><td>%d.</td><td>%d</td><td>%s</td><td>%lu bytes</td><td>%dx%d</td>",
         i, cptr->id, tmp, (long unsigned) cptr->s, cptr->w, cptr->h);
 #else

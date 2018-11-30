@@ -28,7 +28,7 @@
 /* some common win/posix issues */
 #define PRIlld "lld"
 
-#ifndef WIN32
+#ifndef _WIN32
 #define mymsleep(ms) usleep((ms) * 1000)
 #define SNPRINTF snprintf
 
@@ -41,7 +41,7 @@ int portable_snprintf(char *str, size_t str_m, const char *fmt, /*args*/ ...);
 #endif
 
 /* syslog */
-#ifndef WIN32
+#ifndef _WIN32
 #include <syslog.h>
 #else
 #define LOG_EMERG 1

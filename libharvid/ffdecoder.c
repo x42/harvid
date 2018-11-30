@@ -250,7 +250,7 @@ static void ff_init_moviebuffer(void *ptr) {
   ff->buf_width = ff->out_width;
   ff->buf_height = ff->out_height;
   if (!ff->buffer) {
-#ifdef WIN32
+#ifdef _WIN32
     fprintf(stderr, "out of memory (trying to allocate %lu bytes)\n", (long unsigned) numBytes);
 #else
     fprintf(stderr, "out of memory (trying to allocate %zu bytes)\n", numBytes);
