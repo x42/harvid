@@ -1,3 +1,6 @@
+2018-01-30 (0.8.3) Robin Gareus <robin@gareus.org>
+* NO-OP, build-system update only
+
 2017-01-11 (0.8.2) Robin Gareus <robin@gareus.org>
 * explicitly set "C" locale: consistent numeric data format
 * allow empty docroot for passing drive-letters on windows
