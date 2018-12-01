@@ -32,7 +32,7 @@ ifneq ($(XWIN),)
   ARCHINCLUDES=-I$(WINPREFIX)/include -DHAVE_WINDOWS
   ARCHLIBES=-lwsock32 -lws2_32 -lpthread
   LDFLAGS+=-L$(WINLIB) -L$(WINPREFIX)/bin -mwindows
-  UNAME=win32|mingw
+  UNAME=$(XWIN)
   LIBEXT=dll
 else
   RANLIB=ranlib
