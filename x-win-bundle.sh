@@ -53,7 +53,16 @@ tar cJhf /tmp/harvid_$WARCH-$VERSION.tar.xz harvid
 rm -rf $TARDIR
 cd -
 
-sed 's/@VERSION@/'${VERSION}'/;s/@WARCH@/'$WARCH'/' \
+if test "$WARCH" = "w64"; then
+	PGF=PROGRAMFILES64
+	SFX=
+else
+	PGF=PROGRAMFILES
+	# TODO we should only add this for 32bit on 64bit windows!
+	SFX=" (x86)"
+fi
+
+sed "s/@VERSION@/$VERSION/;s/@WARCH@/$WARCH/;s/@PROGRAMFILES@/$PGF/;s/@SFX@/$SFX/" \
 	pkg/win/harvid.nsi \
 	> $NSIDIR/harvid.nsi
 

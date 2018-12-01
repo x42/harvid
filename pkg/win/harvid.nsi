@@ -1,36 +1,32 @@
-; The name of the installer
-Name "harvid"
+SetCompressor /SOLID lzma
+SetCompressorDictSize 32
+RequestExecutionLevel admin
 
-; The file to write
+Name "harvid"
 OutFile "harvid_installer-@WARCH@-@VERSION@.exe"
 
-; The default installation directory
-InstallDir $PROGRAMFILES\harvid
-
-; Registry key to check for directory (so if you install again, it will
-; overwrite the old one automatically)
-InstallDirRegKey HKLM "Software\RSS\harvid" "Install_Dir"
+InstallDir "$@PROGRAMFILES@\harvid"
+InstallDirRegKey HKLM "Software\RSS\harvid\@WARCH@" "Install_Dir"
 
 ;--------------------------------
 
-; Pages
+!include MUI2.nsh
 
-Page components
-Page directory
-Page instfiles
-
-UninstPage uninstConfirm
-UninstPage instfiles
+!define MUI_ABORTWARNING
+!insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_COMPONENTS
+!insertmacro MUI_PAGE_DIRECTORY
+!insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_UNPAGE_CONFIRM
+!insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_LANGUAGE "English"
 
 ;--------------------------------
 
-; The stuff to install
-Section "harvid (required)"
-
+Section "harvid (required)" SecMainProg
   SectionIn RO
 
-  ; Set output path to the installation directory.
-  SetOutPath $INSTDIR
+  SetOutPath "$INSTDIR"
 
   File "harvid.exe"
   File "harvid.nsi"
@@ -40,33 +36,45 @@ Section "harvid (required)"
   FILE /r "*.dll"
 
   ; Write the installation path into the registry
-  WriteRegStr HKLM SOFTWARE\RSS\harvid "Install_Dir" "$INSTDIR"
+  WriteRegStr HKLM SOFTWARE\RSS\harvid\@WARCH@ "Install_Dir" "$INSTDIR"
 
   ; Write the uninstall keys for Windows
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid" "DisplayName" "harvid"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid" "UninstallString" '"$INSTDIR\uninstall.exe"'
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid" "NoModify" 1
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid" "NoRepair" 1
-  WriteUninstaller "uninstall.exe"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid-@WARCH@" "DisplayName" "harvid@SFX@"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid-@WARCH@" "UninstallString" '"$INSTDIR\uninstall.exe"'
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid-@WARCH@" "NoModify" 1
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid-@WARCH@" "NoRepair" 1
 
+  WriteUninstaller "$INSTDIR\uninstall.exe"
 SectionEnd
 
-; Optional section (can be disabled by the user)
-Section "Start Menu Shortcuts"
-  CreateDirectory "$SMPROGRAMS\harvid"
-  CreateShortCut "$SMPROGRAMS\harvid\harvid.lnk" "$INSTDIR\harvid.exe" "-A shutdown" "$INSTDIR\harvid.exe" 0
-  CreateShortCut "$SMPROGRAMS\harvid\uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
+Section "Start Menu Shortcuts" SecMenu
+  SetShellVarContext all
+  CreateDirectory "$SMPROGRAMS\harvid@SFX@"
+  CreateShortCut "$SMPROGRAMS\harvid@SFX@\harvid.lnk" "$INSTDIR\harvid.exe" "-A shutdown" "$INSTDIR\harvid.exe" 0
+  CreateShortCut "$SMPROGRAMS\harvid@SFX@\uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
 SectionEnd
+
+;--------------------------------
+
+LangString DESC_SecMainProg ${LANG_ENGLISH} "Ardour video-tools; HTTP Ardour Video Daemon + ffmpeg, ffprobe"
+LangString DESC_SecMenu ${LANG_ENGLISH} "Create Start-Menu Shortcuts (recommended)."
+
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+!insertmacro MUI_DESCRIPTION_TEXT ${SecMainProg} $(DESC_SecMainProg)
+!insertmacro MUI_DESCRIPTION_TEXT ${SecMenu} $(DESC_SecMenu)
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ;--------------------------------
 
 ; Uninstaller
 
 Section "Uninstall"
+  SetShellVarContext all
 
   ; Remove registry keys
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\harvid-@WARCH@"
   DeleteRegKey HKLM SOFTWARE\RSS\harvid
+  DeleteRegKey HKLM SOFTWARE\RSS\harvid\@WARCH@
 
   ; Remove files and uninstaller
   Delete $INSTDIR\harvid.exe
@@ -78,10 +86,10 @@ Section "Uninstall"
   Delete "$INSTDIR\*.dll"
 
   ; Remove shortcuts, if any
-  Delete "$SMPROGRAMS\harvid\*.*"
+  Delete "$SMPROGRAMS\harvid@SFX@\*.*"
 
   ; Remove directories used
-  RMDir "$SMPROGRAMS\harvid"
+  RMDir "$SMPROGRAMS\harvid@SFX@"
   RMDir "$INSTDIR"
 
 SectionEnd
