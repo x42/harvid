@@ -179,6 +179,7 @@ cd ${BUILDD}/ffmpeg-${FFVERSION}/
 	--enable-libx264 --enable-libtheora --enable-libvorbis --enable-libmp3lame --enable-libvpx \
 	--enable-shared --enable-gpl --disable-static --disable-debug --disable-doc \
 	--disable-ffserver --disable-ffplay --disable-iconv \
+	--disable-jack --disable-sdl2 --disable-coreimage \
 	--arch=x86_32 --target-os=darwin --cpu=i686 --enable-cross-compile \
 	--extra-cflags="-arch i386 ${OSXCOMPAT}  -I${PREFIX}/include" \
 	--extra-ldflags="-arch i386 ${OSXCOMPAT} -L${PREFIX}/lib -headerpad_max_install_names"
@@ -197,6 +198,7 @@ cd ${BUILDD}/ffmpeg-${FFVERSION}/
 	--enable-libtheora --enable-libvorbis --enable-libmp3lame \
 	--enable-shared --enable-gpl --disable-static --disable-debug --disable-doc \
 	--disable-ffserver --disable-ffplay --disable-iconv \
+	--disable-jack --disable-sdl2 --disable-coreimage \
 	--arch=x86_64 \
 	--extra-cflags="-arch x86_64 ${OSXCOMPAT}  -I${PREFIX}/include" \
 	--extra-ldflags="-arch x86_64 ${OSXCOMPAT} -L${PREFIX}/lib -headerpad_max_install_names"
@@ -213,6 +215,7 @@ cd ${BUILDD}/ffmpeg-${FFVERSION}/
 	--enable-libx264 --enable-libtheora --enable-libvorbis --enable-libmp3lame --enable-libvpx \
 	--enable-shared --enable-gpl --disable-static --disable-debug --disable-doc \
 	--disable-ffserver --disable-ffplay --disable-iconv \
+	--disable-jack --disable-sdl2 --disable-coreimage \
 	--arch=ppc \
 	--extra-cflags="-arch ppc ${OSXCOMPAT}  -I${PREFIX}/include" \
 	--extra-ldflags="-arch ppc ${OSXCOMPAT} -L${PREFIX}/lib -headerpad_max_install_names"
