@@ -10,10 +10,10 @@ TARGET=/tmp/
 VERSION=$(git describe --tags HEAD || echo "X.X.X")
 
 TOPDIR=$(pwd)
-export PATH=${HVSTACK}/bin:${HOME}/bin:/usr/local/git/bin/:/usr/bin:/bin:/usr/sbin:/sbin
+#export PATH=${HVSTACK}/bin:${HOME}/bin:/usr/local/git/bin/:/usr/bin:/bin:/usr/sbin:/sbin
 export PKG_CONFIG_PATH=${HVSTACK}/lib/pkgconfig
-make clean ARCHINCLUDES="-I${HVSTACK}/include" LDFLAGS="-L${HVSTACK}/lib"
-make CFLAGS="-DNDEBUG -O2 ${HVARCH} ${OSXCOMPAT}" ARCHINCLUDES="-I${HVSTACK}/include" LDFLAGS="-L${HVSTACK}/lib"
+make clean ARCHINCLUDES="-I${HVSTACK}/include" LDFLAGS="-L${HVSTACK}/lib ${HVARCH}"
+make CFLAGS="-DNDEBUG -O2 ${HVARCH} ${OSXCOMPAT}" ARCHINCLUDES="-I${HVSTACK}/include" LDFLAGS="-L${HVSTACK}/lib ${HVARCH}"
 
 file src/harvid
 
@@ -61,6 +61,7 @@ while [ true ] ; do
 		deps=`otool -arch all -L $file \
 			| awk '{print $1}' \
 			| egrep "($HVSTACK|/opt/|/local/|libs/)" \
+			| egrep -v ':$' \
 			| grep -v '/bin/'`
 		set -e
 		for dep in $deps ; do
@@ -234,9 +235,8 @@ mkdir -p "$MNTPATH"
 
 TMPDMG="${TMPDMG}.dmg"
 
-hdiutil create -megabytes $DMGSIZE "$TMPDMG"
+hdiutil create -megabytes $DMGSIZE -fs HFS+ -volname "${VOLNAME}" "$TMPDMG"
 DiskDevice=$(hdid -nomount "$TMPDMG" | grep Apple_HFS | cut -f 1 -d ' ')
-newfs_hfs -v "${VOLNAME}" "${DiskDevice}"
 mount -t hfs "${DiskDevice}" "${MNTPATH}"
 
 cp -r ${PREFIX}/${APPDIR} "${MNTPATH}"
@@ -245,7 +245,7 @@ cp -vi "${TOPDIR}/doc/dmgbg.png" "${MNTPATH}/.background/dmgbg.png"
 
 echo "setting DMG background ..."
 
-if test $(sw_vers -productVersion | cut -d '.' -f 2) -lt 9; then
+if test $(sw_vers -productVersion | cut -d '.' -f 1) -lt 11 -a $(sw_vers -productVersion | cut -d '.' -f 2) -lt 9; then
 	# OSX ..10.8.X
 	DISKNAME=${VOLNAME}
 else
