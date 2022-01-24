@@ -40,14 +40,14 @@ else
   NM=nm
   UNAME=$(shell uname)
   ifeq ($(UNAME),Darwin)
-  ARCHFLAGS+=-headerpad_max_install_names
-  LOGODEP=logo.c seek.c
-  ECHO=echo
-  LIBEXT=dylib
-  NM=nm
+    ARCHFLAGS+=-headerpad_max_install_names
+    LOGODEP=logo.c seek.c
+    ECHO=echo
+    LIBEXT=dylib
+    NM=nm
   else
-  ARCHLIBES=-lrt -lpthread
-  LIBEXT=so
-  NM=nm -B
+    ARCHLIBES=-lrt -lpthread
+    LIBEXT=so
+    NM=nm -B
   endif
 endif
