@@ -263,8 +263,12 @@ static void ff_init_moviebuffer(void *ptr) {
 
 void ff_initialize (void) {
   if (want_verbose) fprintf(stdout, "FFMPEG: registering codecs.\n");
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
   av_register_all();
+#endif
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 10, 100)
   avcodec_register_all();
+#endif
   pthread_mutex_init(&avcodec_lock, NULL);
 
   if(want_quiet) av_log_set_level(AV_LOG_QUIET);
@@ -406,12 +410,16 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
 
   /* Find the first video stream */
   for(i = 0; i < ff->pFormatCtx->nb_streams; i++)
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(57, 33, 100)
 #if LIBAVFORMAT_BUILD > 0x350000
     if(ff->pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
 #elif LIBAVFORMAT_BUILD > 4629
     if(ff->pFormatCtx->streams[i]->codec->codec_type == CODEC_TYPE_VIDEO)
 #else
     if(ff->pFormatCtx->streams[i]->codec.codec_type == CODEC_TYPE_VIDEO)
+#endif
+#else
+    if(ff->pFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
 #endif
     {
       ff->videoStream = i;
@@ -547,7 +555,11 @@ static uint64_t parse_pts_from_frame (AVFrame *f) {
 #endif
 
   if (pts == AV_NOPTS_VALUE) {
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57, 61, 100)
     pts = f->pkt_pts;
+#else
+    pts = f->pts;
+#endif
     if (pts != AV_NOPTS_VALUE) {
       if (!(pts_warn & 2) && want_verbose)
 	fprintf(stderr, "Used PTS from packet instead frame's PTS.\n");
