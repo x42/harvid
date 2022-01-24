@@ -263,12 +263,8 @@ static void ff_init_moviebuffer(void *ptr) {
 
 void ff_initialize (void) {
   if (want_verbose) fprintf(stdout, "FFMPEG: registering codecs.\n");
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
-  av_register_all();
-#endif
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 10, 100)
-  avcodec_register_all();
-#endif
+  register_codecs_compat ();
+
   pthread_mutex_init(&avcodec_lock, NULL);
 
   if(want_quiet) av_log_set_level(AV_LOG_QUIET);
