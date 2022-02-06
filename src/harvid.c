@@ -71,7 +71,7 @@ unsigned int    cfg_host = 0; /* = htonl(INADDR_ANY) */
 static void printversion (void) {
   printf ("harvid %s\n", ICSVERSION);
   printf ("Compiled with %s %s %s\n\n", LIBAVFORMAT_IDENT, LIBAVCODEC_IDENT, LIBAVUTIL_IDENT);
-  printf ("Copyright (C) GPL 2002-2013 Robin Gareus <robin@gareus.org>\n");
+  printf ("Copyright (C) GPL 2002-2013, 2022 Robin Gareus <robin@gareus.org>\n");
 }
 
 static void usage (int status) {

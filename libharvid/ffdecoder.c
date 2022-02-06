@@ -1,7 +1,7 @@
 /*
    This file is part of harvid
 
-   Copyright (C) 2007-2013 Robin Gareus <robin@gareus.org>
+   Copyright (C) 2007-2013, 2022 Robin Gareus <robin@gareus.org>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -88,7 +88,7 @@ static const AVRational c1_Q = { 1, 1 };
 //--------------------------------------------
 
 int ff_picture_bytesize(int render_fmt, int w, int h) {
-  const int bs = avpicture_get_size(render_fmt, w, h);
+  const int bs = av_image_get_buffer_size(render_fmt, w, h, 64);
   if (bs < 0) return 0;
   return bs;
 }
@@ -242,10 +242,10 @@ static void ff_init_moviebuffer(void *ptr) {
     fprintf(stdout, "ff_init_moviebuffer %dx%d vs %dx%d\n", ff->buf_width, ff->buf_height, ff->out_width, ff->out_height);
   }
 
-  if (ff->internal_buffer) free(ff->internal_buffer);
+  if (ff->internal_buffer) av_free(ff->internal_buffer);
   ff_getbuffersize(ff, &numBytes);
   assert(numBytes > 0);
-  ff->internal_buffer = (uint8_t *) calloc(numBytes, sizeof(uint8_t));
+  ff->internal_buffer = (uint8_t *) av_malloc(numBytes);
   ff->buffer = ff->internal_buffer;
   ff->buf_width = ff->out_width;
   ff->buf_height = ff->out_height;
@@ -258,7 +258,11 @@ static void ff_init_moviebuffer(void *ptr) {
     exit(1);
   }
   assert(ff->pFrameFMT);
+#if LIBAVUTIL_VERSION_INT < AV_VERSION_INT(51, 63, 100)
   avpicture_fill((AVPicture *)ff->pFrameFMT, ff->buffer, ff->render_fmt, ff->out_width, ff->out_height);
+#else
+  av_image_fill_arrays (ff->pFrameFMT->data, ff->pFrameFMT->linesize, ff->buffer, ff->render_fmt, ff->out_width, ff->out_height, 64);
+#endif
 }
 
 void ff_initialize (void) {
@@ -287,12 +291,12 @@ int ff_close_movie(void *ptr) {
     ff->out_height = ff->movie_height;
   }
   ff_set_bufferptr(ff, ff->internal_buffer); // restore allocated movie-buffer..
-  if (ff->internal_buffer) free(ff->internal_buffer); // done in pFrameFMT?
+  if (ff->internal_buffer) av_free(ff->internal_buffer); // done in pFrameFMT?
   if (ff->pFrameFMT) av_free(ff->pFrameFMT);
   if (ff->pFrame) av_free(ff->pFrame);
   ff->buffer = NULL;ff->pFrameFMT = ff->pFrame = NULL;
   pthread_mutex_lock(&avcodec_lock);
-  avcodec_close(ff->pCodecCtx);
+  avcodec_free_context(&ff->pCodecCtx);
   avformat_close_input(&ff->pFormatCtx);
   pthread_mutex_unlock(&avcodec_lock);
   if (ff->pSWSCtx) sws_freeContext(ff->pSWSCtx);
@@ -307,7 +311,6 @@ static void ff_set_framerate(ffst *ff) {
   ff->tc.num = 0;
   ff->tc.den = 1;
 
-#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(55, 0, 100) // 9cf788eca8ba (merge a75f01d7e0)
   {
     AVRational fr = av_stream->r_frame_rate;
     if (fr.den > 0 && fr.num > 0) {
@@ -316,16 +319,6 @@ static void ff_set_framerate(ffst *ff) {
       ff->tc.den = fr.den;
     }
   }
-#else
-  {
-    AVRational fr = av_stream_get_r_frame_rate (av_stream);
-    if (fr.den > 0 && fr.num > 0) {
-      ff->framerate = av_q2d (fr);
-      ff->tc.num = fr.num;
-      ff->tc.den = fr.den;
-    }
-  }
-#endif
   if (ff->framerate < 1 || ff->framerate > 1000) {
     AVRational fr = av_stream->avg_frame_rate;
     if (fr.den > 0 && fr.num > 0) {
@@ -461,7 +454,10 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   }
 
   // Get a pointer to the codec context for the video stream
-#if LIBAVFORMAT_BUILD > 4629
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(57, 33, 100)
+  ff->pCodecCtx = avcodec_alloc_context3(NULL);
+  avcodec_parameters_to_context (ff->pCodecCtx, ff->pFormatCtx->streams[ff->videoStream]->codecpar);
+#elif LIBAVFORMAT_BUILD > 4629
   ff->pCodecCtx = ff->pFormatCtx->streams[ff->videoStream]->codec;
 #else
   ff->pCodecCtx = &(ff->pFormatCtx->streams[ff->videoStream]->codec);
@@ -511,7 +507,7 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   if (!(ff->pFrame = av_frame_alloc())) {
     if (!want_quiet)
       fprintf(stderr, "Cannot allocate video frame buffer\n");
-    avcodec_close(ff->pCodecCtx);
+    avcodec_free_context(&ff->pCodecCtx);
     avformat_close_input(&ff->pFormatCtx);
     return(-1);
   }
@@ -520,7 +516,7 @@ int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
     if (!want_quiet)
       fprintf(stderr, "Cannot allocate display frame buffer\n");
     av_free(ff->pFrame);
-    avcodec_close(ff->pCodecCtx);
+    avcodec_free_context(&ff->pCodecCtx);
     avformat_close_input(&ff->pFormatCtx);
     return(-1);
   }
@@ -539,7 +535,7 @@ static uint64_t parse_pts_from_frame (AVFrame *f) {
 
 #if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51, 49, 100)
   if (pts == AV_NOPTS_VALUE) {
-    pts = av_frame_get_best_effort_timestamp (f);
+    pts = f->best_effort_timestamp;
     if (pts != AV_NOPTS_VALUE) {
       if (!(pts_warn & 1) && want_verbose)
 	fprintf(stderr, "PTS: Best effort.\n");
@@ -625,24 +621,40 @@ static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t framenumber) {
     int err;
     if ((err = av_read_frame (ff->pFormatCtx, packet)) < 0) {
       if (err != AVERROR_EOF) {
-	av_free_packet (packet);
+	av_packet_unref (packet);
 	return -1;
       } else {
 	--bailout;
       }
     }
     if(packet->stream_index != ff->videoStream) {
-      av_free_packet (packet);
+      av_packet_unref (packet);
       continue;
     }
 
     int frameFinished = 0;
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(52, 21, 0)
     err = avcodec_decode_video (ff->pCodecCtx, ff->pFrame, &frameFinished, packet->data, packet->size);
-#else
+#elif LIBAVCODEC_VERSION_INT < AV_VERSION_INT(57, 106, 102)
     err = avcodec_decode_video2 (ff->pCodecCtx, ff->pFrame, &frameFinished, packet);
+#else
+    err = avcodec_send_packet (ff->pCodecCtx, packet);
+    if (err == AVERROR_EOF) {
+      err = 0;
+    }
+    frameFinished = 0;
+    if (err >= 0) {
+      err = avcodec_receive_frame (ff->pCodecCtx, ff->pFrame);
+      if (err < 0) {
+	if (err == AVERROR(EAGAIN) || err == AVERROR_EOF) {
+	  err = 0;
+	}
+      } else {
+	frameFinished = 1;
+      }
+    }
 #endif
-    av_free_packet (packet);
+    av_packet_unref (packet);
 
     if (err < 0) {
       return -10;
@@ -778,7 +790,11 @@ uint8_t *ff_set_bufferptr(void *ptr, uint8_t *buf) {
     ff->buffer = buf;
   else
     ff->buffer = ff->internal_buffer;
+#if LIBAVUTIL_VERSION_INT < AV_VERSION_INT(51, 63, 100)
   avpicture_fill((AVPicture *)ff->pFrameFMT, ff->buffer, ff->render_fmt, ff->out_width, ff->out_height);
+#else
+  av_image_fill_arrays (ff->pFrameFMT->data, ff->pFrameFMT->linesize, ff->buffer, ff->render_fmt, ff->out_width, ff->out_height, 1);
+#endif
   return (NULL); // return prev. buffer?
 }
 

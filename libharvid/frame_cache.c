@@ -87,7 +87,7 @@ static videocacheline *getcl(videocacheline **cache, int cfg_cachesize,
         cl->flags = 0;
         memset(&cl->hh, 0, sizeof(UT_hash_handle));
       } else {
-        free(cl->b);
+        av_free(cl->b);
         memset(cl, 0, sizeof(videocacheline));
       }
     } else {
@@ -147,7 +147,7 @@ static void clearcache(videocacheline **cache, pthread_rwlock_t *cachelock, int 
     }
     HASH_DEL(*cache, cl);
     assert(cl->refcnt == 0);
-    free(cl->b);
+    av_free(cl->b);
     free(cl);
   }
 }
@@ -156,9 +156,9 @@ static void realloccl_buf(videocacheline *cptr, int w, int h, int fmt) {
   if (cptr->b && cptr->w == w && cptr->h == h && cptr->fmt == fmt)
     return; // already allocated
 
-  free(cptr->b);
+  av_free(cptr->b);
   cptr->alloc_size = ff_picture_bytesize(fmt, w, h);
-  cptr->b = calloc(cptr->alloc_size, sizeof(uint8_t));
+  cptr->b = av_malloc(cptr->alloc_size);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -324,7 +324,7 @@ void vcache_release_buffer(void *p, void *cptr) {
     if (cl->flags & CLF_RELEASE) {
       HASH_DEL(cc->vcache, cl);
       assert(cl->refcnt == 0);
-      free(cl->b);
+      av_free(cl->b);
       free(cl);
     }
   }

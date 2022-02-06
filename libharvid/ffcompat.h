@@ -58,6 +58,27 @@
 # endif
 #endif
 
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(53, 63, 100)
+static inline void avcodec_free_context (AVCodecContext ** avctx)
+{
+	avcodec_close (*avctx);
+}
+#endif
+
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(55, 25, 100)
+static inline void av_packet_unref (AVPacket *pkt)
+{
+	av_free_packet (pkt);
+}
+#endif
+
+#if LIBAVUTIL_VERSION_INT < AV_VERSION_INT(51, 63, 100)
+static inline int av_image_get_buffer_size (enum AVPixelFormat pix_fmt, int width, int height, int align)
+{
+	return avpicture_get_size (pix_fmt, width, height)
+}
+#endif
+
 #if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(53, 2, 0)
 static inline int avformat_open_input(AVFormatContext **ps, const char *filename, void *fmt, void **options)
 {
