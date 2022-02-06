@@ -10,7 +10,7 @@ TARGET=/tmp/
 VERSION=$(git describe --tags HEAD || echo "X.X.X")
 
 TOPDIR=$(pwd)
-#export PATH=${HVSTACK}/bin:${HOME}/bin:/usr/local/git/bin/:/usr/bin:/bin:/usr/sbin:/sbin
+export PATH=${HVSTACK}/bin:${HOME}/bin:/usr/local/git/bin/:/usr/bin:/bin:/usr/sbin:/sbin
 export PKG_CONFIG_PATH=${HVSTACK}/lib/pkgconfig
 make clean ARCHINCLUDES="-I${HVSTACK}/include" LDFLAGS="-L${HVSTACK}/lib ${HVARCH}"
 make CFLAGS="-DNDEBUG -O2 ${HVARCH} ${OSXCOMPAT}" ARCHINCLUDES="-I${HVSTACK}/include" LDFLAGS="-L${HVSTACK}/lib ${HVARCH}"
