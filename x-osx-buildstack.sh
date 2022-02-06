@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # we keep a copy of the sources here:
-: ${SRCDIR=$HOME/src/stack}
+: ${SRCDIR=/var/tmp/src_cache}
 # actual build location
 : ${BUILDD=$HOME/src/hv_build}
 # target install dir:
@@ -62,7 +62,7 @@ function autoconfbuild {
 
 function download {
 echo "--- Downloading.. $2"
-test -f ${SRCDIR}/$1 || curl -L -o ${SRCDIR}/$1 $2
+test -f ${SRCDIR}/$1 || curl -kL -o ${SRCDIR}/$1 $2
 }
 
 function src {
@@ -84,7 +84,13 @@ src libiconv-1.14 tar.gz ftp://ftp.gnu.org/gnu/libiconv/libiconv-1.14.tar.gz
 autoconfbuild --with-included-gettext --with-libiconv-prefix=$PREFIX
 
 ################################################################################
-src libpng-1.6.16 tar.gz https://downloads.sourceforge.net/project/libpng/libpng16/1.6.16/libpng-1.6.16.tar.gz
+src zlib-1.2.7 tar.gz ftp://ftp.simplesystems.org/pub/libpng/png/src/history/zlib/zlib-1.2.7.tar.gz
+./configure --prefix=$PREFIX --archs="$HVARCH"
+make $MAKEFLAGS
+make install
+
+################################################################################
+src libpng-1.6.37 tar.gz https://downloads.sourceforge.net/project/libpng/libpng16/1.6.37/libpng-1.6.37.tar.gz
 autoconfbuild
 
 ################################################################################
@@ -152,18 +158,7 @@ make $MAKEFLAGS && make install
 
 
 ################################################################################
-src libvpx-v1.3.0 tar.bz2 http://downloads.webmproject.org/releases/webm/libvpx-v1.3.0.tar.bz2
-
-function buildvpx {
-cd ${BUILDD}/libvpx-v1.3.0
-./configure --prefix=$PREFIX --target=$1
-make clean
-make $MAKEFLAGS && make install
-make clean
-}
-
-################################################################################
-FFVERSION=3.4.5
+FFVERSION=5.0
 download ffmpeg-${FFVERSION}.tar.bz2 http://www.ffmpeg.org/releases/ffmpeg-${FFVERSION}.tar.bz2
 cd ${BUILDD}
 tar xjf ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2
@@ -172,14 +167,13 @@ cd ffmpeg-${FFVERSION}/
 rm -rf ${PREFIX}/fflipo
 mkdir ${PREFIX}/fflipo
 
-buildvpx x86-darwin9-gcc
 cd ${BUILDD}/ffmpeg-${FFVERSION}/
 
 ./configure --prefix=${PREFIX} \
-	--enable-libx264 --enable-libtheora --enable-libvorbis --enable-libmp3lame --enable-libvpx \
+	--enable-libx264 --enable-libtheora --enable-libvorbis --enable-libmp3lame \
 	--enable-shared --enable-gpl --disable-static --disable-debug --disable-doc \
-	--disable-ffserver --disable-ffplay --disable-iconv \
-	--disable-jack --disable-sdl2 --disable-coreimage \
+	--disable-ffplay --disable-iconv \
+	--disable-sdl2 --disable-coreimage \
 	--arch=x86_32 --target-os=darwin --cpu=i686 --enable-cross-compile \
 	--extra-cflags="-arch i386 ${OSXCOMPAT}  -I${PREFIX}/include" \
 	--extra-ldflags="-arch i386 ${OSXCOMPAT} -L${PREFIX}/lib -headerpad_max_install_names"
@@ -191,14 +185,13 @@ cp ffprobe ${PREFIX}/fflipo/ffprobe-i386
 cp ffmpeg ${PREFIX}/fflipo/ffmpeg-i386
 make clean
 
-buildvpx x86_64-darwin9-gcc
 cd ${BUILDD}/ffmpeg-${FFVERSION}/
 ./configure --prefix=${PREFIX} \
-	--enable-libx264 --enable-libvpx \
+	--enable-libx264 \
 	--enable-libtheora --enable-libvorbis --enable-libmp3lame \
 	--enable-shared --enable-gpl --disable-static --disable-debug --disable-doc \
-	--disable-ffserver --disable-ffplay --disable-iconv \
-	--disable-jack --disable-sdl2 --disable-coreimage \
+	--disable-ffplay --disable-iconv \
+	--disable-sdl2 --disable-coreimage \
 	--arch=x86_64 \
 	--extra-cflags="-arch x86_64 ${OSXCOMPAT}  -I${PREFIX}/include" \
 	--extra-ldflags="-arch x86_64 ${OSXCOMPAT} -L${PREFIX}/lib -headerpad_max_install_names"
@@ -209,13 +202,12 @@ cp ffmpeg ${PREFIX}/fflipo/ffmpeg-x86_64
 make clean
 
 if echo "$HVARCH" | grep -q "ppc"; then
-buildvpx ppc32-darwin9-gcc
 cd ${BUILDD}/ffmpeg-${FFVERSION}/
 ./configure --prefix=${PREFIX} \
-	--enable-libx264 --enable-libtheora --enable-libvorbis --enable-libmp3lame --enable-libvpx \
+	--enable-libx264 --enable-libtheora --enable-libvorbis --enable-libmp3lame \
 	--enable-shared --enable-gpl --disable-static --disable-debug --disable-doc \
-	--disable-ffserver --disable-ffplay --disable-iconv \
-	--disable-jack --disable-sdl2 --disable-coreimage \
+	--disable-ffplay --disable-iconv \
+	--disable-sdl2 --disable-coreimage \
 	--arch=ppc \
 	--extra-cflags="-arch ppc ${OSXCOMPAT}  -I${PREFIX}/include" \
 	--extra-ldflags="-arch ppc ${OSXCOMPAT} -L${PREFIX}/lib -headerpad_max_install_names"

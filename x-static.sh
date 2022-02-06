@@ -32,7 +32,6 @@ LIBDEPS=" \
  libbluray.a \
  libxvidcore.a \
  libbz2.a \
- libvpx.a \
  libopenjpeg.a \
  libx264.a \
  libz.a \

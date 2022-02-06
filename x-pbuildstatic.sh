@@ -41,7 +41,7 @@ git clone -b master --single-branch git://github.com/x42/harvid.git
 
 set -e
 
-FFVERSION=3.4.5
+FFVERSION=5.0
 test -f ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2 \
 	|| curl -k -L -o ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2 http://www.ffmpeg.org/releases/ffmpeg-${FFVERSION}.tar.bz2
 tar xjf ${SRCDIR}/ffmpeg-${FFVERSION}.tar.bz2
@@ -57,7 +57,6 @@ fi
 
 ./configure --enable-gpl \
 	--enable-libmp3lame --enable-libx264 --enable-libxvid --enable-libtheora  --enable-libvorbis \
-	--enable-libvpx --enable-libopenjpeg \
 	--enable-libspeex --enable-libbluray --enable-libgsm \
 	--disable-vaapi --disable-devices \
 	--extra-cflags="-D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64" \
@@ -79,8 +78,6 @@ LIBDEPS=" \
  libbluray.a \
  libxvidcore.a \
  libbz2.a \
- libvpx.a \
- libopenjpeg.a \
  libx264.a \
  libz.a \
  "
@@ -104,7 +101,6 @@ cd $SRC/ffmpeg-${FFVERSION}
 gcc -o ffmpeg_s \
 	fftools/ffmpeg.o fftools/cmdutils.o \
 	fftools/ffmpeg_opt.o fftools/ffmpeg_filter.o fftools/ffmpeg_hw.o \
-	./fftools/ffmpeg_cuvid.o \
 	${LIBF}/libavformat.a \
 	${LIBF}/libavdevice.a \
 	${LIBF}/libavfilter.a \
