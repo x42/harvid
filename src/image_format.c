@@ -24,6 +24,7 @@
 #define HAVE_BOOLEAN 1
 #endif
 
+#include <sys/time.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
