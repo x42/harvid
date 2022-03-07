@@ -28,7 +28,7 @@ test -n "$1" && exit 0
 
 # NSI package
 
-cp -v src/harvid $NSIDIR/harvid.exe
+cp -v src/harvid.exe $NSIDIR/harvid.exe
 ${XPREFIX}-strip $NSIDIR/harvid.exe
 
 if update-alternatives --query ${XPREFIX}-gcc | grep Value: | grep -q win32; then

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # we keep a copy of the sources here:
 : ${SRCDIR=/var/tmp/src_cache}

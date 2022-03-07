@@ -18,7 +18,6 @@ export PKG_CONFIG_PATH=${LIBF}/pkgconfig
 
 # ffmpeg needs this libs
 LIBDEPS=" \
- libpng12.a \
  libjpeg.a \
  libmp3lame.a \
  libspeex.a \
@@ -31,9 +30,12 @@ LIBDEPS=" \
  libgsm.a \
  libbluray.a \
  libxvidcore.a \
- libbz2.a \
- libopenjpeg.a \
  libx264.a \
+ libfreetype.a \
+ libxml2.a \
+ libpng.a \
+ libbz2.a \
+ liblzma.a \
  libz.a \
  "
 

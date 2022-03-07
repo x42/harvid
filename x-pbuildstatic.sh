@@ -24,14 +24,15 @@ if [ "$(id -u)" != "0" -a -z "$SUDO" ]; then
 	exit 1
 fi
 
+$SUDO apt-get update
 $SUDO apt-get -y install git build-essential yasm \
-	libass-dev libbluray-dev libgmp3-dev \
+	libass-dev libbluray-dev libgmp3-dev liblzma-dev \
 	libbz2-dev libfreetype6-dev libgsm1-dev liblzo2-dev \
-	libmp3lame-dev libopenjpeg-dev librtmp-dev \
+	libmp3lame-dev  librtmp-dev libxml2-dev \
 	libspeex-dev libtheora-dev \
-	libvorbis-dev libvpx-dev libx264-dev \
+	libvorbis-dev libx264-dev \
 	libxvidcore-dev zlib1g-dev zlib1g-dev \
-	libpng12-dev libjpeg8-dev curl vim-common
+	libpng-dev libjpeg-dev curl vim-common
 
 mkdir -p ${SRCDIR}
 mkdir -p ${SRC}
@@ -77,8 +78,12 @@ LIBDEPS=" \
  libgsm.a \
  libbluray.a \
  libxvidcore.a \
- libbz2.a \
  libx264.a \
+ libfreetype.a \
+ libxml2.a \
+ libpng.a \
+ libbz2.a \
+ liblzma.a \
  libz.a \
  "
 
@@ -87,7 +92,7 @@ for SLIB in $LIBDEPS; do
 	echo -n "searching $SLIB.."
 	SL=`find /usr/lib -name "$SLIB"`
 	if test -z "$SL"; then
-		echo " not found."
+		echo " '$SLIB' not found."
 		exit 1
 	else
 		echo

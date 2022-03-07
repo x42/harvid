@@ -24,14 +24,12 @@ if test "$XARCH" = "x86_64" -o "$XARCH" = "amd64"; then
 	HPREFIX=x86_64
 	WARCH=w64
 	FFFLAGS="--arch=x86_64 --target-os=mingw64 --cpu=x86_64"
-	VPXARCH="x86_64-win64-gcc"
 	DEBIANPKGS="mingw-w64"
 else
 	echo "Target: 32 Windows (i686)"
 	XPREFIX=i686-w64-mingw32
 	HPREFIX=i386
 	WARCH=w32
-	VPXARCH="x86-win32-gcc"
 	FFFLAGS="--arch=i686 --target-os=mingw32 --cpu=i686"
 	DEBIANPKGS="gcc-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64-tools mingw32"
 fi
@@ -40,7 +38,7 @@ apt-get -y install build-essential \
 	${DEBIANPKGS} \
 	wget git autoconf automake pkg-config \
 	curl unzip ed yasm \
-	nsis nasm
+	nsis nasm xxd
 
 #fixup mingw64 ccache for now
 if test -d /usr/lib/ccache -a -f /usr/bin/ccache; then
@@ -91,19 +89,6 @@ function autoconfbuild {
 }
 
 ################################################################################
-download pthreads-w32-2-9-1-release.tar.gz ftp://sourceware.org/pub/pthreads-win32/pthreads-w32-2-9-1-release.tar.gz
-cd ${BUILDD}
-tar xzf ${SRCDIR}/pthreads-w32-2-9-1-release.tar.gz
-cd pthreads-w32-2-9-1-release
-make clean GC CROSS=${XPREFIX}-
-mkdir -p ${PREFIX}/bin
-mkdir -p ${PREFIX}/lib
-mkdir -p ${PREFIX}/include
-cp -vf pthreadGC2.dll ${PREFIX}/bin/
-cp -vf libpthreadGC2.a ${PREFIX}/lib/libpthread.a
-cp -vf pthread.h sched.h ${PREFIX}/include
-
-################################################################################
 download zlib-1.2.7.tar.gz ftp://ftp.simplesystems.org/pub/libpng/png/src/history/zlib/zlib-1.2.7.tar.gz
 cd ${BUILDD}
 tar xzf ${SRCDIR}/zlib-1.2.7.tar.gz
@@ -115,10 +100,10 @@ make install -fwin32/Makefile.gcc SHARED_MODE=1 \
 	BINARY_PATH=${PREFIX}/bin
 
 ################################################################################
-download libiconv-1.14.tar.gz ftp://ftp.gnu.org/gnu/libiconv/libiconv-1.14.tar.gz
+download libiconv-1.16.tar.gz http://ftpmirror.gnu.org/libiconv/libiconv-1.16.tar.gz
 cd ${BUILDD}
-tar xzf ${SRCDIR}/libiconv-1.14.tar.gz
-cd libiconv-1.14
+tar xzf ${SRCDIR}/libiconv-1.16.tar.gz
+cd libiconv-1.16
 autoconfbuild --with-included-gettext --with-libiconv-prefix=$PREFIX
 
 ################################################################################
@@ -159,9 +144,10 @@ sed -i -e 's/\r$//' win32/xmingw32/libtheoradec-all.def
 MAKEFLAGS=-j1 autoconfbuild --enable-shared --disable-sdltest --disable-examples --with-ogg=${PREFIX}
 
 ################################################################################
-download x264-snapshot-20171224-2245-stable.tar.bz2 http://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-20171224-2245-stable.tar.bz2
+download x264-0bb85e8bb.tar.bz2 https://code.videolan.org/videolan/x264/-/archive/0bb85e8bbc85244d5c8fd300033ca32539b541b7/x264-0bb85e8bbc85244d5c8fd300033ca32539b541b7.tar.bz2
+
 cd ${BUILDD}
-tar xjf  ${SRCDIR}/x264-snapshot-20171224-2245-stable.tar.bz2
+tar xjf  ${SRCDIR}/x264-0bb85e8bb.tar.bz2
 cd x264*
 PATH=${PREFIX}/bin:/usr/bin:/bin:/usr/sbin:/sbin \
 	CPPFLAGS="-I${PREFIX}/include" \
@@ -169,21 +155,6 @@ PATH=${PREFIX}/bin:/usr/bin:/bin:/usr/sbin:/sbin \
 	CXXFLAGS="-I${PREFIX}/include -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -mstackrealign" \
 	LDFLAGS="-L${PREFIX}/lib" \
 	./configure --host=${XPREFIX} --cross-prefix=${XPREFIX}- --prefix=$PREFIX --enable-shared --disable-cli # --disable-asm
-make $MAKEFLAGS && make install
-
-################################################################################
-download libvpx-1.5.0.tar.bz2 http://downloads.webmproject.org/releases/webm/libvpx-1.5.0.tar.bz2
-cd ${BUILDD}
-tar xjf ${SRCDIR}/libvpx-1.5.0.tar.bz2
-cd libvpx-1.5.0
-CC=${XPREFIX}-gcc CROSS=${XPREFIX}- \
-	CPPFLAGS="-I${PREFIX}/include" \
-	CFLAGS="-I${PREFIX}/include -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -mstackrealign" \
-	CXXFLAGS="-I${PREFIX}/include -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -mstackrealign" \
-	LDFLAGS="-L${PREFIX}/lib" \
-	./configure --target=$VPXARCH \
-	--disable-examples --disable-docs --disable-install-bins \
-	--prefix=$PREFIX
 make $MAKEFLAGS && make install
 
 ################################################################################
@@ -210,7 +181,7 @@ EOF
 ./configure --prefix=${PREFIX} \
 	--disable-ffplay \
 	--enable-gpl --enable-shared --disable-static --disable-debug \
-	--enable-libvpx --enable-libx264 --enable-libtheora --enable-libvorbis --enable-libmp3lame \
+	--enable-libx264 --enable-libtheora --enable-libvorbis --enable-libmp3lame \
 	--disable-sdl2 \
 	--enable-cross-compile --cross-prefix=${XPREFIX}- \
 	$FFFLAGS \
