@@ -39,7 +39,9 @@ else
 	cp -v /usr/lib/gcc/${XPREFIX}/*/libgcc_s_sjlj-1.dll $NSIDIR
 fi
 
-ffdlls="avcodec- avdevice- avfilter- avformat- avutil- libcharset- libiconv- libjpeg- libmp3lame- libogg- libpng16- libtheora- libtheoradec- libtheoraenc- libvorbis- libvorbisenc- libvorbisfile- libx264- postproc- pthreadGC2 swresample- swscale- zlib1"
+cp -v /usr/${XPREFIX}/lib/libwinpthread-*.dll $NSDIR
+
+ffdlls="avcodec- avdevice- avfilter- avformat- avutil- libcharset- libiconv- libjpeg- libmp3lame- libogg- libpng16- libtheora- libtheoradec- libtheoraenc- libvorbis- libvorbisenc- libvorbisfile- libx264- postproc- libwinpthread- swresample- swscale- zlib1"
 for fname in $ffdlls; do
 	cp -v ${WINPREFIX}/bin/${fname}*.dll $NSIDIR
 done
