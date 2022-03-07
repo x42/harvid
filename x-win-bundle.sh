@@ -41,7 +41,7 @@ fi
 
 cp -v /usr/${XPREFIX}/lib/libwinpthread-*.dll $NSIDIR
 
-ffdlls="avcodec- avdevice- avfilter- avformat- avutil- libcharset- libiconv- libjpeg- libmp3lame- libogg- libpng16- libtheora- libtheoradec- libtheoraenc- libvorbis- libvorbisenc- libvorbisfile- libx264- postproc- libwinpthread- swresample- swscale- zlib1"
+ffdlls="avcodec- avdevice- avfilter- avformat- avutil- libcharset- libiconv- libjpeg- libmp3lame- libogg- libpng16- libtheora- libtheoradec- libtheoraenc- libvorbis- libvorbisenc- libvorbisfile- libx264- postproc- swresample- swscale- zlib1"
 for fname in $ffdlls; do
 	cp -v ${WINPREFIX}/bin/${fname}*.dll $NSIDIR
 done
