@@ -38,7 +38,7 @@ mkdir -p ${SRCDIR}
 mkdir -p ${SRC}
 
 cd $SRC
-git clone -b master --single-branch git://github.com/x42/harvid.git
+git clone -b master --single-branch https://github.com/x42/harvid.git
 
 set -e
 
