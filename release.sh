@@ -165,4 +165,4 @@ rsync -Pa \
 	releases/harvid_installer-w32-${VERSION}.exe \
 	releases/harvid_installer-w64-${VERSION}.exe \
 	releases/harvid_version.txt \
-		ardour.org:/persist/community.ardour.org/files/video-tools/
+		ardour.org:/persist/files/video-tools/
