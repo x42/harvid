@@ -350,7 +350,11 @@ static void ff_set_framerate(ffst *ff) {
 
 int ff_open_movie(void *ptr, char *file_name, int render_fmt) {
   int i;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 0, 100)
   AVCodec *pCodec;
+#else
+  AVCodec const* pCodec;
+#endif
   ffst *ff = (ffst*) ptr;
 
   if (ff->pFrameFMT) {
