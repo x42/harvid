@@ -604,9 +604,7 @@ static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t framenumber) {
 
   if (ff->avprev < 0 || ff->avprev >= timestamp || ((ff->avprev + 32 * ff->tpf) < timestamp)) {
     rv = av_seek_frame(ff->pFormatCtx, ff->videoStream, timestamp, AVSEEK_FLAG_BACKWARD) ;
-    if (ff->pCodecCtx->codec->flush) {
-      avcodec_flush_buffers(ff->pCodecCtx);
-    }
+    maybe_avcodec_flush_buffers (ff->pCodecCtx);
   }
 
   ff->avprev = -1;
@@ -683,9 +681,7 @@ static int my_seek_frame (ffst *ff, AVPacket *packet, int64_t framenumber) {
 	  fprintf(stdout, " PTS mismatch want: %"PRId64" got: %"PRId64" -> re-seek\n", timestamp, pts);
 	// re-seek - make a guess, since we don't know the keyframe interval
 	rv = av_seek_frame(ff->pFormatCtx, ff->videoStream, MAX(0, timestamp - ff->tpf * 25), AVSEEK_FLAG_BACKWARD) ;
-	if (ff->pCodecCtx->codec->flush) {
-	  avcodec_flush_buffers(ff->pCodecCtx);
-	}
+	maybe_avcodec_flush_buffers (ff->pCodecCtx);
 	if (rv < 0) {
 	  return -3;
 	}
