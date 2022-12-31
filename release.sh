@@ -2,8 +2,10 @@
 
 #environment variables
 : ${OSXUSER:=}
-: ${OSXMACHINE:=cowbuilder.local}
-: ${COWBUILDER:=osxbuilder.local}
+: ${COWBUILDER:=cowbuilder.local} # linux/windows (mingw)
+: ${OSXMACHINE:=oscbuilder.local} # 10.6 (i386/x86)
+: ${MACMACHINE:=macbuilder.local} # 11.0 (arm)
+
 test -f "$HOME/.buildcfg.sh" && . "$HOME/.buildcfg.sh"
 
 NEWVERSION=$1
@@ -83,11 +85,12 @@ if test "$ok" != 0; then
 	exit
 fi
 
+echo "building OSX/Intel versions"
 if test -n "$OSXFROMSCRATCH"; then
   echo "building osx package from scratch"
   ssh ${OSXUSER}${OSXMACHINE} << EOF
 exec /bin/bash -l
-curl -L -o /tmp/harvid-x-pbuildstatic.sh https://raw.github.com/x42/harvid/master/x-osx-buildstack.sh
+curl -kL -o /tmp/harvid-x-pbuildstatic.sh https://raw.github.com/x42/harvid/master/x-osx-buildstack.sh
 chmod +x /tmp/harvid-x-pbuildstatic.sh
 /tmp/harvid-x-pbuildstatic.sh
 EOF
@@ -104,6 +107,14 @@ rm -rf harvid
 EOF
 fi
 
+ok=$?
+if test "$ok" != 0; then
+	echo "remote build failed"
+	exit
+fi
+
+echo "building macOS/ARM versions"
+ssh $MACMACHINE ./bin/build-harvid.sh
 
 ok=$?
 if test "$ok" != 0; then
@@ -111,7 +122,7 @@ if test "$ok" != 0; then
 	exit
 fi
 
-
+# collect binaries from build-hosts
 rsync -Pa $COWBUILDER:/tmp/harvid-i386-linux-gnu-${VERSION}.tgz site/releases/ || exit
 rsync -Pa $COWBUILDER:/tmp/harvid-x86_64-linux-gnu-${VERSION}.tgz site/releases/ || exit
 rsync -Pa $COWBUILDER:/tmp/harvid_installer-w32-${VERSION}.exe site/releases/ || exit
@@ -120,8 +131,11 @@ rsync -Pa $COWBUILDER:/tmp/harvid_w32-${VERSION}.tar.xz tmp/ || exit
 rsync -Pa $COWBUILDER:/tmp/harvid_w64-${VERSION}.tar.xz tmp/ || exit
 
 rsync -Pa ${OSXUSER}$OSXMACHINE:/tmp/harvid-${VERSION}.pkg site/releases/ || exit
-rsync -Pa ${OSXUSER}$OSXMACHINE:/tmp/harvid-${VERSION}.dmg site/releases/ || exit
+rsync -Pa ${OSXUSER}$OSXMACHINE:/tmp/Harvid-${VERSION}.dmg site/releases/ || exit
 rsync -Pa ${OSXUSER}$OSXMACHINE:/tmp/harvid-osx-${VERSION}.tgz tmp/ || exit
+
+rsync -Pa $MACMACHINE:/tmp/Harvid-arm64-${VERSION}.dmg site/releases/ || exit
+rsync -Pa $MACMACHINE:/tmp/harvid-macOS-arm64-${VERSION}.tgz site/releases/ || exit
 
 echo -n "${VERSION}" > site/releases/harvid_version.txt
 
@@ -160,6 +174,8 @@ rsync -Pa \
 	../tmp/harvid_w64-${VERSION}.tar.xz \
 	releases/harvid-${VERSION}.dmg \
 	releases/harvid-${VERSION}.pkg \
+	releases/harvid-arm64-${VERSION}.dmg \
+	releases/harvid-arm64-${VERSION}.pkg \
 	releases/harvid-i386-linux-gnu-${VERSION}.tgz \
 	releases/harvid-x86_64-linux-gnu-${VERSION}.tgz  \
 	releases/harvid_installer-w32-${VERSION}.exe \

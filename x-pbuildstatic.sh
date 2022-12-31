@@ -24,7 +24,7 @@ if [ "$(id -u)" != "0" -a -z "$SUDO" ]; then
 	exit 1
 fi
 
-$SUDO apt-get update
+#$SUDO apt-get update
 $SUDO apt-get -y install git build-essential yasm \
 	libass-dev libbluray-dev libgmp3-dev liblzma-dev \
 	libbz2-dev libfreetype6-dev libgsm1-dev liblzo2-dev \
